@@ -1,5 +1,5 @@
-import React from 'react';
-import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv, ImageOff } from 'lucide-react';
 
 export default function ProductCard({
   model,
@@ -13,6 +13,8 @@ export default function ProductCard({
   onEdit,
   onDelete
 }) {
+  const [hasImgError, setHasImgError] = useState(false);
+
   const discountPercent = model.originalPrice && model.originalPrice > model.salePrice
     ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
     : 0;
@@ -25,18 +27,25 @@ export default function ProductCard({
       {/* Image Container with Badges */}
       <div 
         onClick={() => onOpenDetails(model)}
-        className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden cursor-pointer"
+        className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden cursor-pointer flex items-center justify-center"
       >
-        <img
-          src={model.image}
-          alt={model.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80';
-          }}
-        />
+        {model.image && !hasImgError ? (
+          <img
+            src={model.image}
+            alt={model.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            onError={() => setHasImgError(true)}
+          />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center select-none">
+            <div className="w-12 h-12 rounded-2xl bg-slate-200/80 flex items-center justify-center mb-1.5 text-slate-400">
+              <ImageOff className="w-6 h-6" />
+            </div>
+            <span className="text-xs font-bold text-slate-600">{t.noImage || 'وێنەی نییە'}</span>
+            <span className="text-[10px] text-slate-400 mt-0.5">No Image</span>
+          </div>
+        )}
 
         {/* Gradient Overlay on hover */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
@@ -109,12 +118,14 @@ export default function ProductCard({
             {model.name}
           </h3>
 
-          {/* SKU Code */}
-          <div className="mt-0.5">
-            <span className="inline-block text-[10px] font-mono font-medium px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
-              SKU: {model.sku}
-            </span>
-          </div>
+          {/* SKU Code (Only if distinct from model name) */}
+          {model.sku && model.sku !== model.name && (
+            <div className="mt-0.5">
+              <span className="inline-block text-[10px] font-mono font-medium px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
+                SKU: {model.sku}
+              </span>
+            </div>
+          )}
 
           {/* Notes Preview */}
           {model.notes && (

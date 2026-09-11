@@ -186,13 +186,11 @@ export default function AdminModal({
       }
     }
 
-    if (!finalImageUrl) {
-      finalImageUrl = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80';
-    }
-
+    // Do not set default/placeholder image; leave empty if no image provided
     await onSaveModel({
       ...modelForm,
-      image: finalImageUrl
+      sku: modelForm.name.trim(),
+      image: finalImageUrl || ''
     });
 
     setIsUploading(false);
@@ -279,7 +277,7 @@ export default function AdminModal({
         {type === 'model' && (
           <form onSubmit={handleModelSubmit} className="mt-4 space-y-3">
             
-            {/* Model Name */}
+            {/* Model Code / Name */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 {t.modelName} *
@@ -288,38 +286,24 @@ export default function AdminModal({
                 type="text"
                 required
                 value={modelForm.name}
-                onChange={(e) => setModelForm({ ...modelForm, name: e.target.value })}
-                placeholder="Bolanburg King Bed Frame"
+                onChange={(e) => setModelForm({ ...modelForm, name: e.target.value, sku: e.target.value })}
+                placeholder="B600-54 یان ناوی مۆدێل..."
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
               />
             </div>
 
-            {/* SKU & Stock */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  {t.modelSku}
-                </label>
-                <input
-                  type="text"
-                  value={modelForm.sku}
-                  onChange={(e) => setModelForm({ ...modelForm, sku: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  {t.stockCount}
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={modelForm.stock}
-                  onChange={(e) => setModelForm({ ...modelForm, stock: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium"
-                />
-              </div>
+            {/* Stock Count */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                {t.stockCount}
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={modelForm.stock}
+                onChange={(e) => setModelForm({ ...modelForm, stock: e.target.value })}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium"
+              />
             </div>
 
             {/* Category & Collection */}

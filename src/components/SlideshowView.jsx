@@ -13,7 +13,8 @@ import {
   Minimize2,
   Sliders,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  ImageOff
 } from 'lucide-react';
 
 export default function SlideshowView({
@@ -261,20 +262,29 @@ export default function SlideshowView({
                         : 'hover:bg-slate-50 border border-transparent opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img
-                      src={model.image}
-                      alt={model.name}
-                      className="w-11 h-11 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
-                    />
+                    {model.image ? (
+                      <img
+                        src={model.image}
+                        alt={model.name}
+                        className="w-11 h-11 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex flex-col items-center justify-center text-slate-400 p-0.5">
+                        <ImageOff className="w-3.5 h-3.5" />
+                        <span className="text-[7px] font-bold mt-0.5 leading-none">بێ وێنە</span>
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <h5 className={`text-[11px] font-bold truncate leading-tight ${isSelected ? 'text-red-700' : 'text-slate-800'}`}>
                         {model.name}
                       </h5>
                       <div className="flex items-center justify-between mt-0.5">
-                        <span className="text-[9px] font-mono text-slate-400 truncate">
-                          {model.sku}
-                        </span>
-                        <span className="text-[10px] font-black text-red-600">
+                        {model.sku && model.sku !== model.name && (
+                          <span className="text-[9px] font-mono text-slate-400 truncate">
+                            {model.sku}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-black text-red-600 ms-auto">
                           {model.salePrice?.toLocaleString()} {t.currency}
                         </span>
                       </div>
@@ -414,15 +424,25 @@ export default function SlideshowView({
                   style={{ animationDuration: `${shimmerTime}s` }}
                 />
 
-                {/* Morph Image - Full Quality, Zero Blur, Dynamic Transition Duration */}
-                <img
-                  key={activeModel.id}
-                  src={activeModel.image}
-                  alt={activeModel.name}
-                  style={{ animationDuration: `${transitionTime}s` }}
-                  className="animate-morph-image max-h-full max-w-full object-contain drop-shadow-xl z-10 select-none pointer-events-none"
-                  draggable={false}
-                />
+                {/* Morph Image or Explicit No Image Banner */}
+                {activeModel.image ? (
+                  <img
+                    key={activeModel.id}
+                    src={activeModel.image}
+                    alt={activeModel.name}
+                    style={{ animationDuration: `${transitionTime}s` }}
+                    className="animate-morph-image max-h-full max-w-full object-contain drop-shadow-xl z-10 select-none pointer-events-none"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8 bg-white/75 backdrop-blur-md rounded-3xl border border-slate-200/90 text-slate-400 shadow-lg z-10 select-none max-w-xs text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-3 text-slate-400 shadow-inner">
+                      <ImageOff className="w-8 h-8" />
+                    </div>
+                    <span className="text-base font-bold text-slate-700">{t.noImage || 'وێنەی نییە'}</span>
+                    <span className="text-xs text-slate-400 mt-1">ئەم مۆدێلە لە ئێستادا وێنەی نییە</span>
+                  </div>
+                )}
               </div>
 
               {/* Previous Arrow (Touch-friendly 44px+ hit area for iPad & tablets) */}
@@ -500,9 +520,11 @@ export default function SlideshowView({
                       {activeModel.name}
                     </h2>
 
-                    <span className="font-mono text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
-                      SKU: {activeModel.sku}
-                    </span>
+                    {activeModel.sku && activeModel.sku !== activeModel.name && (
+                      <span className="font-mono text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                        SKU: {activeModel.sku}
+                      </span>
+                    )}
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                       isOutOfStock ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'

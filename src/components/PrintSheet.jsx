@@ -77,20 +77,29 @@ export default function PrintSheet({
                 <div className="text-xs font-bold text-slate-800">
                   {currentDate}
                 </div>
-                <div className="text-[11px] font-mono font-semibold text-slate-500">
-                  SKU: {model.sku}
-                </div>
+                {model.sku && model.sku !== model.name && (
+                  <div className="text-[11px] font-mono font-semibold text-slate-500">
+                    SKU: {model.sku}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* 2. Furniture High-Quality Photo */}
-            <div className="print-image-container my-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center relative">
-              <img
-                src={model.image}
-                alt={model.name}
-                className="max-h-full max-w-full object-contain p-2"
-                crossOrigin="anonymous"
-              />
+            <div className="print-image-container my-3 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center relative min-h-[280px]">
+              {model.image ? (
+                <img
+                  src={model.image}
+                  alt={model.name}
+                  className="max-h-full max-w-full object-contain p-2"
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                  <span className="text-xl font-bold text-slate-600">وێنەی نییە / No Image</span>
+                  <span className="text-xs text-slate-400 mt-1">ئەم مۆدێلە لە سیستەمدا بەبێ وێنە تۆمارکراوە</span>
+                </div>
+              )}
               {discountPercent > 0 && (
                 <div className="absolute top-3 start-3 bg-red-600 text-white font-black text-sm px-3 py-1 rounded-lg">
                   {discountPercent}% {t.saveDiscount}

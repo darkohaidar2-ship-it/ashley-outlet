@@ -8,6 +8,7 @@ import {
   Trash2, 
   Save, 
   Image as ImageIcon, 
+  ImageOff,
   Check, 
   AlertCircle,
   FolderPlus
@@ -122,8 +123,10 @@ export default function AdminSpreadsheet({
             return '';
           };
 
-          const name = findVal(['name', 'model', 'model name', 'ناو', 'ناوی مۆدێل', 'اسم', 'الموديل']);
-          const sku = findVal(['sku', 'code', 'item code', 'کۆد', 'بارکۆد', 'رمز']);
+          const codeOrName = findVal([
+            'code', 'item code', 'item no', 'item_code', 'item', 'کۆد', 'کۆدی کاڵا', 'کۆدی مۆدێل', 'بارکۆد', 'رمز',
+            'name', 'model', 'model name', 'model_name', 'description', 'ناو', 'ناوی مۆدێل', 'اسم', 'الموديل', 'sku'
+          ]);
           const stock = findVal(['stock', 'quantity', 'qty', 'count', 'عدد', 'ژمارە', 'العدد', 'الكمية']);
           const salePrice = findVal(['price', 'sale price', 'outlet price', 'نرخ', 'نرخی نوێ', 'السعر']);
           const originalPrice = findVal(['original price', 'old price', 'before discount', 'کۆن', 'نرخی پێشوو', 'السعر الأصلي']);
@@ -136,6 +139,7 @@ export default function AdminSpreadsheet({
           const matchedCat = categories.find(c => 
             (c.name_ku && c.name_ku.toLowerCase() === catName.toString().toLowerCase()) ||
             (c.name_en && c.name_en.toLowerCase() === catName.toString().toLowerCase()) ||
+            (c.name_ar && c.name_ar.toLowerCase() === catName.toString().toLowerCase()) ||
             (c.id === catName)
           );
 
@@ -146,8 +150,8 @@ export default function AdminSpreadsheet({
 
           return {
             id: 'mod-' + Date.now() + '-' + idx,
-            name: name || '',
-            sku: sku || ('ASH-' + Math.floor(1000 + Math.random() * 9000)),
+            name: codeOrName || '',
+            sku: codeOrName || '',
             categoryId: matchedCat ? matchedCat.id : (categories[0]?.id || ''),
             collectionId: matchedCol ? matchedCol.id : '',
             stock: stock !== '' ? stock : '',
@@ -175,15 +179,14 @@ export default function AdminSpreadsheet({
       const cat = categories.find(c => c.id === row.categoryId);
       const col = collections.find(c => c.id === row.collectionId);
       return {
-        'Model Name (ناو)': row.name,
-        'SKU (کۆد)': row.sku,
+        'Model Code / Name (کۆد / ناوی مۆدێل)': row.name,
         'Category (کەتەگۆری)': cat ? (lang === 'ku' ? cat.name_ku : cat.name_en) : '',
         'Collection (سێت)': col ? col.name : '',
         'Stock (عدد)': row.stock,
         'Original Price (د.ع)': row.originalPrice,
         'Outlet Price (د.ع)': row.salePrice,
         'Notes (تێبینی)': row.notes,
-        'Image URL': row.image
+        'Image URL (بەستەری وێنە)': row.image
       };
     });
 
@@ -289,8 +292,7 @@ export default function AdminSpreadsheet({
             <tr>
               <th className="p-2 w-10 text-center border-e border-slate-200">#</th>
               <th className="p-2 w-28 text-center border-e border-slate-200">{t.uploadImage} (Drag & Drop)</th>
-              <th className="p-2 min-w-[180px] text-start border-e border-slate-200">{t.modelName} *</th>
-              <th className="p-2 min-w-[110px] text-start border-e border-slate-200">{t.modelSku}</th>
+              <th className="p-2 min-w-[200px] text-start border-e border-slate-200">{t.modelName} *</th>
               <th className="p-2 min-w-[120px] text-start border-e border-slate-200">{t.category}</th>
               <th className="p-2 min-w-[120px] text-start border-e border-slate-200">{t.collection}</th>
               <th className="p-2 w-20 text-center border-e border-slate-200">{t.stockCount}</th>
@@ -337,15 +339,15 @@ export default function AdminSpreadsheet({
                           className="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-2xs"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-[9px] text-slate-400">
-                          <ImageIcon className="w-3.5 h-3.5 mb-0.5" />
-                          <span>بکێشە</span>
+                        <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-[8px] text-slate-400">
+                          <ImageOff className="w-3.5 h-3.5 mb-0.5 text-slate-400" />
+                          <span className="font-semibold text-[8px] leading-none">{t.noImage || 'وێنەی نییە'}</span>
                         </div>
                       )}
 
                       {/* Drop/Upload overlay */}
                       <label className="absolute inset-0 bg-black/60 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer font-bold">
-                        <span>گۆڕین</span>
+                        <span>{row.image ? 'گۆڕین' : 'دانان'}</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -356,25 +358,17 @@ export default function AdminSpreadsheet({
                     </div>
                   </td>
 
-                  {/* Model Name */}
+                  {/* Model Code / Name */}
                   <td className="p-1 border-e border-slate-200">
                     <input
                       type="text"
                       value={row.name || ''}
-                      onChange={(e) => handleCellChange(idx, 'name', e.target.value)}
-                      placeholder="ناوی مۆدێل..."
+                      onChange={(e) => {
+                        handleCellChange(idx, 'name', e.target.value);
+                        handleCellChange(idx, 'sku', e.target.value);
+                      }}
+                      placeholder="کۆد یان ناوی مۆدێل..."
                       className="w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs font-bold text-slate-900"
-                    />
-                  </td>
-
-                  {/* SKU */}
-                  <td className="p-1 border-e border-slate-200">
-                    <input
-                      type="text"
-                      value={row.sku || ''}
-                      onChange={(e) => handleCellChange(idx, 'sku', e.target.value)}
-                      placeholder="ASH-..."
-                      className="w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs font-mono font-semibold text-slate-700"
                     />
                   </td>
 

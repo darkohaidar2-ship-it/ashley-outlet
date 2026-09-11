@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText } from 'lucide-react';
+import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff } from 'lucide-react';
 
 export default function ProductModal({
   model,
@@ -25,11 +25,21 @@ export default function ProductModal({
         
         {/* Left Side: Large Image */}
         <div className="relative md:w-1/2 bg-slate-100 min-h-[260px] md:min-h-full flex items-center justify-center overflow-hidden">
-          <img
-            src={model.image}
-            alt={model.name}
-            className="w-full h-full object-cover"
-          />
+          {model.image ? (
+            <img
+              src={model.image}
+              alt={model.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full min-h-[260px] flex flex-col items-center justify-center p-6 text-center select-none bg-slate-100">
+              <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center mb-2 text-slate-400">
+                <ImageOff className="w-8 h-8" />
+              </div>
+              <span className="text-sm font-bold text-slate-700">{t.noImage || 'وێنەی نییە'}</span>
+              <span className="text-xs text-slate-400 mt-0.5">No Image Available</span>
+            </div>
+          )}
 
           {discountPercent > 0 && (
             <div className="absolute top-4 start-4 bg-red-600 text-white font-black text-sm px-3 py-1.5 rounded-xl shadow-lg">
@@ -92,9 +102,11 @@ export default function ProductModal({
               {model.name}
             </h2>
 
-            <div className="mt-2 inline-block font-mono text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
-              SKU: {model.sku}
-            </div>
+            {model.sku && model.sku !== model.name && (
+              <div className="mt-2 inline-block font-mono text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
+                SKU: {model.sku}
+              </div>
+            )}
 
             {/* Price Box */}
             <div className="mt-5 p-4 rounded-2xl bg-red-50/60 border border-red-100">
