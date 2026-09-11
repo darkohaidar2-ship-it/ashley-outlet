@@ -48,53 +48,19 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Gradient Overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
-          <span className="inline-flex items-center gap-1 text-white text-xs font-semibold bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-lg">
-            <Eye className="w-3.5 h-3.5" />
-            پیشاندان
-          </span>
-
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenSlideshow(model);
-            }}
-            className="inline-flex items-center gap-1 text-white text-xs font-semibold bg-red-600/90 hover:bg-red-600 backdrop-blur-sm px-2.5 py-1 rounded-lg transition-colors"
-            title={t.slideshowView}
-          >
-            <Tv className="w-3.5 h-3.5" />
-            <span>سڵاید</span>
-          </button>
-        </div>
-
         {/* Discount Badge */}
         {discountPercent > 0 && (
-          <div className="absolute top-2.5 start-2.5 bg-red-600 text-white font-black text-xs px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1">
-            <span>{discountPercent}%</span>
-            <span className="text-[10px] font-medium uppercase">{t.saveDiscount}</span>
+          <div className="absolute top-2.5 start-2.5 bg-red-600 text-white font-black text-xs px-2 py-0.5 rounded-lg shadow-sm">
+            {discountPercent}%-
           </div>
         )}
 
-        {/* Stock Badge */}
-        <div className={`absolute top-2.5 end-2.5 text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-xs flex items-center gap-1 backdrop-blur-md ${
-          isOutOfStock
-            ? 'bg-rose-100/90 text-rose-700 border border-rose-200'
-            : 'bg-emerald-500/90 text-white'
-        }`}>
-          {isOutOfStock ? (
-            <>
-              <AlertCircle className="w-3 h-3" />
-              <span>{t.outOfStock}</span>
-            </>
-          ) : (
-            <>
-              <CheckCircle2 className="w-3 h-3" />
-              <span>{model.stock} {t.piece}</span>
-            </>
-          )}
-        </div>
+        {/* Stock Badge - only if out of stock to reduce clutter */}
+        {isOutOfStock && (
+          <div className="absolute top-2.5 end-2.5 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-100/95 text-rose-700 border border-rose-200 shadow-xs">
+            {t.outOfStock}
+          </div>
+        )}
       </div>
 
       {/* Content Body */}

@@ -39,31 +39,26 @@ export default function Navbar({
         <div className="flex items-center justify-between h-13 sm:h-15">
           
           {/* Logo & Outlet Branding */}
-          <div className="flex items-center space-x-2.5 rtl:space-x-reverse">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse shrink-0">
             {logoUrl ? (
               <img
                 src={logoUrl}
-                alt="Ashley Outlet Logo"
-                className="h-8 sm:h-9 max-w-[140px] object-contain rounded-lg"
+                alt="Ashley Outlet"
+                className="h-8 sm:h-9 max-w-[130px] object-contain rounded-lg"
               />
             ) : (
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-linear-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center shadow-sm text-white font-black text-base sm:text-lg tracking-tighter shrink-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-linear-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center shadow-xs text-white font-black text-base sm:text-lg tracking-tighter shrink-0">
                 A
               </div>
             )}
 
-            <div>
-              <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
-                <span className="font-extrabold text-base sm:text-lg tracking-tight text-slate-900">
-                  ASHLEY
-                </span>
-                <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
-                  OUTLET
-                </span>
-              </div>
-              <p className="text-[10px] text-slate-400 font-medium leading-none">
-                {t.brandSubtitle}
-              </p>
+            <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
+              <span className="font-black text-base sm:text-lg tracking-tight text-slate-900">
+                ASHLEY
+              </span>
+              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                OUTLET
+              </span>
             </div>
           </div>
 
@@ -170,69 +165,69 @@ export default function Navbar({
               </div>
             )}
 
-            {/* Install App Button (PWA for iPad / Tablet / Mobile) */}
+            {/* Install App Icon Button */}
             <button
               onClick={openInstallModal}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl shadow-xs text-xs font-bold transition-all active:scale-95 shrink-0"
-              title={lang === 'ar' ? 'تثبيت التطبيق على الجهاز' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
+              className="p-1.5 sm:px-2.5 sm:py-1.5 inline-flex items-center text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all shrink-0"
+              title={lang === 'ar' ? 'تثبيت التطبيق' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">
-                {lang === 'ar' ? 'تثبيت التطبيق' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
+              <Download className="w-3.5 h-3.5 text-red-600" />
+              <span className="hidden lg:inline text-xs font-bold ms-1">
+                {lang === 'ar' ? 'تثبيت' : lang === 'en' ? 'App' : 'ئەپ'}
               </span>
             </button>
 
             {/* Language Switcher */}
-            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-semibold">
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-[11px] font-semibold">
               <button
                 onClick={() => setLang('ku')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'ku' 
                     ? 'bg-white text-red-600 shadow-2xs font-bold' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                کوردی
+                کورد
               </button>
               <button
                 onClick={() => setLang('ar')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'ar' 
                     ? 'bg-white text-red-600 shadow-2xs font-bold' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
-                عربي
+                عرب
               </button>
               <button
                 onClick={() => setLang('en')}
-                className={`px-2 py-0.5 rounded-lg transition-all ${
+                className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'en' 
                     ? 'bg-white text-red-600 shadow-2xs font-bold' 
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 EN
               </button>
             </div>
 
-            {/* Discreet Admin Login / Logout */}
+            {/* Admin Login / Logout */}
             {isAdmin ? (
               <button
                 onClick={() => setIsAdmin(false)}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-medium transition-all"
+                className="inline-flex items-center gap-1 p-1.5 sm:px-2 sm:py-1 text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl font-medium transition-all"
                 title={t.logout}
               >
-                <LogOut className="w-3 h-3" />
-                <span className="hidden sm:inline">{t.logout}</span>
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">{t.logout}</span>
               </button>
             ) : (
               <button
                 onClick={openLoginModal}
-                className="text-[10px] text-slate-400 hover:text-slate-700 px-1.5 py-1 transition-colors rounded-lg hover:bg-slate-100"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
                 title={t.login}
               >
-                {t.login}
+                <LogIn className="w-3.5 h-3.5" />
               </button>
             )}
 

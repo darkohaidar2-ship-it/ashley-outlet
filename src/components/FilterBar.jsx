@@ -90,12 +90,7 @@ export default function FilterBar({
 
       {/* 3. Sub-Collections Bar (If any exist for selected category) */}
       {relevantCollections.length > 0 && (
-        <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 text-xs">
-          <span className="text-slate-400 font-medium shrink-0 flex items-center gap-1 ps-1">
-            <Layers className="w-3.5 h-3.5" />
-            {t.filterByCollection}:
-          </span>
-
+        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 text-xs scrollbar-none">
           <button
             onClick={() => setSelectedCollection('all')}
             className={`px-3 py-1 rounded-lg font-medium transition-all ${
@@ -124,9 +119,9 @@ export default function FilterBar({
       )}
 
       {/* Quick Summary status */}
-      <div className="flex items-center justify-between text-xs text-slate-500 mt-3 px-1">
+      <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1 font-medium">
         <span>
-          {t.showing} <strong className="text-slate-800 font-bold">{filteredCount}</strong> / {totalCount}
+          <strong className="text-slate-700 font-bold">{filteredCount}</strong> مۆدێل بەردەستە
         </span>
       </div>
 

@@ -96,12 +96,11 @@ export default function App() {
     localStorage.setItem('ashley_lang', lang);
   }, [lang, t.dir]);
 
-  // Apply UI zoom scale (default 0.80 / 80% as requested)
+  // Clean responsive viewport without browser zoom distortion
   useEffect(() => {
-    const scale = data.settings?.uiScale || 0.80;
-    document.documentElement.style.setProperty('--ui-scale', scale);
-    document.documentElement.style.zoom = scale;
-  }, [data.settings?.uiScale]);
+    document.documentElement.style.removeProperty('zoom');
+    document.documentElement.style.setProperty('--ui-scale', '1');
+  }, []);
 
   // Persist admin & view mode
   useEffect(() => {
