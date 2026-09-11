@@ -42,16 +42,30 @@ export default function SlideshowView({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isControlsVisible, setIsControlsVisible] = useState(true);
   const [zenMode, setZenMode] = useState(false);
+  const [showZenUnlock, setShowZenUnlock] = useState(false);
+  const zenUnlockTimer = useRef(null);
   const hideControlsTimer = useRef(null);
   const containerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
 
+  // Screen interaction handler: shows lock button temporarily in Zen mode
+  const handleScreenInteraction = () => {
+    if (zenMode) {
+      setShowZenUnlock(true);
+      if (zenUnlockTimer.current) clearTimeout(zenUnlockTimer.current);
+      zenUnlockTimer.current = setTimeout(() => {
+        setShowZenUnlock(false);
+      }, 3800);
+      return;
+    }
+    resetControlsVisibility();
+  };
+
   // Auto-hide controls in Ambient / Zen mode, fullscreen, or during autoplay
   const resetControlsVisibility = () => {
-    // If Zen mode is locked, controls should never pop up automatically!
     if (zenMode) {
-      setIsControlsVisible(false);
+      handleScreenInteraction();
       return;
     }
 
@@ -69,12 +83,16 @@ export default function SlideshowView({
   useEffect(() => {
     if (zenMode) {
       setIsControlsVisible(false);
+      setShowZenUnlock(false);
       if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+      if (zenUnlockTimer.current) clearTimeout(zenUnlockTimer.current);
     } else {
+      setShowZenUnlock(false);
       resetControlsVisibility();
     }
     return () => {
       if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+      if (zenUnlockTimer.current) clearTimeout(zenUnlockTimer.current);
     };
   }, [isPlaying, isFullscreen, zenMode]);
 
@@ -373,19 +391,37 @@ export default function SlideshowView({
         {activeModel ? (
           <div className="flex-1 flex flex-col h-full relative">
             
-            {/* Discrete Floating Exit Button when Zen Mode is Locked */}
+            {/* In Zen Mode: Lock Button that is completely HIDDEN until the screen is touched/tapped */}
             {zenMode && (
-              <div className="absolute top-3 end-3 z-30 animate-fadeIn">
+              <div 
+                className={`absolute top-4 end-4 z-40 transition-all duration-300 transform ${
+                  showZenUnlock 
+                    ? 'opacity-100 translate-y-0 scale-100 pointer-events-auto' 
+                    : 'opacity-0 -translate-y-3 scale-95 pointer-events-none'
+                }`}
+              >
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setZenMode(false);
+                    setShowZenUnlock(false);
                     setIsControlsVisible(true);
                   }}
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-black/70 hover:bg-black/90 text-white rounded-full backdrop-blur-xl border border-white/20 shadow-2xl text-xs font-black transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                  title="دەرچوون لە دۆخی بێدەنگ"
+                  className="flex items-center gap-2.5 px-4 py-2 bg-black/85 hover:bg-black text-white rounded-2xl backdrop-blur-xl border border-white/25 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+                  title="کرتە بکە بۆ کردنەوەی قفڵ و گەڕانەوە بۆ دۆخی ئاسایی"
                 >
-                  <Unlock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>دەرچوون لە بێدەنگ</span>
+                  <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <div className="text-start">
+                    <div className="text-xs font-black text-white flex items-center gap-1.5 leading-tight">
+                      <span>کردنەوەی قفڵ</span>
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">دۆخی ئاسایی</span>
+                    </div>
+                    <div className="text-[11px] text-amber-300 font-bold leading-tight mt-0.5">
+                      outlet کۆتا دانە
+                    </div>
+                  </div>
                 </button>
               </div>
             )}
@@ -454,6 +490,7 @@ export default function SlideshowView({
                   onClick={() => {
                     setZenMode(true);
                     setIsControlsVisible(false);
+                    setShowZenUnlock(false);
                     if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
                   }}
                   className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
@@ -461,9 +498,9 @@ export default function SlideshowView({
                       ? 'bg-slate-900/90 text-white border border-white/15 hover:bg-slate-800'
                       : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
                   }`}
-                  title="دۆخی پێشانگای بێدەنگ (Zen Mode)"
+                  title="دۆخی قفڵ و بێدەنگ (outlet کۆتا دانە)"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  <Lock className="w-3.5 h-3.5 text-amber-500" />
                 </button>
 
                 {/* Auto Play / Pause */}
@@ -529,14 +566,16 @@ export default function SlideshowView({
 
             {/* Giant Furniture Image Stage in Frosted Glass with Dynamic Shimmer Sweep */}
             <div 
-              onClick={resetControlsVisibility}
-              onMouseMove={resetControlsVisibility}
+              onClick={handleScreenInteraction}
+              onMouseMove={() => {
+                if (!zenMode) resetControlsVisibility();
+              }}
               className={`flex-1 relative flex flex-col items-center justify-center overflow-hidden touch-pan-y select-none cursor-pointer ${
                 zenMode ? 'p-0' : 'p-1 sm:p-2.5'
               }`}
               onTouchStart={(e) => {
                 handleTouchStart(e);
-                resetControlsVisibility();
+                handleScreenInteraction();
               }}
               onTouchEnd={handleTouchEnd}
             >
@@ -642,13 +681,37 @@ export default function SlideshowView({
 
             {/* Minimal Floating Corner Tag in Locked Zen Mode */}
             {zenMode ? (
-              <div className="absolute bottom-4 start-4 z-30 bg-black/65 backdrop-blur-xl border border-white/15 px-4 py-2 rounded-2xl shadow-2xl text-white flex items-center gap-3 select-none pointer-events-none animate-fadeIn">
+              <div className="absolute bottom-4 start-4 z-30 bg-black/80 backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl shadow-2xl text-white flex items-center gap-3.5 select-none pointer-events-none animate-fadeIn">
                 <div>
+                  {/* Outlet Last Piece / Stock Badge */}
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide mb-1.5 shadow-xs">
+                    <span>ASHLEY OUTLET</span>
+                    <span>•</span>
+                    <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+                  </div>
+
                   <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
-                  <span className="text-[10px] text-red-400 font-bold uppercase">{getCategoryName(activeModel.categoryId)}</span>
+                  
+                  <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300">
+                    <span className="text-red-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
+                    {activeModel.stock > 0 && (
+                      <>
+                        <span>•</span>
+                        <span className="text-amber-300 font-bold">عدد: {activeModel.stock}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="text-base sm:text-lg font-black text-red-500 leading-none">
-                  {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} {t.currency}
+
+                <div className="text-start border-s border-white/20 ps-3.5 ms-1">
+                  {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
+                    <span className="text-[10px] text-slate-400 line-through block font-medium">
+                      {activeModel.originalPrice.toLocaleString()} {t.currency}
+                    </span>
+                  )}
+                  <div className="text-base sm:text-xl font-black text-red-500 leading-none">
+                    {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
+                  </div>
                 </div>
               </div>
             ) : (
