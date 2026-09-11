@@ -27,13 +27,13 @@ export default function ProductCard({
       {/* Image Container with Badges */}
       <div 
         onClick={() => onOpenDetails(model)}
-        className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden cursor-pointer flex items-center justify-center"
+        className="relative aspect-[4/5] w-full bg-slate-100 overflow-hidden cursor-pointer flex items-center justify-center"
       >
         {model.image && !hasImgError ? (
           <img
             src={model.image}
             alt={model.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             onError={() => setHasImgError(true)}
           />
