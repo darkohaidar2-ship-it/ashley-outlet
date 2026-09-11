@@ -7,57 +7,46 @@
 -- 1. EXTENSIONS
 create extension if not exists "uuid-ossp";
 
--- Clean up any existing old tables to avoid missing column conflicts
-drop table if exists public.models cascade;
-drop table if exists public.collections cascade;
-drop table if exists public.categories cascade;
-drop table if exists public.settings cascade;
+-- 2. ENSURE ALL TABLES EXIST
+create table if not exists public.categories (id text primary key);
+create table if not exists public.collections (id text primary key);
+create table if not exists public.models (id text primary key);
+create table if not exists public.settings (id text primary key default 'global_settings');
 
--- 2. CATEGORIES TABLE
-create table public.categories (
-  id text primary key,
-  name_ku text not null,
-  name_en text default '',
-  name_ar text default '',
-  icon text default 'Sofa',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- 3. ENSURE EVERY SINGLE COLUMN EXISTS (Solves any 42703 column missing errors)
+-- Categories columns:
+alter table public.categories add column if not exists name_ku text default '';
+alter table public.categories add column if not exists name_en text default '';
+alter table public.categories add column if not exists name_ar text default '';
+alter table public.categories add column if not exists icon text default 'Sofa';
+alter table public.categories add column if not exists created_at timestamp with time zone default timezone('utc'::text, now());
 
--- 3. COLLECTIONS TABLE
-create table public.collections (
-  id text primary key,
-  category_id text references public.categories(id) on delete set null,
-  name text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- Collections columns:
+alter table public.collections add column if not exists category_id text default '';
+alter table public.collections add column if not exists name text default '';
+alter table public.collections add column if not exists created_at timestamp with time zone default timezone('utc'::text, now());
 
--- 4. MODELS TABLE (Furniture Items)
-create table public.models (
-  id text primary key,
-  category_id text default '',
-  collection_id text default '',
-  name text not null,
-  sku text default '',
-  image text default '',
-  stock integer default 0,
-  original_price numeric default 0,
-  sale_price numeric default 0,
-  notes text default '',
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- Models columns:
+alter table public.models add column if not exists category_id text default '';
+alter table public.models add column if not exists collection_id text default '';
+alter table public.models add column if not exists name text default '';
+alter table public.models add column if not exists sku text default '';
+alter table public.models add column if not exists image text default '';
+alter table public.models add column if not exists stock integer default 0;
+alter table public.models add column if not exists original_price numeric default 0;
+alter table public.models add column if not exists sale_price numeric default 0;
+alter table public.models add column if not exists notes text default '';
+alter table public.models add column if not exists created_at timestamp with time zone default timezone('utc'::text, now());
 
--- 5. SETTINGS TABLE (Branding, Slideshow Timings, UI Zoom Scale)
-create table public.settings (
-  id text primary key default 'global_settings',
-  logo_url text default '',
-  slideshow_dwell_time numeric default 4.5,
-  slideshow_transition_time numeric default 1.0,
-  slideshow_shimmer_time numeric default 7.0,
-  ui_scale numeric default 0.80,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- Settings columns:
+alter table public.settings add column if not exists logo_url text default '';
+alter table public.settings add column if not exists slideshow_dwell_time numeric default 4.5;
+alter table public.settings add column if not exists slideshow_transition_time numeric default 1.0;
+alter table public.settings add column if not exists slideshow_shimmer_time numeric default 7.0;
+alter table public.settings add column if not exists ui_scale numeric default 0.80;
+alter table public.settings add column if not exists updated_at timestamp with time zone default timezone('utc'::text, now());
 
--- 6. ENABLE ROW LEVEL SECURITY (RLS)
+-- 4. ENABLE ROW LEVEL SECURITY (RLS)
 alter table public.categories enable row level security;
 alter table public.collections enable row level security;
 alter table public.models enable row level security;
@@ -76,7 +65,7 @@ create policy "Public Models Access" on public.models for all using (true) with 
 drop policy if exists "Public Settings Access" on public.settings;
 create policy "Public Settings Access" on public.settings for all using (true) with check (true);
 
--- 7. ENABLE REALTIME ON ALL TABLES
+-- 5. ENABLE REALTIME ON ALL TABLES
 -- Safe realtime publication: ignores if already added
 do $$
 begin
@@ -98,7 +87,7 @@ begin
   end;
 end $$;
 
--- 8. STORAGE BUCKET CREATION FOR PRODUCT IMAGES & LOGO
+-- 6. STORAGE BUCKET CREATION FOR PRODUCT IMAGES & LOGO
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'ashley-catalog',
@@ -133,7 +122,7 @@ create policy "Allow Public Delete in Catalog Bucket"
 on storage.objects for delete
 using (bucket_id = 'ashley-catalog');
 
--- 9. INITIAL DATA SEEDING (With Iraqi Dinar IQD & Outlet Demo Data)
+-- 7. INITIAL DATA SEEDING (With Iraqi Dinar IQD & Outlet Demo Data)
 
 -- Categories
 insert into public.categories (id, name_ku, name_en, name_ar, icon) values
@@ -282,7 +271,7 @@ on conflict (id) do update set
   sale_price = excluded.sale_price, 
   notes = excluded.notes;
 
--- Verification query
+-- 8. پشکنینی کۆتایی داتاکان
 select 
   (select count(*) from public.categories) as total_categories,
   (select count(*) from public.collections) as total_collections,
