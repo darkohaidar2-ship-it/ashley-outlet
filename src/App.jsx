@@ -17,14 +17,44 @@ import { isSupabaseConfigured } from './supabaseClient';
 export default function App() {
   const [lang, setLang] = useState(() => localStorage.getItem('ashley_lang') || 'ku');
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('ashley_isAdmin') === 'true');
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem('ashley_viewMode') || 'grid'); // 'grid' | 'slideshow' | 'sheet'
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+      if (path.startsWith('/slideshow') || path.startsWith('/slide') || viewParam === 'slideshow') return 'slideshow';
+      if (path.startsWith('/sheet') || path.startsWith('/spreadsheet') || viewParam === 'sheet') return 'sheet';
+      if (path.startsWith('/grid') || viewParam === 'grid') return 'grid';
+    }
+    return localStorage.getItem('ashley_viewMode') || 'grid';
+  });
   
   const [data, setData] = useState({ categories: [], collections: [], models: [], settings: { logoUrl: '' } });
   const [isLoading, setIsLoading] = useState(true);
 
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCollection, setSelectedCollection] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('category') || 'all';
+    }
+    return 'all';
+  });
+
+  const [selectedCollection, setSelectedCollection] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('collection') || 'all';
+    }
+    return 'all';
+  });
+
+  const [searchQuery, setSearchQuery] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('search') || '';
+    }
+    return '';
+  });
 
   // Modals & Slideshow state
   const [detailModel, setDetailModel] = useState(null);
@@ -110,6 +140,99 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('ashley_viewMode', viewMode);
   }, [viewMode]);
+
+  // Open login modal if accessing /sheet directly without admin privileges
+  useEffect(() => {
+    if (viewMode === 'sheet' && !isAdmin) {
+      setAdminModal({ isOpen: true, type: 'login', editingModel: null });
+    }
+  }, [viewMode, isAdmin]);
+
+  // URL Deep Link: automatically open model modal when catalog data is ready
+  useEffect(() => {
+    if (!data.models || data.models.length === 0) return;
+    const params = new URLSearchParams(window.location.search);
+    const modelParam = params.get('model') || params.get('sku');
+    if (modelParam) {
+      const found = data.models.find(
+        m => String(m.id) === modelParam || String(m.sku || '').toLowerCase() === modelParam.toLowerCase()
+      );
+      if (found) {
+        setDetailModel(found);
+      }
+    }
+  }, [data.models]);
+
+  // Synchronize browser URL with current viewMode, selected model, and filters
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    let path = '/';
+    if (viewMode === 'slideshow') path = '/slideshow';
+    else if (viewMode === 'sheet') path = '/sheet';
+
+    const params = new URLSearchParams();
+    if (detailModel?.id) {
+      params.set('model', detailModel.id);
+    }
+    if (selectedCategory && selectedCategory !== 'all') {
+      params.set('category', selectedCategory);
+    }
+    if (selectedCollection && selectedCollection !== 'all') {
+      params.set('collection', selectedCollection);
+    }
+    if (searchQuery && searchQuery.trim() !== '') {
+      params.set('search', searchQuery.trim());
+    }
+
+    const qs = params.toString();
+    const targetUrl = qs ? `${path}?${qs}` : path;
+    const currentUrl = window.location.pathname + window.location.search;
+
+    if (targetUrl !== currentUrl) {
+      // Use replaceState if only search query changed, pushState for view/model changes
+      const isSearchOnly = targetUrl.replace(/search=[^&]*/, '') === currentUrl.replace(/search=[^&]*/, '');
+      if (isSearchOnly && currentUrl.includes('search=')) {
+        window.history.replaceState({ viewMode, modelId: detailModel?.id }, '', targetUrl);
+      } else {
+        window.history.pushState({ viewMode, modelId: detailModel?.id }, '', targetUrl);
+      }
+    }
+  }, [viewMode, detailModel?.id, selectedCategory, selectedCollection, searchQuery]);
+
+  // Browser Back/Forward navigation support
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname.toLowerCase();
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view');
+
+      if (path.startsWith('/slideshow') || path.startsWith('/slide') || viewParam === 'slideshow') {
+        setViewMode('slideshow');
+      } else if (path.startsWith('/sheet') || path.startsWith('/spreadsheet') || viewParam === 'sheet') {
+        setViewMode('sheet');
+      } else {
+        setViewMode('grid');
+      }
+
+      const modelParam = params.get('model') || params.get('sku');
+      if (modelParam && data.models && data.models.length > 0) {
+        const found = data.models.find(
+          m => String(m.id) === modelParam || String(m.sku || '').toLowerCase() === modelParam.toLowerCase()
+        );
+        setDetailModel(found || null);
+      } else {
+        setDetailModel(null);
+      }
+
+      setSelectedCategory(params.get('category') || 'all');
+      setSelectedCollection(params.get('collection') || 'all');
+      setSearchQuery(params.get('search') || '');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [data.models]);
 
   // Dynamic App Icon, Favicon & Apple Touch Icon Synchronization
   useEffect(() => {

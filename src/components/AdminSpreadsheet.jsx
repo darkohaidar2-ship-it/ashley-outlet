@@ -28,6 +28,7 @@ export default function AdminSpreadsheet({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [deleteCandidate, setDeleteCandidate] = useState(null); // 2-Factor deletion state
   const fileInputRef = useRef(null);
 
   // Handle cell text edits
@@ -56,9 +57,9 @@ export default function AdminSpreadsheet({
     setTableData(prev => [newRow, ...prev]);
   };
 
-  // Delete row
+  // 2-Factor / 2-Step delete row request
   const handleDeleteRow = (index) => {
-    setTableData(prev => prev.filter((_, i) => i !== index));
+    setDeleteCandidate({ index, model: tableData[index] });
   };
 
   // Image Drag & Drop onto specific row
@@ -468,6 +469,64 @@ export default function AdminSpreadsheet({
 
         </table>
       </div>
+
+      {/* 2-Factor / 2-Step Item Deletion Modal */}
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-200 text-center animate-scaleUp">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            
+            <h3 className="font-black text-base text-slate-900 leading-snug">
+              دڵنیایت لە سڕینەوەی ئەم مۆدێلە؟
+            </h3>
+            
+            <div className="mt-3 p-3 bg-slate-50 border border-slate-200/90 rounded-2xl text-start space-y-1.5">
+              <div className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span>مۆدێل:</span>
+                <span className="text-red-600 font-black">{deleteCandidate.model?.name || 'بێ ناو'}</span>
+              </div>
+              {deleteCandidate.model?.stock !== '' && deleteCandidate.model?.stock !== undefined && (
+                <div className="text-[11px] text-slate-600 flex items-center justify-between">
+                  <span>عدد:</span>
+                  <span className="font-bold text-slate-800">{deleteCandidate.model.stock} دانە</span>
+                </div>
+              )}
+              {deleteCandidate.model?.salePrice && (
+                <div className="text-[11px] text-slate-600 flex items-center justify-between">
+                  <span>نرخ:</span>
+                  <span className="font-bold text-slate-800">{Number(deleteCandidate.model.salePrice).toLocaleString()} {t.currency}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="text-[10.5px] text-rose-600 font-bold mt-2.5">
+              ⚠️ ئەم هەنگاوە (2F) بۆ پاراستنی کاڵاکانە و پاشگەزبوونەوەی نییە!
+            </p>
+
+            <div className="mt-5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteCandidate(null)}
+                className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+              >
+                پاشگەزبوونەوە
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTableData(prev => prev.filter((_, i) => i !== deleteCandidate.index));
+                  setDeleteCandidate(null);
+                }}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-500/25 transition-all cursor-pointer active:scale-98"
+              >
+                بەڵێ، بسڕەوە
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

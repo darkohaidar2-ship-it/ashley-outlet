@@ -50,17 +50,27 @@ export default function ProductCard({
 
         {/* Discount Badge */}
         {discountPercent > 0 && (
-          <div className="absolute top-2.5 start-2.5 bg-red-600 text-white font-black text-xs px-2 py-0.5 rounded-lg shadow-sm">
-            {discountPercent}%-
+          <div className="absolute top-2.5 start-2.5 bg-red-600 text-white font-black text-xs px-2.5 py-1 rounded-xl shadow-md backdrop-blur-xs flex items-center gap-1">
+            <span>{discountPercent}%-</span>
+            <span className="text-[10px] font-medium opacity-90">داشکاندن</span>
           </div>
         )}
 
-        {/* Stock Badge - only if out of stock to reduce clutter */}
-        {isOutOfStock && (
-          <div className="absolute top-2.5 end-2.5 text-[10px] font-bold px-2 py-0.5 rounded-lg bg-rose-100/95 text-rose-700 border border-rose-200 shadow-xs">
-            {t.outOfStock}
-          </div>
-        )}
+        {/* Stock Badge - Always show quantity or out of stock */}
+        <div className={`absolute top-2.5 end-2.5 text-[11px] font-bold px-2.5 py-1 rounded-xl shadow-md backdrop-blur-md flex items-center gap-1.5 ${
+          isOutOfStock 
+            ? 'bg-rose-600 text-white shadow-xs' 
+            : 'bg-slate-900/85 text-white border border-white/20'
+        }`}>
+          {isOutOfStock ? (
+            <span>{t.outOfStock || 'تەواوبووە'}</span>
+          ) : (
+            <>
+              <span className="text-slate-300 font-medium text-[10px]">عدد:</span>
+              <span className="font-extrabold text-amber-300">{model.stock}</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Content Body */}
@@ -97,9 +107,14 @@ export default function ProductCard({
         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
           <div>
             {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-              <span className="text-[10px] text-slate-400 line-through block font-semibold leading-none mb-1">
-                {model.originalPrice.toLocaleString()} {t.currency}
-              </span>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[11px] text-slate-400 line-through font-semibold leading-none">
+                  {model.originalPrice.toLocaleString()} {t.currency}
+                </span>
+                <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-md leading-none">
+                  {discountPercent}%-
+                </span>
+              </div>
             )}
             <div className="text-sm sm:text-base font-black text-red-600 leading-none flex items-baseline gap-1 tracking-tight">
               <span>{model.salePrice ? model.salePrice.toLocaleString() : '0'}</span>

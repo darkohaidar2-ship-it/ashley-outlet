@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check } from 'lucide-react';
 
 export default function ProductModal({
   model,
@@ -11,7 +11,29 @@ export default function ProductModal({
   onPrint,
   onOpenSlideshow
 }) {
+  const [copied, setCopied] = useState(false);
+
   if (!model) return null;
+
+  const handleCopyLink = async () => {
+    const url = `${window.location.origin}/?model=${model.id}`;
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch (e) {
+      console.warn('Copy link error:', e);
+    }
+  };
 
   const discountPercent = model.originalPrice && model.originalPrice > model.salePrice
     ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
@@ -157,14 +179,31 @@ export default function ProductModal({
             )}
           </div>
 
-          {/* Print Trigger Button */}
-          <div className="mt-6 pt-4 border-t border-slate-100">
+          {/* Action Buttons: Print & Share Link */}
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
             <button
               onClick={() => onPrint(model)}
-              className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98"
+              className="flex-1 py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98"
             >
               <Printer className="w-5 h-5 text-red-500" />
               <span>{t.print}</span>
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs"
+              title="کۆپیکردنی لینکی مۆدێل"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span className="text-xs text-emerald-700">کۆپی کرا</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="w-4 h-4 text-slate-600" />
+                  <span className="text-xs text-slate-700">بەستەر</span>
+                </>
+              )}
             </button>
           </div>
 

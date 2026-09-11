@@ -15,7 +15,9 @@ import {
   ImageOff,
   X,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 export default function SlideshowView({
@@ -47,11 +49,17 @@ export default function SlideshowView({
 
   // Auto-hide controls in Ambient / Zen mode, fullscreen, or during autoplay
   const resetControlsVisibility = () => {
+    // If Zen mode is locked, controls should never pop up automatically!
+    if (zenMode) {
+      setIsControlsVisible(false);
+      return;
+    }
+
     setIsControlsVisible(true);
     if (hideControlsTimer.current) {
       clearTimeout(hideControlsTimer.current);
     }
-    if (isPlaying || zenMode || isFullscreen) {
+    if (isPlaying || isFullscreen) {
       hideControlsTimer.current = setTimeout(() => {
         setIsControlsVisible(false);
       }, 3800);
@@ -59,11 +67,16 @@ export default function SlideshowView({
   };
 
   useEffect(() => {
-    resetControlsVisibility();
+    if (zenMode) {
+      setIsControlsVisible(false);
+      if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+    } else {
+      resetControlsVisibility();
+    }
     return () => {
       if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
     };
-  }, [isPlaying, zenMode, isFullscreen, currentIndex]);
+  }, [isPlaying, isFullscreen, zenMode]);
 
   // Filter models strictly by Category & Collection
   const filteredModels = models.filter((model) => {
@@ -360,12 +373,29 @@ export default function SlideshowView({
         {activeModel ? (
           <div className="flex-1 flex flex-col h-full relative">
             
+            {/* Discrete Floating Exit Button when Zen Mode is Locked */}
+            {zenMode && (
+              <div className="absolute top-3 end-3 z-30 animate-fadeIn">
+                <button
+                  onClick={() => {
+                    setZenMode(false);
+                    setIsControlsVisible(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-black/70 hover:bg-black/90 text-white rounded-full backdrop-blur-xl border border-white/20 shadow-2xl text-xs font-black transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  title="دەرچوون لە دۆخی بێدەنگ"
+                >
+                  <Unlock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>دەرچوون لە بێدەنگ</span>
+                </button>
+              </div>
+            )}
+
             {/* Top Toolbar Overlay: Filter Button, Ashley Logo Badge, Controls & Fullscreen */}
             <div className={`absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none transition-all duration-500 ${
-              isControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+              !zenMode && isControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
             }`}>
               
-              <div className={`flex items-center gap-2 ${isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+              <div className={`flex items-center gap-2 ${!zenMode && isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 {/* Small Filter Button (کە کلیک لەسەری کرا فلتەر و شت دەکرێتەوە) */}
                 <button
                   onClick={() => {
@@ -417,30 +447,23 @@ export default function SlideshowView({
               </div>
 
               {/* Controls (Play/Pause, Fullscreen, Print, Zen Mode) */}
-              <div className={`flex items-center gap-1.5 ${isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
+              <div className={`flex items-center gap-1.5 ${!zenMode && isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 
                 {/* Ambient / Zen Mode Toggle (Showroom luxury mode) */}
                 <button
                   onClick={() => {
-                    const nextZen = !zenMode;
-                    setZenMode(nextZen);
-                    if (nextZen) {
-                      if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-                      hideControlsTimer.current = setTimeout(() => setIsControlsVisible(false), 1800);
-                    } else {
-                      setIsControlsVisible(true);
-                    }
+                    setZenMode(true);
+                    setIsControlsVisible(false);
+                    if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
                   }}
                   className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
-                    zenMode 
-                      ? 'bg-amber-500 text-white shadow-amber-500/25 ring-2 ring-amber-300' 
-                      : isFullscreen
+                    isFullscreen
                       ? 'bg-slate-900/90 text-white border border-white/15 hover:bg-slate-800'
                       : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
                   }`}
-                  title={zenMode ? 'دۆخی بێدەنگ چالاکە (تەنها وێنە و نرخ)' : 'دۆخی پێشانگای بێدەنگ (Zen Mode)'}
+                  title="دۆخی پێشانگای بێدەنگ (Zen Mode)"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                 </button>
 
                 {/* Auto Play / Pause */}
@@ -508,7 +531,9 @@ export default function SlideshowView({
             <div 
               onClick={resetControlsVisibility}
               onMouseMove={resetControlsVisibility}
-              className="flex-1 relative flex flex-col items-center justify-center p-2.5 sm:p-4 overflow-hidden touch-pan-y select-none cursor-pointer"
+              className={`flex-1 relative flex flex-col items-center justify-center overflow-hidden touch-pan-y select-none cursor-pointer ${
+                zenMode ? 'p-0' : 'p-1 sm:p-2.5'
+              }`}
               onTouchStart={(e) => {
                 handleTouchStart(e);
                 resetControlsVisibility();
@@ -518,7 +543,9 @@ export default function SlideshowView({
               
               {/* Frosted Glass Frame with Dynamic CSS Variables */}
               <div 
-                className="glass-image-frame w-full h-full flex items-center justify-center p-3 sm:p-6 relative"
+                className={`w-full h-full flex items-center justify-center relative ${
+                  zenMode ? 'p-0 bg-transparent border-0' : 'glass-image-frame p-1.5 sm:p-3'
+                }`}
                 style={{
                   '--morph-duration': `${transitionTime}s`,
                   '--shimmer-interval': `${shimmerTime}s`
@@ -538,7 +565,7 @@ export default function SlideshowView({
                     src={activeModel.image}
                     alt={activeModel.name}
                     style={{ animationDuration: `${transitionTime}s` }}
-                    className="animate-morph-image max-h-full max-w-full object-contain drop-shadow-xl z-10 select-none pointer-events-none"
+                    className="animate-morph-image max-h-[88vh] max-w-full w-auto h-auto object-contain drop-shadow-2xl z-10 select-none pointer-events-none"
                     draggable={false}
                   />
                 ) : (
@@ -560,7 +587,7 @@ export default function SlideshowView({
                   resetControlsVisibility();
                 }}
                 className={`absolute start-3 sm:start-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all duration-500 active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer ${
-                  isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                  !zenMode && isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
                 title={t.previous}
                 aria-label="Previous Slide"
@@ -576,7 +603,7 @@ export default function SlideshowView({
                   resetControlsVisibility();
                 }}
                 className={`absolute end-3 sm:end-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all duration-500 active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer ${
-                  isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                  !zenMode && isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                 }`}
                 title={t.next}
                 aria-label="Next Slide"
@@ -585,7 +612,7 @@ export default function SlideshowView({
               </button>
 
               {/* Touch & Tablet Interactive Pagination Indicator */}
-              {filteredModels.length > 1 && (
+              {filteredModels.length > 1 && !zenMode && (
                 <div className="absolute bottom-2.5 sm:bottom-3 inset-x-0 z-20 flex items-center justify-center gap-1.5 pointer-events-none">
                   <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 pointer-events-auto border border-white/10">
                     {filteredModels.length <= 12 ? (
@@ -613,16 +640,28 @@ export default function SlideshowView({
               )}
             </div>
 
-            {/* BOTTOM INFORMATION BAR (Morph Transition) */}
-            <div 
-              key={activeModel.id}
-              style={{ animationDuration: `${transitionTime}s` }}
-              className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 transition-all duration-500 ${
-                isFullscreen 
-                  ? 'bg-slate-900/90 border-white/10 text-white' 
-                  : 'bg-white/95 border-slate-200 text-slate-900'
-              } ${!isControlsVisible && zenMode ? 'opacity-90 py-2 sm:py-2.5' : 'opacity-100'}`}
-            >
+            {/* Minimal Floating Corner Tag in Locked Zen Mode */}
+            {zenMode ? (
+              <div className="absolute bottom-4 start-4 z-30 bg-black/65 backdrop-blur-xl border border-white/15 px-4 py-2 rounded-2xl shadow-2xl text-white flex items-center gap-3 select-none pointer-events-none animate-fadeIn">
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
+                  <span className="text-[10px] text-red-400 font-bold uppercase">{getCategoryName(activeModel.categoryId)}</span>
+                </div>
+                <div className="text-base sm:text-lg font-black text-red-500 leading-none">
+                  {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} {t.currency}
+                </div>
+              </div>
+            ) : (
+              /* Standard BOTTOM INFORMATION BAR (Morph Transition) */
+              <div 
+                key={activeModel.id}
+                style={{ animationDuration: `${transitionTime}s` }}
+                className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 transition-all duration-500 ${
+                  isFullscreen 
+                    ? 'bg-slate-900/90 border-white/10 text-white' 
+                    : 'bg-white/95 border-slate-200 text-slate-900'
+                }`}
+              >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 
                 {/* Left: Category, Title, Stock, Notes */}
@@ -702,6 +741,7 @@ export default function SlideshowView({
 
               </div>
             </div>
+          )}
 
           </div>
         ) : (
