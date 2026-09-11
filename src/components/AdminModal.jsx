@@ -654,9 +654,6 @@ export default function AdminModal({
                         <label className="text-xs font-bold text-slate-800 block">
                           {t.dwellTimeLabel}
                         </label>
-                        <p className="text-[10px] text-slate-500 leading-tight">
-                          {t.dwellTimeDesc}
-                        </p>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 bg-white border border-red-200 text-red-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
@@ -717,9 +714,6 @@ export default function AdminModal({
                         <label className="text-xs font-bold text-slate-800 block">
                           {t.transitionTimeLabel}
                         </label>
-                        <p className="text-[10px] text-slate-500 leading-tight">
-                          {t.transitionTimeDesc}
-                        </p>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 bg-white border border-blue-200 text-blue-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
@@ -780,9 +774,6 @@ export default function AdminModal({
                         <label className="text-xs font-bold text-slate-800 block">
                           {t.shimmerTimeLabel}
                         </label>
-                        <p className="text-[10px] text-slate-500 leading-tight">
-                          {t.shimmerTimeDesc}
-                        </p>
                       </div>
                     </div>
                     <span className="px-2.5 py-1 bg-white border border-amber-200 text-amber-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
@@ -827,78 +818,6 @@ export default function AdminModal({
                         }`}
                       >
                         {val} {t.seconds}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. UI Scale / Zoom Out (قەبارەی گشتی وێبسایت و تێکست) */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-                        <ZoomIn className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-800 block">
-                          {t.uiScaleLabel}
-                        </label>
-                        <p className="text-[10px] text-slate-500 leading-tight">
-                          {t.uiScaleDesc}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 bg-white border border-purple-200 text-purple-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
-                      {Math.round(uiScale * 100)}%
-                    </span>
-                  </div>
-
-                  {/* Range Slider & Synced Value */}
-                  <div className="mt-3 flex items-center gap-3">
-                    <input
-                      type="range"
-                      min="0.70"
-                      max="1.00"
-                      step="0.05"
-                      value={uiScale}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        setUiScale(val);
-                        document.documentElement.style.setProperty('--ui-scale', val);
-                        document.documentElement.style.zoom = val;
-                      }}
-                      className="w-full accent-purple-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
-                    />
-                    <span className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center text-slate-800 shadow-2xs">
-                      {Math.round(uiScale * 100)}%
-                    </span>
-                  </div>
-
-                  {/* Presets */}
-                  <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
-                    {[
-                      { label: '75% (ئێجگار ورد)', val: 0.75 },
-                      { label: '80% (ستانداردی ورد)', val: 0.80 },
-                      { label: '85%', val: 0.85 },
-                      { label: '90%', val: 0.90 },
-                      { label: '100% (ئاسایی)', val: 1.00 }
-                    ].map((item) => (
-                      <button
-                        key={item.val}
-                        type="button"
-                        onClick={() => {
-                          setUiScale(item.val);
-                          document.documentElement.style.setProperty('--ui-scale', item.val);
-                          document.documentElement.style.zoom = item.val;
-                        }}
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
-                          Math.abs(uiScale - item.val) < 0.01 
-                            ? 'bg-purple-600 text-white shadow-xs' 
-                            : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
-                        }`}
-                      >
-                        {item.label}
                       </button>
                     ))}
                   </div>

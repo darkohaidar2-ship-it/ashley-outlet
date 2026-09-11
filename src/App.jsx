@@ -288,6 +288,8 @@ export default function App() {
           isAdmin={isAdmin}
           setIsAdmin={setIsAdmin}
           logoUrl={data.settings?.logoUrl || ''}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
           openLoginModal={() => setAdminModal({ isOpen: true, type: 'login', editingModel: null })}
           openNewModelModal={() => setAdminModal({ isOpen: true, type: 'model', editingModel: null })}
           openNewCategoryModal={() => setAdminModal({ isOpen: true, type: 'category', editingModel: null })}
@@ -337,7 +339,7 @@ export default function App() {
         ) : (
           /* GRID VIEW: Windows 11 Modern Cards Layout */
           <>
-            {/* Filter & Search Bar */}
+            {/* Streamlined Category Strip */}
             <FilterBar
               t={t}
               lang={lang}
@@ -347,8 +349,6 @@ export default function App() {
               setSelectedCategory={setSelectedCategory}
               selectedCollection={selectedCollection}
               setSelectedCollection={setSelectedCollection}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
               totalCount={data.models?.length || 0}
               filteredCount={filteredModels.length}
             />

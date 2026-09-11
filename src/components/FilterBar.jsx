@@ -1,5 +1,4 @@
 import React from 'react';
-import { Search, X, Layers, SlidersHorizontal } from 'lucide-react';
 
 export default function FilterBar({
   t,
@@ -10,8 +9,6 @@ export default function FilterBar({
   setSelectedCategory,
   selectedCollection,
   setSelectedCollection,
-  searchQuery,
-  setSearchQuery,
   totalCount,
   filteredCount
 }) {
@@ -27,46 +24,31 @@ export default function FilterBar({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 pb-1 no-print">
-      
-      {/* 1. Search Bar */}
-      <div className="relative mb-3">
-        <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none text-slate-400">
-          <Search className="w-4 h-4" />
-        </div>
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t.searchPlaceholder}
-          className="w-full ps-10 pe-10 py-2.5 bg-white/90 backdrop-blur-md border border-slate-200/90 rounded-xl text-slate-800 placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 shadow-2xs transition-all"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      {/* 2. Category Filter Pills (Windows 11 Fluent style) */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 no-print">
+      {/* Single Unified Horizontal Pill Strip */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        
+        {/* All Pill with Count */}
         <button
           onClick={() => {
             setSelectedCategory('all');
             setSelectedCollection('all');
           }}
-          className={`shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs ${
+          className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             selectedCategory === 'all'
-              ? 'bg-slate-900 text-white shadow-md'
+              ? 'bg-slate-900 text-white shadow-xs'
               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
           }`}
         >
-          {t.allCategories}
+          <span>{t.allCategories}</span>
+          <span className={`ms-1.5 text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+            selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+          }`}>
+            {totalCount}
+          </span>
         </button>
 
+        {/* Categories */}
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id;
           return (
@@ -76,9 +58,9 @@ export default function FilterBar({
                 setSelectedCategory(cat.id);
                 setSelectedCollection('all');
               }}
-              className={`shrink-0 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-red-600 text-white shadow-md shadow-red-500/20'
+                  ? 'bg-red-600 text-white shadow-xs'
                   : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
@@ -86,45 +68,30 @@ export default function FilterBar({
             </button>
           );
         })}
+
+        {/* Collections in the SAME row if a category is selected */}
+        {relevantCollections.length > 0 && selectedCategory !== 'all' && (
+          <>
+            <span className="text-slate-300 mx-0.5">•</span>
+            {relevantCollections.map((col) => {
+              const isColSelected = selectedCollection === col.id;
+              return (
+                <button
+                  key={col.id}
+                  onClick={() => setSelectedCollection(isColSelected ? 'all' : col.id)}
+                  className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    isColSelected
+                      ? 'bg-red-100 text-red-700 font-bold border border-red-200'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
+                  }`}
+                >
+                  {col.name}
+                </button>
+              );
+            })}
+          </>
+        )}
       </div>
-
-      {/* 3. Sub-Collections Bar (If any exist for selected category) */}
-      {relevantCollections.length > 0 && (
-        <div className="flex items-center gap-1.5 mt-2 overflow-x-auto pb-1 text-xs scrollbar-none">
-          <button
-            onClick={() => setSelectedCollection('all')}
-            className={`px-3 py-1 rounded-lg font-medium transition-all ${
-              selectedCollection === 'all'
-                ? 'bg-slate-200 text-slate-900 font-bold'
-                : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/80'
-            }`}
-          >
-            {t.allCollections}
-          </button>
-
-          {relevantCollections.map((col) => (
-            <button
-              key={col.id}
-              onClick={() => setSelectedCollection(col.id)}
-              className={`px-3 py-1 rounded-lg font-medium transition-all whitespace-nowrap ${
-                selectedCollection === col.id
-                  ? 'bg-red-100 text-red-700 font-bold border border-red-200'
-                  : 'bg-slate-100/70 text-slate-600 hover:bg-slate-200/80'
-              }`}
-            >
-              {col.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Quick Summary status */}
-      <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1 font-medium">
-        <span>
-          <strong className="text-slate-700 font-bold">{filteredCount}</strong> مۆدێل بەردەستە
-        </span>
-      </div>
-
     </div>
   );
 }
