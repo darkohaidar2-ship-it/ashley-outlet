@@ -92,6 +92,34 @@
   will-change: transform, opacity;
 }
 
+@keyframes slideInRightDrawer {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+[dir="rtl"] .animate-slideInRight {
+  animation: slideInRightDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+[dir="ltr"] .animate-slideInRight {
+  animation: slideInRightDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fadeInBackdrop {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeInBackdrop 0.2s ease-out both;
+}
+
 /* ===================================================
    FROSTED GLASS FRAME & SHIMMER REFLECTION SWEEP
    =================================================== */

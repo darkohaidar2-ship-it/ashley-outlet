@@ -12,9 +12,9 @@ import {
   Maximize2,
   Minimize2,
   Sliders,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ImageOff
+  ImageOff,
+  X,
+  RotateCcw
 } from 'lucide-react';
 
 export default function SlideshowView({
@@ -36,7 +36,7 @@ export default function SlideshowView({
   const [sidebarCategory, setSidebarCategory] = useState('all');
   const [sidebarCollection, setSidebarCollection] = useState('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const containerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -174,154 +174,202 @@ export default function SlideshowView({
   return (
     <div 
       ref={containerRef}
-      className={`w-full bg-slate-100 flex flex-col md:flex-row gap-2 sm:gap-2.5 p-1.5 sm:p-2.5 md:p-3 overflow-hidden no-print select-none transition-all ${
+      className={`w-full flex flex-col overflow-hidden no-print select-none transition-all relative ${
         isFullscreen 
           ? 'fixed inset-0 z-50 h-screen w-screen bg-slate-950 p-0' 
-          : 'h-[calc(100dvh-54px)] sm:h-[calc(100dvh-60px)] md:h-[calc(100dvh-68px)]'
+          : 'h-[calc(100dvh-54px)] sm:h-[calc(100dvh-60px)] md:h-[calc(100dvh-68px)] bg-slate-100 p-1.5 sm:p-2.5 md:p-3'
       }`}
     >
       
-      {/* 1. SLIM THUMBNAIL STRIP (شریتی زۆر ورد و جوانی تەنیشت) */}
-      {isSidebarOpen ? (
-        <aside className="w-full md:w-56 lg:w-64 max-h-56 md:max-h-none bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl shadow-xs flex flex-col overflow-hidden shrink-0 transition-all duration-300">
-          
-          {/* Compact Filters Header */}
-          <div className="p-2.5 border-b border-slate-100 space-y-1.5 bg-slate-50/70">
+      {/* 1. SLIDE-OVER FILTER & THUMBNAILS DRAWER (دەستە ڕاست / لەسەر داوای بەکارهێنەر) */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden no-print">
+          {/* Backdrop Blur */}
+          <div 
+            onClick={() => setIsFilterOpen(false)}
+            className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer animate-fadeIn"
+          />
+
+          {/* Floating Drawer Container on the right side (RTL start / right) */}
+          <aside className="absolute inset-y-0 start-0 max-w-full w-80 sm:w-88 bg-white/95 backdrop-blur-2xl border-e border-slate-200 shadow-2xl flex flex-col overflow-hidden animate-slideInRight">
             
-            <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 pb-0.5">
-              <span className="flex items-center gap-1">
-                <Filter className="w-3 h-3 text-red-600" />
-                فلتەری سڵاید
-              </span>
-              <div className="flex items-center gap-1.5">
-                {filteredModels.length > 0 && (
-                  <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.2 rounded-full font-extrabold">
-                    {currentIndex + 1} / {filteredModels.length}
+            {/* Drawer Header */}
+            <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
+                  <Filter className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 leading-tight">
+                    فلتەر و گەڕانی مۆدێلەکان
+                  </h4>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    {filteredModels.length} مۆدێل لەم بەشەدایە
                   </span>
-                )}
-                {/* Collapse Sidebar Button */}
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-lg transition-colors"
-                  title="شاردنەوەی شریت / پێشاندانی تەواو"
-                >
-                  <PanelLeftClose className="w-3.5 h-3.5 rtl:rotate-180" />
-                </button>
+                </div>
               </div>
+
+              <button
+                onClick={() => setIsFilterOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-colors cursor-pointer"
+                title="داخستن"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Category Selector */}
-            <select
-              value={sidebarCategory}
-              onChange={(e) => {
-                setSidebarCategory(e.target.value);
-                setSidebarCollection('all');
-              }}
-              className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
-            >
-              <option value="all">{t.allCategories}</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {lang === 'ku' ? c.name_ku || c.name : lang === 'ar' ? c.name_ar || c.name : c.name_en || c.name}
-                </option>
-              ))}
-            </select>
-
-            {/* Collection Selector */}
-            <select
-              value={sidebarCollection}
-              onChange={(e) => setSidebarCollection(e.target.value)}
-              className="w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
-            >
-              <option value="all">{t.allCollections}</option>
-              {relevantCollections.map((col) => (
-                <option key={col.id} value={col.id}>
-                  {col.name}
-                </option>
-              ))}
-            </select>
-
-          </div>
-
-          {/* Delicate Mini Thumbnails List */}
-          <div className="flex-1 overflow-y-auto p-1.5 space-y-1.5 scrollbar-none">
-            {filteredModels.length === 0 ? (
-              <div className="text-center py-10 text-[11px] text-slate-400">
-                {t.noResultsFound}
+            {/* Filters Controls */}
+            <div className="p-3.5 space-y-2.5 border-b border-slate-100 bg-slate-50/40">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                  {t.category}
+                </label>
+                <select
+                  value={sidebarCategory}
+                  onChange={(e) => {
+                    setSidebarCategory(e.target.value);
+                    setSidebarCollection('all');
+                  }}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                >
+                  <option value="all">{t.allCategories}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {lang === 'ku' ? c.name_ku || c.name : lang === 'ar' ? c.name_ar || c.name : c.name_en || c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            ) : (
-              filteredModels.map((model, idx) => {
-                const isSelected = idx === currentIndex;
-                return (
-                  <div
-                    key={model.id}
-                    onClick={() => setCurrentIndex(idx)}
-                    className={`flex items-center gap-2 p-1.5 rounded-xl cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-red-50 border-2 border-red-500 shadow-xs'
-                        : 'hover:bg-slate-50 border border-transparent opacity-75 hover:opacity-100'
-                    }`}
-                  >
-                    {model.image ? (
-                      <img
-                        src={model.image}
-                        alt={model.name}
-                        className="w-11 h-11 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
-                      />
-                    ) : (
-                      <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex flex-col items-center justify-center text-slate-400 p-0.5">
-                        <ImageOff className="w-3.5 h-3.5" />
-                        <span className="text-[7px] font-bold mt-0.5 leading-none">بێ وێنە</span>
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h5 className={`text-[11px] font-bold truncate leading-tight ${isSelected ? 'text-red-700' : 'text-slate-800'}`}>
-                        {model.name}
-                      </h5>
-                      <div className="flex items-center justify-between mt-0.5">
-                        {model.sku && model.sku !== model.name && (
-                          <span className="text-[9px] font-mono text-slate-400 truncate">
-                            {model.sku}
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                  {t.collection}
+                </label>
+                <select
+                  value={sidebarCollection}
+                  onChange={(e) => setSidebarCollection(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                >
+                  <option value="all">{t.allCollections}</option>
+                  {relevantCollections.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {(sidebarCategory !== 'all' || sidebarCollection !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSidebarCategory('all');
+                    setSidebarCollection('all');
+                  }}
+                  className="w-full py-1 text-center text-[10px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>پاککردنەوەی فلتەرەکان (Reset)</span>
+                </button>
+              )}
+            </div>
+
+            {/* Scrollable Thumbnails List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
+              {filteredModels.length === 0 ? (
+                <div className="text-center py-12 text-xs text-slate-400">
+                  {t.noResultsFound}
+                </div>
+              ) : (
+                filteredModels.map((model, idx) => {
+                  const isSelected = idx === currentIndex;
+                  return (
+                    <div
+                      key={model.id}
+                      onClick={() => {
+                        setCurrentIndex(idx);
+                      }}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-red-50 border-2 border-red-500 shadow-xs'
+                          : 'hover:bg-slate-50 border border-transparent opacity-85 hover:opacity-100'
+                      }`}
+                    >
+                      {model.image ? (
+                        <img
+                          src={model.image}
+                          alt={model.name}
+                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 shrink-0 flex flex-col items-center justify-center text-slate-400 p-0.5">
+                          <ImageOff className="w-4 h-4" />
+                          <span className="text-[7px] font-bold mt-0.5 leading-none">بێ وێنە</span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h5 className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-red-700' : 'text-slate-800'}`}>
+                          {model.name}
+                        </h5>
+                        <div className="flex items-center justify-between mt-1">
+                          {model.sku && model.sku !== model.name && (
+                            <span className="text-[9px] font-mono text-slate-400 truncate">
+                              {model.sku}
+                            </span>
+                          )}
+                          <span className="text-xs font-black text-red-600 ms-auto">
+                            {model.salePrice?.toLocaleString()} {t.currency}
                           </span>
-                        )}
-                        <span className="text-[10px] font-black text-red-600 ms-auto">
-                          {model.salePrice?.toLocaleString()} {t.currency}
-                        </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
 
-        </aside>
-      ) : null}
+          </aside>
+        </div>
+      )}
 
       {/* 2. FULLSCREEN HERO MODEL & BOTTOM INFO BAR (مۆدێلە گەورەکە بە ستایلی مۆرف) */}
-      <main className="flex-1 bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden flex flex-col relative transition-all">
+      <main className={`flex-1 overflow-hidden flex flex-col relative transition-all ${
+        isFullscreen 
+          ? 'bg-slate-950 border-0 rounded-none' 
+          : 'bg-white border border-slate-200 rounded-2xl shadow-xs'
+      }`}>
         
         {activeModel ? (
           <div className="flex-1 flex flex-col h-full relative">
             
-            {/* Top Toolbar Overlay: Ashley Logo Badge, Sidebar Reopen, Controls & Fullscreen */}
+            {/* Top Toolbar Overlay: Filter Button, Ashley Logo Badge, Controls & Fullscreen */}
             <div className="absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none">
               
               <div className="flex items-center gap-2 pointer-events-auto">
-                {/* Sidebar Reopen Toggle (When Sidebar is Collapsed) */}
-                {!isSidebarOpen && (
-                  <button
-                    onClick={() => setIsSidebarOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/90 hover:bg-white text-slate-700 border border-slate-200 rounded-xl shadow-xs text-xs font-bold transition-all backdrop-blur-md"
-                    title="پیشاندانی شریتی مۆدێلەکان"
-                  >
-                    <PanelLeftOpen className="w-3.5 h-3.5 text-red-600 rtl:rotate-180" />
-                    <span className="hidden sm:inline">مۆدێلەکان</span>
-                  </button>
-                )}
+                {/* Small Filter Button (کە کلیک لەسەری کرا فلتەر و شت دەکرێتەوە) */}
+                <button
+                  onClick={() => setIsFilterOpen(true)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-md text-xs font-bold transition-all backdrop-blur-md active:scale-95 cursor-pointer ${
+                    isFullscreen
+                      ? 'bg-slate-900/90 hover:bg-slate-800 text-white border border-white/20'
+                      : 'bg-white/95 hover:bg-white text-slate-800 border border-slate-200/90'
+                  }`}
+                  title="فلتەر و لیستی مۆدێلەکان"
+                >
+                  <Filter className="w-3.5 h-3.5 text-red-600" />
+                  <span>فلتەر و مۆدێلەکان</span>
+                  {filteredModels.length > 0 && (
+                    <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                      {currentIndex + 1} / {filteredModels.length}
+                    </span>
+                  )}
+                </button>
 
                 {/* Corner Ashley Logo Badge */}
-                <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xs border border-slate-200/80">
+                <div className={`hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl shadow-xs backdrop-blur-md ${
+                  isFullscreen
+                    ? 'bg-slate-900/80 border border-white/10 text-white'
+                    : 'bg-white/90 border border-slate-200/80 text-slate-900'
+                }`}>
                   {logoUrl ? (
                     <img
                       src={logoUrl}
@@ -334,7 +382,7 @@ export default function SlideshowView({
                     </div>
                   )}
                   <div className="flex items-center gap-1 leading-none">
-                    <span className="font-extrabold text-xs tracking-tight text-slate-900">
+                    <span className="font-extrabold text-xs tracking-tight">
                       ASHLEY
                     </span>
                     <span className="bg-red-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
@@ -498,30 +546,38 @@ export default function SlideshowView({
             <div 
               key={activeModel.id}
               style={{ animationDuration: `${transitionTime}s` }}
-              className="animate-morph-content p-3 sm:p-3.5 bg-white/95 border-t border-slate-200 backdrop-blur-xl shadow-lg shrink-0"
+              className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 ${
+                isFullscreen 
+                  ? 'bg-slate-900/90 border-white/10 text-white' 
+                  : 'bg-white/95 border-slate-200 text-slate-900'
+              }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 
                 {/* Left: Category, Title, SKU, Stock, Notes */}
                 <div className="flex-1 min-w-0">
                   
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 uppercase mb-0.5">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 uppercase mb-0.5">
                     <span>{getCategoryName(activeModel.categoryId)}</span>
                     {getCollectionName(activeModel.collectionId) && (
                       <>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-slate-700">{getCollectionName(activeModel.collectionId)}</span>
+                        <span className="text-slate-400">•</span>
+                        <span className={isFullscreen ? 'text-slate-300' : 'text-slate-700'}>{getCollectionName(activeModel.collectionId)}</span>
                       </>
                     )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                    <h2 className={`text-base sm:text-lg font-black leading-tight ${
+                      isFullscreen ? 'text-white' : 'text-slate-900'
+                    }`}>
                       {activeModel.name}
                     </h2>
 
                     {activeModel.sku && activeModel.sku !== activeModel.name && (
-                      <span className="font-mono text-[10px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
+                      <span className={`font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                        isFullscreen ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-700'
+                      }`}>
                         SKU: {activeModel.sku}
                       </span>
                     )}
@@ -545,7 +601,9 @@ export default function SlideshowView({
 
                   {/* Notes & Dimensions */}
                   {activeModel.notes && (
-                    <p className="mt-1 text-[11px] sm:text-xs text-slate-500 max-w-3xl truncate">
+                    <p className={`mt-1 text-[11px] sm:text-xs max-w-3xl truncate ${
+                      isFullscreen ? 'text-slate-300' : 'text-slate-500'
+                    }`}>
                       {activeModel.notes}
                     </p>
                   )}
@@ -553,7 +611,9 @@ export default function SlideshowView({
                 </div>
 
                 {/* Right: Pricing Box in Iraqi Dinar (د.ع) */}
-                <div className="flex items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-s border-slate-200 pt-2 sm:pt-0 sm:ps-5 shrink-0">
+                <div className={`flex items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-s pt-2 sm:pt-0 sm:ps-5 shrink-0 ${
+                  isFullscreen ? 'border-white/10' : 'border-slate-200'
+                }`}>
                   
                   <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-0">
                     {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
