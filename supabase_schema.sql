@@ -71,21 +71,25 @@ drop policy if exists "Public Settings Access" on public.settings;
 create policy "Public Settings Access" on public.settings for all using (true) with check (true);
 
 -- 7. ENABLE REALTIME ON ALL TABLES
--- This allows every iPad and browser to receive instantaneous updates when data changes!
+-- Safe realtime publication: ignores if already added
 do $$
 begin
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'categories') then
+  begin
     alter publication supabase_realtime add table public.categories;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'collections') then
+  exception when others then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.collections;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'models') then
+  exception when others then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.models;
-  end if;
-  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'settings') then
+  exception when others then null;
+  end;
+  begin
     alter publication supabase_realtime add table public.settings;
-  end if;
+  exception when others then null;
+  end;
 end $$;
 
 -- 8. STORAGE BUCKET CREATION FOR PRODUCT IMAGES & LOGO
