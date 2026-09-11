@@ -44,17 +44,14 @@ export default function Navbar({
           
           {/* Logo & Outlet Branding */}
           <div className="flex items-center space-x-2 rtl:space-x-reverse shrink-0">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt="Ashley Outlet"
-                className="h-8 sm:h-9 max-w-[130px] object-contain rounded-lg"
-              />
-            ) : (
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-linear-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center shadow-xs text-white font-black text-base sm:text-lg tracking-tighter shrink-0">
-                A
-              </div>
-            )}
+            <img
+              src={logoUrl || '/app-logo.jpg'}
+              alt="Ashley Outlet"
+              className="h-8 sm:h-9 max-w-[130px] object-contain rounded-lg"
+              onError={(e) => {
+                e.target.style.display = 'none';
+              }}
+            />
 
             <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
               <span className="font-black text-base sm:text-lg tracking-tight text-slate-900">

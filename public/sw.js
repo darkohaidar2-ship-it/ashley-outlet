@@ -1,8 +1,9 @@
-﻿const CACHE_NAME = 'ashley-outlet-v1';
+const CACHE_NAME = 'ashley-outlet-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/app-logo.jpg',
   '/pwa-icon.svg'
 ];
 

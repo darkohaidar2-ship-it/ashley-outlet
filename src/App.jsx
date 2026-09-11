@@ -111,6 +111,78 @@ export default function App() {
     localStorage.setItem('ashley_viewMode', viewMode);
   }, [viewMode]);
 
+  // Dynamic App Icon, Favicon & Apple Touch Icon Synchronization
+  useEffect(() => {
+    const activeLogo = data.settings?.logoUrl || '/app-logo.jpg';
+    if (!activeLogo) return;
+
+    // 1. Browser Tab Favicon links
+    const favicons = document.querySelectorAll("link[rel*='icon']");
+    if (favicons.length > 0) {
+      favicons.forEach(el => {
+        el.href = activeLogo;
+      });
+    } else {
+      const link = document.createElement('link');
+      link.rel = 'icon';
+      link.href = activeLogo;
+      document.head.appendChild(link);
+    }
+
+    // 2. Apple Touch Icon links (Safari on iPad / iPhone Home Screen)
+    const appleIcons = document.querySelectorAll("link[rel*='apple-touch-icon']");
+    if (appleIcons.length > 0) {
+      appleIcons.forEach(el => {
+        el.href = activeLogo;
+      });
+    } else {
+      const link = document.createElement('link');
+      link.rel = 'apple-touch-icon';
+      link.href = activeLogo;
+      document.head.appendChild(link);
+    }
+
+    // 3. PWA Dynamic Manifest
+    try {
+      const dynamicManifest = {
+        name: "Ashley Furniture Outlet | ئاوت لێتی ئاشڵی",
+        short_name: "Ashley Outlet",
+        description: "ئەلبوومی مۆبلیاتی ئاشڵی بۆ پیشاندانی کاڵاکان لەسەر ئایپاد و تابلێت",
+        start_url: "/",
+        id: "/",
+        scope: "/",
+        display: "standalone",
+        display_override: ["standalone", "fullscreen", "minimal-ui"],
+        background_color: "#ffffff",
+        theme_color: "#dc2626",
+        orientation: "any",
+        categories: ["shopping", "business", "lifestyle"],
+        icons: [
+          {
+            src: activeLogo,
+            sizes: "192x192 512x512",
+            type: activeLogo.endsWith('.svg') ? 'image/svg+xml' : 'image/jpeg',
+            purpose: "any maskable"
+          },
+          {
+            src: "/pwa-icon.svg",
+            sizes: "512x512",
+            type: "image/svg+xml",
+            purpose: "maskable"
+          }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(dynamicManifest)], { type: 'application/manifest+json' });
+      const manifestUrl = URL.createObjectURL(blob);
+      let manifestLink = document.querySelector("link[rel='manifest']");
+      if (manifestLink) {
+        manifestLink.href = manifestUrl;
+      }
+    } catch (e) {
+      console.warn('Dynamic manifest sync error:', e);
+    }
+  }, [data.settings?.logoUrl]);
+
   // Fetch catalog data (Supabase or Local fallback)
   const fetchData = async () => {
     try {
@@ -436,6 +508,7 @@ export default function App() {
           hasNativePrompt={!!deferredPrompt}
           onNativeInstall={handleNativeInstall}
           lang={lang}
+          logoUrl={data.settings?.logoUrl || '/app-logo.jpg'}
         />
 
       </div>

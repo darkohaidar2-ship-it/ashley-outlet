@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { 
   X, 
   Download, 
@@ -16,7 +16,8 @@ export default function InstallModal({
   isIOS,
   onNativeInstall,
   hasNativePrompt,
-  lang = 'ku'
+  lang = 'ku',
+  logoUrl = ''
 }) {
   if (!isOpen) return null;
 
@@ -34,8 +35,14 @@ export default function InstallModal({
 
         {/* Header Icon */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 text-white flex items-center justify-center shadow-lg shadow-red-500/20 shrink-0">
-            <Smartphone className="w-6 h-6" />
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-md shrink-0 overflow-hidden p-1">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Ashley Outlet" className="w-full h-full object-contain rounded-xl" />
+            ) : (
+              <div className="w-full h-full bg-linear-to-br from-red-600 to-rose-700 rounded-xl flex items-center justify-center text-white font-black text-lg">
+                A
+              </div>
+            )}
           </div>
           <div>
             <h3 className="font-extrabold text-base sm:text-lg text-slate-900 leading-tight">
