@@ -7,8 +7,14 @@
 -- 1. EXTENSIONS
 create extension if not exists "uuid-ossp";
 
+-- Clean up any existing old tables to avoid missing column conflicts
+drop table if exists public.models cascade;
+drop table if exists public.collections cascade;
+drop table if exists public.categories cascade;
+drop table if exists public.settings cascade;
+
 -- 2. CATEGORIES TABLE
-create table if not exists public.categories (
+create table public.categories (
   id text primary key,
   name_ku text not null,
   name_en text default '',
@@ -18,7 +24,7 @@ create table if not exists public.categories (
 );
 
 -- 3. COLLECTIONS TABLE
-create table if not exists public.collections (
+create table public.collections (
   id text primary key,
   category_id text references public.categories(id) on delete set null,
   name text not null,
@@ -26,7 +32,7 @@ create table if not exists public.collections (
 );
 
 -- 4. MODELS TABLE (Furniture Items)
-create table if not exists public.models (
+create table public.models (
   id text primary key,
   category_id text default '',
   collection_id text default '',
@@ -41,7 +47,7 @@ create table if not exists public.models (
 );
 
 -- 5. SETTINGS TABLE (Branding, Slideshow Timings, UI Zoom Scale)
-create table if not exists public.settings (
+create table public.settings (
   id text primary key default 'global_settings',
   logo_url text default '',
   slideshow_dwell_time numeric default 4.5,
