@@ -1,0 +1,181 @@
+{
+  "categories": [
+    {
+      "id": "cat-living",
+      "name_ku": "ژووری دانیشتن",
+      "name_en": "Living Room",
+      "name_ar": "غرفة المعيشة",
+      "icon": "Sofa"
+    },
+    {
+      "id": "cat-bedroom",
+      "name_ku": "ژووری نووستن",
+      "name_en": "Bedroom",
+      "name_ar": "غرفة النوم",
+      "icon": "Bed"
+    },
+    {
+      "id": "cat-dining",
+      "name_ku": "ژووری نانخواردن",
+      "name_en": "Dining Room",
+      "name_ar": "غرفة الطعام",
+      "icon": "Utensils"
+    },
+    {
+      "id": "cat-accessories",
+      "name_ku": "مێز و دیکۆرات",
+      "name_en": "Tables & Decor",
+      "name_ar": "طاولات وديكور",
+      "icon": "Lamp"
+    }
+  ],
+  "collections": [
+    {
+      "id": "col-darcy",
+      "categoryId": "cat-living",
+      "name": "Darcy Collection"
+    },
+    {
+      "id": "col-rawcliffe",
+      "categoryId": "cat-living",
+      "name": "Rawcliffe Modern"
+    },
+    {
+      "id": "col-bolanburg",
+      "categoryId": "cat-bedroom",
+      "name": "Bolanburg Antique"
+    },
+    {
+      "id": "col-realyn",
+      "categoryId": "cat-bedroom",
+      "name": "Realyn French Country"
+    },
+    {
+      "id": "col-skempton",
+      "categoryId": "cat-dining",
+      "name": "Skempton Counter Height"
+    },
+    {
+      "id": "col-decor",
+      "categoryId": "cat-accessories",
+      "name": "Ashley Accent Tables"
+    }
+  ],
+  "models": [
+    {
+      "id": "mod-1789126650928-158",
+      "categoryId": "cat-living",
+      "collectionId": "",
+      "name": "6770423",
+      "sku": "ASH-7635",
+      "image": "/uploads/ashley-1789126717969-146190421.jpg",
+      "stock": 4,
+      "originalPrice": 1250000,
+      "salePrice": 625000,
+      "notes": "h=٣ عدد تغلیفن"
+    },
+    {
+      "id": "mod-101",
+      "categoryId": "cat-living",
+      "collectionId": "col-darcy",
+      "name": "Darcy Sofa 3-Seater (قەنەفەی ٣ نەفەری)",
+      "sku": "ASH-7500-38",
+      "image": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1000&q=80",
+      "stock": 3,
+      "originalPrice": 850000,
+      "salePrice": 590000,
+      "notes": "قوماشی پۆلیستەری بەرگری بەرز، قیاس: 228سم پانی × 96سم بەرزی. زۆر ئاسوودە بۆ دانیشتنی درێژخایەن."
+    },
+    {
+      "id": "mod-102",
+      "categoryId": "cat-living",
+      "collectionId": "col-darcy",
+      "name": "Darcy Loveseat 2-Seater (قەنەفەی ٢ نەفەری)",
+      "sku": "ASH-7500-35",
+      "image": "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1000&q=80",
+      "stock": 2,
+      "originalPrice": 680000,
+      "salePrice": 460000,
+      "notes": "گونجاو بۆ ژووری میوان و هۆڵ. قیاس: 170سم × 96سم. تەواوکەری سێتی دارسی."
+    },
+    {
+      "id": "mod-103",
+      "categoryId": "cat-living",
+      "collectionId": "col-rawcliffe",
+      "name": "Rawcliffe Sectional L-Shape (گۆشەی شاهانە)",
+      "sku": "ASH-9860-S5",
+      "image": "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1000&q=80",
+      "stock": 1,
+      "originalPrice": 2200000,
+      "salePrice": 1490000,
+      "notes": "قوماشی پەڕەیی سپی بەفری، لەگەڵ بالیفەکانی لەسەریەتی. قیاس: 320سم × 240سم."
+    },
+    {
+      "id": "mod-201",
+      "categoryId": "cat-bedroom",
+      "collectionId": "col-bolanburg",
+      "name": "Bolanburg King Bed Frame (تەختەی کینگ بە کەنتۆر)",
+      "sku": "ASH-B647-58",
+      "image": "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1000&q=80",
+      "stock": 4,
+      "originalPrice": 1650000,
+      "salePrice": 1150000,
+      "notes": "دارێکی سروشتی تەواو ئەستوور بە دیزاینی ڤینتیجی ئەمریکی، پێوانە 200سم × 200سم."
+    },
+    {
+      "id": "mod-202",
+      "categoryId": "cat-bedroom",
+      "collectionId": "col-bolanburg",
+      "name": "Bolanburg Nightstand 3-Drawer (کۆمۆدین ٣ چەکمەجە)",
+      "sku": "ASH-B647-93",
+      "image": "https://images.unsplash.com/photo-1532372998445-5f6e650b097b?auto=format&fit=crop&w=1000&q=80",
+      "stock": 6,
+      "originalPrice": 390000,
+      "salePrice": 240000,
+      "notes": "چەکمەجەکان بە شێوازی نەرم دادەخرێن (Soft-close)، شوێنی پاوەری بارگاویکردنەوەی تێدایە."
+    },
+    {
+      "id": "mod-203",
+      "categoryId": "cat-bedroom",
+      "collectionId": "col-realyn",
+      "name": "Realyn Dresser with Mirror (مێزی ماکیاژ بە ئاوێنە)",
+      "sku": "ASH-B743-31",
+      "image": "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=1000&q=80",
+      "stock": 2,
+      "originalPrice": 1200000,
+      "salePrice": 790000,
+      "notes": "دیزاینی کلاسیکی فەرەنسی ڕەنگی کرێمی، لەگەڵ ئاوێنەی تەلارسازی کلاسیک."
+    },
+    {
+      "id": "mod-301",
+      "categoryId": "cat-dining",
+      "collectionId": "col-skempton",
+      "name": "Skempton Counter Height Table + 4 Stools (مێزی نانخواردن + ٤ کورسی)",
+      "sku": "ASH-D397-223",
+      "image": "https://images.unsplash.com/photo-1617806118233-18e1de247200?auto=format&fit=crop&w=1000&q=80",
+      "stock": 5,
+      "originalPrice": 780000,
+      "salePrice": 520000,
+      "notes": "زۆر گونجاوە بۆ چێشتخانە و هۆڵی بچووک، ڕەفەی لاوەکی هەیە بۆ شووشە و دەفر."
+    },
+    {
+      "id": "mod-401",
+      "categoryId": "cat-accessories",
+      "collectionId": "col-decor",
+      "name": "Ashley Marble Accent Table (مێزی سووچ بە مەڕمەڕ)",
+      "sku": "ASH-T120-2",
+      "image": "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=1000&q=80",
+      "stock": 8,
+      "originalPrice": 210000,
+      "salePrice": 135000,
+      "notes": "سەری مەڕمەڕی سروشتی و پایەی ئاسنی ڕەشی مات. قیاس: 60سم بەرزایی × 50سم تیرە."
+    }
+  ],
+  "settings": {
+    "logoUrl": "/uploads/ashley-1789126844995-164541083.png",
+    "slideshowDwellTime": 4.5,
+    "slideshowTransitionTime": 1.0,
+    "slideshowShimmerTime": 7.0,
+    "uiScale": 0.80
+  }
+}
