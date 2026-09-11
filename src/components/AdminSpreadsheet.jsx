@@ -341,7 +341,7 @@ export default function AdminSpreadsheet({
                       ) : (
                         <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-[8px] text-slate-400">
                           <ImageOff className="w-3.5 h-3.5 mb-0.5 text-slate-400" />
-                          <span className="font-semibold text-[8px] leading-none">{t.noImage || 'وێنەی نییە'}</span>
+                          <span className="font-semibold text-[8px] leading-none">بێ وێنە</span>
                         </div>
                       )}
 

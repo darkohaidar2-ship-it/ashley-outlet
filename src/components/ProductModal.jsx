@@ -32,12 +32,13 @@ export default function ProductModal({
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full min-h-[260px] flex flex-col items-center justify-center p-6 text-center select-none bg-slate-100">
-              <div className="w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center mb-2 text-slate-400">
+            <div className="w-full h-full min-h-[260px] flex flex-col items-center justify-center p-6 text-center select-none bg-slate-50">
+              <div className="w-16 h-16 rounded-2xl bg-slate-200/80 flex items-center justify-center mb-3 text-slate-400">
                 <ImageOff className="w-8 h-8" />
               </div>
-              <span className="text-sm font-bold text-slate-700">{t.noImage || 'وێنەی نییە'}</span>
-              <span className="text-xs text-slate-400 mt-0.5">No Image Available</span>
+              <span className="text-base font-bold text-slate-700 leading-snug">
+                {t.noImage || 'ئەم مۆدێلە وێنەی نییە'}
+              </span>
             </div>
           )}
 

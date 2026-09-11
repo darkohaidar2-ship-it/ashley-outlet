@@ -91,7 +91,7 @@ export default function PrintSheet({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                  <span className="text-xl font-bold text-slate-600">وێنەی نییە / No Image</span>
+                  <span className="text-xl font-bold text-slate-700">ئەم مۆدێلە وێنەی نییە</span>
                   <span className="text-xs text-slate-400 mt-1">ئەم مۆدێلە لە سیستەمدا بەبێ وێنە تۆمارکراوە</span>
                 </div>
               )}

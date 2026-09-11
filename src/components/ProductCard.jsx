@@ -38,12 +38,13 @@ export default function ProductCard({
             onError={() => setHasImgError(true)}
           />
         ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-4 text-center select-none">
-            <div className="w-12 h-12 rounded-2xl bg-slate-200/80 flex items-center justify-center mb-1.5 text-slate-400">
+          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-400 p-4 text-center select-none border-b border-slate-100">
+            <div className="w-12 h-12 rounded-2xl bg-slate-200/70 flex items-center justify-center mb-2 text-slate-400">
               <ImageOff className="w-6 h-6" />
             </div>
-            <span className="text-xs font-bold text-slate-600">{t.noImage || 'وێنەی نییە'}</span>
-            <span className="text-[10px] text-slate-400 mt-0.5">No Image</span>
+            <span className="text-xs font-bold text-slate-600 leading-snug px-2">
+              {t.noImage || 'ئەم مۆدێلە وێنەی نییە'}
+            </span>
           </div>
         )}
 
