@@ -10,7 +10,8 @@ import {
   Tv, 
   FileSpreadsheet, 
   Image as ImageIcon,
-  Sliders
+  Sliders,
+  Download
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -28,6 +29,7 @@ export default function Navbar({
   openNewCollectionModal,
   openLogoModal,
   openSettingsModal,
+  openInstallModal,
   onBatchPrint,
   filteredCount
 }) {
@@ -167,6 +169,18 @@ export default function Navbar({
                 </button>
               </div>
             )}
+
+            {/* Install App Button (PWA for iPad / Tablet / Mobile) */}
+            <button
+              onClick={openInstallModal}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-xl shadow-xs text-xs font-bold transition-all active:scale-95 shrink-0"
+              title={lang === 'ar' ? 'تثبيت التطبيق على الجهاز' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">
+                {lang === 'ar' ? 'تثبيت التطبيق' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
+              </span>
+            </button>
 
             {/* Language Switcher */}
             <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200 text-xs font-semibold">

@@ -8,6 +8,7 @@ import AdminSpreadsheet from './components/AdminSpreadsheet';
 import Footer from './components/Footer';
 import PrintSheet from './components/PrintSheet';
 import AdminModal from './components/AdminModal';
+import InstallModal from './components/InstallModal';
 import { translations } from './locales';
 import { PackageOpen } from 'lucide-react';
 import { catalogService } from './services/catalogService';
@@ -35,7 +36,58 @@ export default function App() {
     editingModel: null
   });
 
+  // PWA App Installation States (iPad / Tablet / Mobile)
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [isAppInstalled, setIsAppInstalled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    return false;
+  });
+
+  const isIOSDevice = useMemo(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return isIOS || isIPadOS;
+  }, []);
+
   const t = translations[lang] || translations.ku;
+
+  // Listen for PWA beforeinstallprompt & appinstalled events
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      setIsAppInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleNativeInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsAppInstalled(true);
+      }
+      setDeferredPrompt(null);
+      setIsInstallModalOpen(false);
+    }
+  };
 
   // Set HTML dir and lang
   useEffect(() => {
@@ -243,6 +295,7 @@ export default function App() {
           openNewCollectionModal={() => setAdminModal({ isOpen: true, type: 'collection', editingModel: null })}
           openLogoModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
           openSettingsModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
+          openInstallModal={() => setIsInstallModalOpen(true)}
           onBatchPrint={handleBatchPrint}
           filteredCount={filteredModels.length}
         />
@@ -373,6 +426,17 @@ export default function App() {
           onSaveLogo={handleSaveLogo}
           onSaveSettings={handleSaveSettings}
           onClearAllData={handleClearAllData}
+        />
+
+        {/* PWA App Install Modal for iPads, Tablets & Mobile */}
+        <InstallModal
+          isOpen={isInstallModalOpen}
+          onClose={() => setIsInstallModalOpen(false)}
+          isInstalled={isAppInstalled}
+          isIOS={isIOSDevice}
+          hasNativePrompt={!!deferredPrompt}
+          onNativeInstall={handleNativeInstall}
+          lang={lang}
         />
 
       </div>

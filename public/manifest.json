@@ -1,0 +1,22 @@
+﻿{
+  "name": "Ashley Furniture Outlet | ئاوت لێتی ئاشڵی",
+  "short_name": "Ashley Outlet",
+  "description": "ئەلبوومی مۆبلیاتی ئاشڵی بۆ پیشاندانی کاڵاکان لەسەر ئایپاد و تابلێت",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
+  "background_color": "#ffffff",
+  "theme_color": "#dc2626",
+  "orientation": "any",
+  "categories": ["shopping", "business", "lifestyle"],
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
