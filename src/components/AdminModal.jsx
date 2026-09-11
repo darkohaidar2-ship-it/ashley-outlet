@@ -13,7 +13,8 @@ import {
   MoveRight, 
   RotateCcw, 
   Image as ImageIcon,
-  ZoomIn
+  ZoomIn,
+  Trash2
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 
@@ -31,9 +32,12 @@ export default function AdminModal({
   onLogin,
   onSaveModel,
   onSaveCategory,
+  onDeleteCategory,
   onSaveCollection,
+  onDeleteCollection,
   onSaveLogo,
-  onSaveSettings
+  onSaveSettings,
+  onClearAllData
 }) {
   if (!isOpen) return null;
 
@@ -502,6 +506,28 @@ export default function AdminModal({
             >
               {t.save}
             </button>
+
+            {/* List of existing categories with delete button */}
+            {categories && categories.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-slate-200">
+                <h4 className="text-xs font-bold text-slate-700 mb-2">کەتەگۆرییە بەردەستەکان ({categories.length}):</h4>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {categories.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs">
+                      <span className="font-bold text-slate-800">{c.name_ku || c.name || c.name_en}</span>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCategory && onDeleteCategory(c.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="سڕینەوە"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
 
@@ -545,6 +571,28 @@ export default function AdminModal({
             >
               {t.save}
             </button>
+
+            {/* List of existing collections with delete button */}
+            {collections && collections.length > 0 && (
+              <div className="mt-5 pt-4 border-t border-slate-200">
+                <h4 className="text-xs font-bold text-slate-700 mb-2">سێتە بەردەستەکان ({collections.length}):</h4>
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {collections.map((col) => (
+                    <div key={col.id} className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs">
+                      <span className="font-bold text-slate-800">{col.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCollection && onDeleteCollection(col.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        title="سڕینەوە"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
 

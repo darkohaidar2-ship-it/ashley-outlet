@@ -192,44 +192,111 @@ export const catalogService = {
     if (isSupabaseConfigured && supabase) {
       try {
         const { error } = await supabase.from('models').delete().eq('id', modelId);
-        if (!error) return true;
+        if (error) throw error;
+        return true;
       } catch (err) {
         console.warn('Supabase delete model error:', err);
       }
     }
 
-    await fetch(`/api/models/${modelId}`, { method: 'DELETE' });
+    try {
+      await fetch(`/api/models/${modelId}`, { method: 'DELETE' });
+    } catch (e) {}
   },
 
   // 6. Bulk Save Models (from Excel / Spreadsheet)
   async saveBulkModels(modelsList) {
     if (isSupabaseConfigured && supabase) {
       try {
-        const dbModels = modelsList.map((m, idx) => ({
-          id: m.id || ('mod-' + Date.now() + '-' + idx),
-          category_id: m.categoryId || '',
-          collection_id: m.collectionId || '',
-          name: m.name || '',
-          sku: m.sku || '',
-          image: m.image || '',
-          stock: parseInt(m.stock) || 0,
-          original_price: parseFloat(m.originalPrice) || 0,
-          sale_price: parseFloat(m.salePrice) || 0,
-          notes: m.notes || ''
-        }));
+        // Fetch current model IDs from DB to detect deletions
+        const { data: existingRows } = await supabase.from('models').select('id');
+        const existingIds = (existingRows || []).map(r => r.id);
+        const keepIds = new Set(modelsList.filter(m => m.id).map(m => m.id));
+        const idsToDelete = existingIds.filter(id => !keepIds.has(id));
 
-        const { error } = await supabase.from('models').upsert(dbModels);
-        if (!error) return true;
+        // Delete items removed by the user in spreadsheet
+        if (idsToDelete.length > 0) {
+          await supabase.from('models').delete().in('id', idsToDelete);
+        }
+
+        // Upsert the remaining models
+        if (modelsList.length > 0) {
+          const dbModels = modelsList.map((m, idx) => ({
+            id: m.id || ('mod-' + Date.now() + '-' + idx),
+            category_id: m.categoryId || '',
+            collection_id: m.collectionId || '',
+            name: m.name || '',
+            sku: m.sku || '',
+            image: m.image || '',
+            stock: parseInt(m.stock) || 0,
+            original_price: parseFloat(m.originalPrice) || 0,
+            sale_price: parseFloat(m.salePrice) || 0,
+            notes: m.notes || ''
+          }));
+
+          const { error } = await supabase.from('models').upsert(dbModels);
+          if (error) console.error('Supabase bulk save upsert error:', error);
+        }
+        return true;
       } catch (err) {
         console.warn('Supabase bulk save error:', err);
       }
     }
 
-    await fetch('/api/models/bulk', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ models: modelsList })
-    });
+    try {
+      await fetch('/api/models/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ models: modelsList })
+      });
+    } catch (e) {}
+  },
+
+  // Delete Category & its associated models & collections
+  async deleteCategory(catId) {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('models').delete().eq('category_id', catId);
+        await supabase.from('collections').delete().eq('category_id', catId);
+        await supabase.from('categories').delete().eq('id', catId);
+        return true;
+      } catch (err) {
+        console.warn('Supabase delete category error:', err);
+      }
+    }
+    try {
+      await fetch(`/api/categories/${catId}`, { method: 'DELETE' });
+    } catch (e) {}
+  },
+
+  // Delete Collection & its associated models
+  async deleteCollection(colId) {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('models').delete().eq('collection_id', colId);
+        await supabase.from('collections').delete().eq('id', colId);
+        return true;
+      } catch (err) {
+        console.warn('Supabase delete collection error:', err);
+      }
+    }
+    try {
+      await fetch(`/api/collections/${colId}`, { method: 'DELETE' });
+    } catch (e) {}
+  },
+
+  // Delete All Catalog Data (Fresh Reset)
+  async deleteAllData() {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('models').delete().neq('id', '');
+        await supabase.from('collections').delete().neq('id', '');
+        await supabase.from('categories').delete().neq('id', '');
+        return true;
+      } catch (err) {
+        console.warn('Supabase deleteAllData error:', err);
+      }
+    }
   },
 
   // 7. Save Category

@@ -181,8 +181,26 @@ export default function App() {
     await fetchData();
   };
 
+  const handleDeleteCategory = async (catId) => {
+    if (!window.confirm(lang === 'ku' ? 'دڵنیایت لە سڕینەوەی ئەم کەتەگۆرییە؟' : 'Are you sure you want to delete this category?')) return;
+    await catalogService.deleteCategory(catId);
+    await fetchData();
+  };
+
   const handleSaveCollection = async (colData) => {
     await catalogService.saveCollection(colData);
+    await fetchData();
+  };
+
+  const handleDeleteCollection = async (colId) => {
+    if (!window.confirm(lang === 'ku' ? 'دڵنیایت لە سڕینەوەی ئەم سێتە؟' : 'Are you sure you want to delete this collection?')) return;
+    await catalogService.deleteCollection(colId);
+    await fetchData();
+  };
+
+  const handleClearAllData = async () => {
+    if (!window.confirm(lang === 'ku' ? 'ئاگاداری: هەموو مۆدێلەکان و کەتەگۆرییەکان بە تەواوی دەسڕدرێنەوە. ئایا دڵنیایت؟' : 'Warning: All models, collections, and categories will be permanently deleted. Are you sure?')) return;
+    await catalogService.deleteAllData();
     await fetchData();
   };
 
@@ -349,9 +367,12 @@ export default function App() {
           onLogin={handleLogin}
           onSaveModel={handleSaveModel}
           onSaveCategory={handleSaveCategory}
+          onDeleteCategory={handleDeleteCategory}
           onSaveCollection={handleSaveCollection}
+          onDeleteCollection={handleDeleteCollection}
           onSaveLogo={handleSaveLogo}
           onSaveSettings={handleSaveSettings}
+          onClearAllData={handleClearAllData}
         />
 
       </div>
