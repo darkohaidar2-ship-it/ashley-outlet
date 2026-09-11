@@ -311,12 +311,7 @@ export default function SlideshowView({
                           {model.name}
                         </h5>
                         <div className="flex items-center justify-between mt-1">
-                          {model.sku && model.sku !== model.name && (
-                            <span className="text-[9px] font-mono text-slate-400 truncate">
-                              {model.sku}
-                            </span>
-                          )}
-                          <span className="text-xs font-black text-red-600 ms-auto">
+                          <span className="text-xs font-black text-red-600">
                             {model.salePrice?.toLocaleString()} {t.currency}
                           </span>
                         </div>
@@ -554,7 +549,7 @@ export default function SlideshowView({
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 
-                {/* Left: Category, Title, SKU, Stock, Notes */}
+                {/* Left: Category, Title, Stock, Notes */}
                 <div className="flex-1 min-w-0">
                   
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 uppercase mb-0.5">
@@ -573,14 +568,6 @@ export default function SlideshowView({
                     }`}>
                       {activeModel.name}
                     </h2>
-
-                    {activeModel.sku && activeModel.sku !== activeModel.name && (
-                      <span className={`font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                        isFullscreen ? 'bg-white/10 text-slate-300' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        SKU: {activeModel.sku}
-                      </span>
-                    )}
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                       isOutOfStock ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'

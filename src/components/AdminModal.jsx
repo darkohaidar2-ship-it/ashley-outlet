@@ -103,7 +103,7 @@ export default function AdminModal({
     } else {
       setModelForm({
         name: '',
-        sku: 'ASH-' + Math.floor(1000 + Math.random() * 9000),
+        sku: '',
         categoryId: categories[0]?.id || '',
         collectionId: collections[0]?.id || '',
         originalPrice: '',
@@ -277,7 +277,7 @@ export default function AdminModal({
         {type === 'model' && (
           <form onSubmit={handleModelSubmit} className="mt-4 space-y-3">
             
-            {/* Model Code / Name */}
+            {/* Model */}
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">
                 {t.modelName} *
@@ -287,7 +287,7 @@ export default function AdminModal({
                 required
                 value={modelForm.name}
                 onChange={(e) => setModelForm({ ...modelForm, name: e.target.value, sku: e.target.value })}
-                placeholder="B600-54 یان ناوی مۆدێل..."
+                placeholder="B600-54 یان مۆدێل..."
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
               />
             </div>

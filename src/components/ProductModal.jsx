@@ -97,16 +97,10 @@ export default function ProductModal({
               )}
             </div>
 
-            {/* Title & SKU */}
+            {/* Model Name */}
             <h2 className="text-xl font-bold text-slate-900 leading-snug">
               {model.name}
             </h2>
-
-            {model.sku && model.sku !== model.name && (
-              <div className="mt-2 inline-block font-mono text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
-                SKU: {model.sku}
-              </div>
-            )}
 
             {/* Price Box */}
             <div className="mt-5 p-4 rounded-2xl bg-red-50/60 border border-red-100">

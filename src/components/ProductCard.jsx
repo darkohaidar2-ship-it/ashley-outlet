@@ -118,15 +118,6 @@ export default function ProductCard({
             {model.name}
           </h3>
 
-          {/* SKU Code (Only if distinct from model name) */}
-          {model.sku && model.sku !== model.name && (
-            <div className="mt-0.5">
-              <span className="inline-block text-[10px] font-mono font-medium px-1.5 py-0.2 bg-slate-100 text-slate-600 rounded">
-                SKU: {model.sku}
-              </span>
-            </div>
-          )}
-
           {/* Notes Preview */}
           {model.notes && (
             <p className="mt-1.5 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">

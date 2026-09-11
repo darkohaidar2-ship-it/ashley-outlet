@@ -77,11 +77,6 @@ export default function PrintSheet({
                 <div className="text-xs font-bold text-slate-800">
                   {currentDate}
                 </div>
-                {model.sku && model.sku !== model.name && (
-                  <div className="text-[11px] font-mono font-semibold text-slate-500">
-                    SKU: {model.sku}
-                  </div>
-                )}
               </div>
             </div>
 

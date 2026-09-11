@@ -46,7 +46,7 @@ export default function AdminSpreadsheet({
       categoryId: categories[0]?.id || '',
       collectionId: '',
       name: '',
-      sku: 'ASH-' + Math.floor(1000 + Math.random() * 9000),
+      sku: '',
       image: '',
       stock: '',
       originalPrice: '',
@@ -179,7 +179,7 @@ export default function AdminSpreadsheet({
       const cat = categories.find(c => c.id === row.categoryId);
       const col = collections.find(c => c.id === row.collectionId);
       return {
-        'Model Code / Name (کۆد / ناوی مۆدێل)': row.name,
+        'Model (مۆدێل)': row.name,
         'Category (کەتەگۆری)': cat ? (lang === 'ku' ? cat.name_ku : cat.name_en) : '',
         'Collection (سێت)': col ? col.name : '',
         'Stock (عدد)': row.stock,
@@ -358,7 +358,7 @@ export default function AdminSpreadsheet({
                     </div>
                   </td>
 
-                  {/* Model Code / Name */}
+                  {/* Model */}
                   <td className="p-1 border-e border-slate-200">
                     <input
                       type="text"
@@ -367,7 +367,7 @@ export default function AdminSpreadsheet({
                         handleCellChange(idx, 'name', e.target.value);
                         handleCellChange(idx, 'sku', e.target.value);
                       }}
-                      placeholder="کۆد یان ناوی مۆدێل..."
+                      placeholder="مۆدێل..."
                       className="w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs font-bold text-slate-900"
                     />
                   </td>
