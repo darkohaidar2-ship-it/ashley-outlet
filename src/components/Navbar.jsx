@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { 
   Printer, 
   LogIn, 
@@ -37,6 +37,19 @@ export default function Navbar({
   onBatchPrint,
   filteredCount
 }) {
+  const searchInputRef = useRef(null);
+
+  // Auto-dismiss virtual keyboard when user scrolls on iPad / tablet / mobile
+  useEffect(() => {
+    const handleScroll = () => {
+      if (document.activeElement === searchInputRef.current) {
+        searchInputRef.current?.blur();
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs no-print">
       <div className="max-w-7xl mx-auto px-3 sm:px-6">
@@ -69,17 +82,27 @@ export default function Navbar({
               <Search className="w-3.5 h-3.5" />
             </div>
             <input
-              type="text"
+              ref={searchInputRef}
+              type="search"
+              enterKeyHint="search"
               value={searchQuery || ''}
               onChange={(e) => setSearchQuery && setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  searchInputRef.current?.blur();
+                }
+              }}
               placeholder={t.searchPlaceholder || 'گەڕان...'}
               className="w-full ps-8.5 pe-8 py-1.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-slate-200/80 focus:border-red-500 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery && setSearchQuery('')}
-                className="absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400 hover:text-slate-600"
+                onClick={() => {
+                  setSearchQuery && setSearchQuery('');
+                  searchInputRef.current?.blur();
+                }}
+                className="absolute inset-y-0 end-0 flex items-center pe-2.5 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

@@ -14,7 +14,8 @@ import {
   Sliders,
   ImageOff,
   X,
-  RotateCcw
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 
 export default function SlideshowView({
@@ -37,9 +38,32 @@ export default function SlideshowView({
   const [sidebarCollection, setSidebarCollection] = useState('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isControlsVisible, setIsControlsVisible] = useState(true);
+  const [zenMode, setZenMode] = useState(false);
+  const hideControlsTimer = useRef(null);
   const containerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+
+  // Auto-hide controls in Ambient / Zen mode, fullscreen, or during autoplay
+  const resetControlsVisibility = () => {
+    setIsControlsVisible(true);
+    if (hideControlsTimer.current) {
+      clearTimeout(hideControlsTimer.current);
+    }
+    if (isPlaying || zenMode || isFullscreen) {
+      hideControlsTimer.current = setTimeout(() => {
+        setIsControlsVisible(false);
+      }, 3800);
+    }
+  };
+
+  useEffect(() => {
+    resetControlsVisibility();
+    return () => {
+      if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+    };
+  }, [isPlaying, zenMode, isFullscreen, currentIndex]);
 
   // Filter models strictly by Category & Collection
   const filteredModels = models.filter((model) => {
@@ -337,12 +361,17 @@ export default function SlideshowView({
           <div className="flex-1 flex flex-col h-full relative">
             
             {/* Top Toolbar Overlay: Filter Button, Ashley Logo Badge, Controls & Fullscreen */}
-            <div className="absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none">
+            <div className={`absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none transition-all duration-500 ${
+              isControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+            }`}>
               
-              <div className="flex items-center gap-2 pointer-events-auto">
+              <div className={`flex items-center gap-2 ${isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 {/* Small Filter Button (کە کلیک لەسەری کرا فلتەر و شت دەکرێتەوە) */}
                 <button
-                  onClick={() => setIsFilterOpen(true)}
+                  onClick={() => {
+                    setIsFilterOpen(true);
+                    resetControlsVisibility();
+                  }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-md text-xs font-bold transition-all backdrop-blur-md active:scale-95 cursor-pointer ${
                     isFullscreen
                       ? 'bg-slate-900/90 hover:bg-slate-800 text-white border border-white/20'
@@ -387,13 +416,40 @@ export default function SlideshowView({
                 </div>
               </div>
 
-              {/* Controls (Play/Pause, Fullscreen, Print) */}
-              <div className="flex items-center gap-1.5 pointer-events-auto">
+              {/* Controls (Play/Pause, Fullscreen, Print, Zen Mode) */}
+              <div className={`flex items-center gap-1.5 ${isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
                 
+                {/* Ambient / Zen Mode Toggle (Showroom luxury mode) */}
+                <button
+                  onClick={() => {
+                    const nextZen = !zenMode;
+                    setZenMode(nextZen);
+                    if (nextZen) {
+                      if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+                      hideControlsTimer.current = setTimeout(() => setIsControlsVisible(false), 1800);
+                    } else {
+                      setIsControlsVisible(true);
+                    }
+                  }}
+                  className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
+                    zenMode 
+                      ? 'bg-amber-500 text-white shadow-amber-500/25 ring-2 ring-amber-300' 
+                      : isFullscreen
+                      ? 'bg-slate-900/90 text-white border border-white/15 hover:bg-slate-800'
+                      : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
+                  }`}
+                  title={zenMode ? 'دۆخی بێدەنگ چالاکە (تەنها وێنە و نرخ)' : 'دۆخی پێشانگای بێدەنگ (Zen Mode)'}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                </button>
+
                 {/* Auto Play / Pause */}
                 <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all ${
+                  onClick={() => {
+                    setIsPlaying(!isPlaying);
+                    resetControlsVisibility();
+                  }}
+                  className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
                     isPlaying 
                       ? 'bg-red-600 text-white shadow-red-500/20' 
                       : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
@@ -405,8 +461,11 @@ export default function SlideshowView({
 
                 {/* Fullscreen Button */}
                 <button
-                  onClick={toggleFullscreen}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 border border-slate-200 shadow-md backdrop-blur-md transition-all"
+                  onClick={() => {
+                    toggleFullscreen();
+                    resetControlsVisibility();
+                  }}
+                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 border border-slate-200 shadow-md backdrop-blur-md transition-all cursor-pointer"
                   title="Full Screen / فوول سکرین"
                 >
                   {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -415,7 +474,7 @@ export default function SlideshowView({
                 {/* Direct Print A4 button */}
                 <button
                   onClick={() => onPrintSingle(activeModel)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md text-xs font-bold transition-all active:scale-95"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md text-xs font-bold transition-all active:scale-95 cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5 text-red-500" />
                   <span>{t.print}</span>
@@ -447,8 +506,13 @@ export default function SlideshowView({
 
             {/* Giant Furniture Image Stage in Frosted Glass with Dynamic Shimmer Sweep */}
             <div 
-              className="flex-1 relative flex flex-col items-center justify-center p-2.5 sm:p-4 overflow-hidden touch-pan-y select-none"
-              onTouchStart={handleTouchStart}
+              onClick={resetControlsVisibility}
+              onMouseMove={resetControlsVisibility}
+              className="flex-1 relative flex flex-col items-center justify-center p-2.5 sm:p-4 overflow-hidden touch-pan-y select-none cursor-pointer"
+              onTouchStart={(e) => {
+                handleTouchStart(e);
+                resetControlsVisibility();
+              }}
               onTouchEnd={handleTouchEnd}
             >
               
@@ -490,8 +554,14 @@ export default function SlideshowView({
 
               {/* Previous Arrow (Touch-friendly 44px+ hit area for iPad & tablets) */}
               <button
-                onClick={goToPrev}
-                className="absolute start-3 sm:start-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPrev();
+                  resetControlsVisibility();
+                }}
+                className={`absolute start-3 sm:start-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all duration-500 active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer ${
+                  isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
                 title={t.previous}
                 aria-label="Previous Slide"
               >
@@ -500,8 +570,14 @@ export default function SlideshowView({
 
               {/* Next Arrow (Touch-friendly 44px+ hit area for iPad & tablets) */}
               <button
-                onClick={goToNext}
-                className="absolute end-3 sm:end-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNext();
+                  resetControlsVisibility();
+                }}
+                className={`absolute end-3 sm:end-5 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-slate-200/80 backdrop-blur-md flex items-center justify-center transition-all duration-500 active:scale-90 hover:scale-105 z-20 touch-manipulation cursor-pointer ${
+                  isControlsVisible ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                }`}
                 title={t.next}
                 aria-label="Next Slide"
               >
@@ -541,11 +617,11 @@ export default function SlideshowView({
             <div 
               key={activeModel.id}
               style={{ animationDuration: `${transitionTime}s` }}
-              className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 ${
+              className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 transition-all duration-500 ${
                 isFullscreen 
                   ? 'bg-slate-900/90 border-white/10 text-white' 
                   : 'bg-white/95 border-slate-200 text-slate-900'
-              }`}
+              } ${!isControlsVisible && zenMode ? 'opacity-90 py-2 sm:py-2.5' : 'opacity-100'}`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 

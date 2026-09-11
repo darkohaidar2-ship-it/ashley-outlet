@@ -80,14 +80,14 @@ export default function ProductCard({
           {/* Model Name */}
           <h3 
             onClick={() => onOpenDetails(model)}
-            className="font-bold text-slate-900 text-sm leading-snug line-clamp-2 hover:text-red-600 transition-colors cursor-pointer"
+            className="font-extrabold text-slate-900 text-sm leading-snug line-clamp-2 hover:text-red-600 transition-colors cursor-pointer tracking-tight"
           >
             {model.name}
           </h3>
 
           {/* Notes Preview */}
           {model.notes && (
-            <p className="mt-1.5 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+            <p className="mt-1 text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
               {model.notes}
             </p>
           )}
@@ -97,11 +97,11 @@ export default function ProductCard({
         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
           <div>
             {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-              <span className="text-[11px] text-slate-400 line-through block font-medium">
+              <span className="text-[10px] text-slate-400 line-through block font-semibold leading-none mb-1">
                 {model.originalPrice.toLocaleString()} {t.currency}
               </span>
             )}
-            <div className="text-sm sm:text-base font-black text-red-600 leading-none flex items-baseline gap-1">
+            <div className="text-sm sm:text-base font-black text-red-600 leading-none flex items-baseline gap-1 tracking-tight">
               <span>{model.salePrice ? model.salePrice.toLocaleString() : '0'}</span>
               <span className="text-[10px] font-bold text-red-600/80">{t.currency}</span>
             </div>
@@ -113,7 +113,7 @@ export default function ProductCard({
             {/* Direct A4 Print Button */}
             <button
               onClick={() => onPrintSingle(model)}
-              className="p-2 text-slate-600 hover:text-red-600 bg-slate-100 hover:bg-red-50 rounded-xl transition-all"
+              className="p-2 text-slate-600 hover:text-red-600 bg-slate-100 hover:bg-red-50 active:scale-95 rounded-xl transition-all cursor-pointer shadow-2xs"
               title={t.print}
             >
               <Printer className="w-4 h-4" />
