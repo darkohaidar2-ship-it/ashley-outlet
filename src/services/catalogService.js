@@ -29,6 +29,7 @@ function mapSettingsFromDB(s) {
   const stage1 = extra.stage1Time !== undefined ? parseFloat(extra.stage1Time) : 3.0;
   const zoomMotion = extra.zoomMotionTime !== undefined ? parseFloat(extra.zoomMotionTime) : 5.0;
   const stage3 = extra.stage3Time !== undefined ? parseFloat(extra.stage3Time) : 4.0;
+  const zoomRatio = extra.zoomScaleRatio !== undefined ? parseFloat(extra.zoomScaleRatio) : 1.28;
   const computedDwell = stage1 + zoomMotion + stage3;
 
   return {
@@ -39,7 +40,8 @@ function mapSettingsFromDB(s) {
     uiScale: s.ui_scale !== undefined ? parseFloat(s.ui_scale) : 1.0,
     stage1Time: stage1,
     zoomMotionTime: zoomMotion,
-    stage3Time: stage3
+    stage3Time: stage3,
+    zoomScaleRatio: zoomRatio
   };
 }
 
@@ -367,9 +369,10 @@ export const catalogService = {
     const stage1Time = settingsData.stage1Time !== undefined ? parseFloat(settingsData.stage1Time) : 3.0;
     const zoomMotionTime = settingsData.zoomMotionTime !== undefined ? parseFloat(settingsData.zoomMotionTime) : 5.0;
     const stage3Time = settingsData.stage3Time !== undefined ? parseFloat(settingsData.stage3Time) : 4.0;
+    const zoomScaleRatio = settingsData.zoomScaleRatio !== undefined ? parseFloat(settingsData.zoomScaleRatio) : 1.28;
     const totalDwellTime = stage1Time + zoomMotionTime + stage3Time;
 
-    const extraCfg = { stage1Time, zoomMotionTime, stage3Time };
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio };
     const rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
     const encodedLogo = rawLogo 
       ? `${rawLogo}#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}` 
@@ -397,7 +400,7 @@ export const catalogService = {
     await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...settingsData, stage1Time, zoomMotionTime, stage3Time, slideshowDwellTime: totalDwellTime })
+      body: JSON.stringify({ ...settingsData, stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, slideshowDwellTime: totalDwellTime })
     });
   }
 };

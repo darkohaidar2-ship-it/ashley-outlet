@@ -141,6 +141,7 @@ export default function SlideshowView({
   const stage1Time = Math.max(0.5, parseFloat(settings?.stage1Time) || 3.0);
   const zoomMotionTime = Math.max(0.5, parseFloat(settings?.zoomMotionTime) || 5.0);
   const stage3Time = Math.max(0.5, parseFloat(settings?.stage3Time) || 4.0);
+  const zoomScaleRatio = Math.max(1.05, Math.min(2.5, parseFloat(settings?.zoomScaleRatio) || 1.28));
   const dwellTime = stage1Time + zoomMotionTime + stage3Time;
   const transitionTime = Math.max(0.1, parseFloat(settings?.slideshowTransitionTime) || 1.0);
   const shimmerTime = Math.max(1, parseFloat(settings?.slideshowShimmerTime) || 7.0);
@@ -807,6 +808,7 @@ export default function SlideshowView({
                             }
                           : cinemaStage === 2
                           ? {
+                              '--stage-zoom-scale': zoomScaleRatio,
                               animation: `cinematicCameraPan ${zoomMotionTime}s cubic-bezier(0.4, 0, 0.2, 1) forwards`
                             }
                           : cinemaStage === 3

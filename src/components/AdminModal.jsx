@@ -86,6 +86,7 @@ export default function AdminModal({
   const [stage1Time, setStage1Time] = useState(3.0);
   const [zoomMotionTime, setZoomMotionTime] = useState(5.0);
   const [stage3Time, setStage3Time] = useState(4.0);
+  const [zoomScaleRatio, setZoomScaleRatio] = useState(1.28);
   const [dwellTime, setDwellTime] = useState(12.0);
   const [transitionTime, setTransitionTime] = useState(1.0);
   const [shimmerTime, setShimmerTime] = useState(7.0);
@@ -125,6 +126,7 @@ export default function AdminModal({
       if (settings.stage1Time !== undefined) setStage1Time(Number(settings.stage1Time));
       if (settings.zoomMotionTime !== undefined) setZoomMotionTime(Number(settings.zoomMotionTime));
       if (settings.stage3Time !== undefined) setStage3Time(Number(settings.stage3Time));
+      if (settings.zoomScaleRatio !== undefined) setZoomScaleRatio(Number(settings.zoomScaleRatio));
       if (settings.slideshowDwellTime !== undefined) setDwellTime(Number(settings.slideshowDwellTime));
       if (settings.slideshowTransitionTime !== undefined) setTransitionTime(Number(settings.slideshowTransitionTime));
       if (settings.slideshowShimmerTime !== undefined) setShimmerTime(Number(settings.slideshowShimmerTime));
@@ -149,6 +151,7 @@ export default function AdminModal({
     setStage1Time(3.0);
     setZoomMotionTime(5.0);
     setStage3Time(4.0);
+    setZoomScaleRatio(1.28);
     setDwellTime(12.0);
     setTransitionTime(1.0);
     setShimmerTime(7.0);
@@ -610,6 +613,7 @@ export default function AdminModal({
               const s1 = Math.max(0.5, parseFloat(stage1Time) || 3.0);
               const s2 = Math.max(0.5, parseFloat(zoomMotionTime) || 5.0);
               const s3 = Math.max(0.5, parseFloat(stage3Time) || 4.0);
+              const zRatio = Math.max(1.05, Math.min(2.5, parseFloat(zoomScaleRatio) || 1.28));
               const totalDwell = Number((s1 + s2 + s3).toFixed(1));
 
               const payload = {
@@ -618,6 +622,7 @@ export default function AdminModal({
                 stage1Time: s1,
                 zoomMotionTime: s2,
                 stage3Time: s3,
+                zoomScaleRatio: zRatio,
                 slideshowTransitionTime: Math.max(0.1, parseFloat(transitionTime) || 1.0),
                 slideshowShimmerTime: Math.max(1, parseFloat(shimmerTime) || 7.0),
                 uiScale: Math.max(0.65, Math.min(1.2, parseFloat(uiScale) || 0.80))
@@ -687,7 +692,7 @@ export default function AdminModal({
                     <div className="bg-emerald-950/70 border border-emerald-500/40 rounded-xl p-2">
                       <span className="text-emerald-300 block text-[9px] font-medium">قۆناغی ٢</span>
                       <span className="text-white font-extrabold">{zoomMotionTime}s</span>
-                      <span className="text-[9px] text-slate-300 block mt-0.5">زووم و مۆشن</span>
+                      <span className="text-[9px] text-emerald-400 block mt-0.5">{Math.round(zoomScaleRatio * 100)}% زووم</span>
                     </div>
                     <div className="bg-rose-950/70 border border-rose-500/40 rounded-xl p-2">
                       <span className="text-rose-300 block text-[9px] font-medium">قۆناغی ٣</span>
@@ -814,6 +819,74 @@ export default function AdminModal({
                         }`}
                       >
                         {val} {t.seconds}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Zoom Scale Ratio (ڕێژەی زوومکردنی کامێرە لە قۆناغی دووەمدا) */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center shrink-0">
+                        <ZoomIn className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block">
+                          {t.zoomScaleRatioLabel || 'ڕێژەی زوومکردنی سڵایدشۆو (گەورەکردنی وێنە)'}
+                        </label>
+                        <span className="text-[10px] text-slate-500 block">
+                          {t.zoomScaleRatioDesc || 'ڕێژەی زوومی کامێرە لە قۆناغی دووەمدا (بۆ نموونە: ١٢٨٪ یان ١.٢٨x)'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-teal-200 text-teal-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
+                      {Math.round(zoomScaleRatio * 100)}% ({zoomScaleRatio}x)
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="1.10"
+                      max="1.80"
+                      step="0.02"
+                      value={zoomScaleRatio}
+                      onChange={(e) => setZoomScaleRatio(parseFloat(e.target.value))}
+                      className="w-full accent-teal-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    />
+                    <input
+                      type="number"
+                      min="1.05"
+                      max="2.5"
+                      step="0.05"
+                      value={zoomScaleRatio}
+                      onChange={(e) => setZoomScaleRatio(parseFloat(e.target.value) || 1.10)}
+                      className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center text-slate-800 shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
+                    {[
+                      { label: '١١٥٪', val: 1.15 },
+                      { label: '١٢٥٪', val: 1.25 },
+                      { label: '١٢٨٪', val: 1.28 },
+                      { label: '١٣٥٪', val: 1.35 },
+                      { label: '١٥٠٪', val: 1.50 },
+                      { label: '١٦٥٪', val: 1.65 }
+                    ].map((item) => (
+                      <button
+                        key={item.val}
+                        type="button"
+                        onClick={() => setZoomScaleRatio(item.val)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
+                          Math.abs(zoomScaleRatio - item.val) < 0.01
+                            ? 'bg-teal-600 text-white shadow-xs' 
+                            : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {item.label}
                       </button>
                     ))}
                   </div>
