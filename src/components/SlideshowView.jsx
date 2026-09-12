@@ -19,7 +19,8 @@ import {
   Lock,
   Unlock,
   Download,
-  FolderArchive
+  FolderArchive,
+  FileText
 } from 'lucide-react';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 
@@ -902,38 +903,55 @@ export default function SlideshowView({
 
             {/* Minimal Floating Corner Tag in Locked Zen Mode */}
             {zenMode ? (
-              <div className="absolute bottom-4 start-4 z-30 bg-black/80 backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl shadow-2xl text-white flex items-center gap-3.5 select-none pointer-events-none animate-fadeIn">
-                <div>
-                  {/* Outlet Last Piece / Stock Badge */}
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide mb-1.5 shadow-xs">
-                    <span>ASHLEY OUTLET</span>
-                    <span>•</span>
-                    <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+              <div className="absolute bottom-4 start-4 z-30 bg-black/85 backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl shadow-2xl text-white select-none pointer-events-none animate-fadeIn max-w-sm sm:max-w-xl">
+                <div className="flex items-start justify-between gap-3.5">
+                  <div>
+                    {/* Outlet Last Piece / Stock Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide mb-1.5 shadow-xs">
+                      <span>ASHLEY OUTLET</span>
+                      <span>•</span>
+                      <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+                    </div>
+
+                    <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
+                    
+                    <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300">
+                      <span className="text-red-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
+                      {activeModel.stock > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-300 font-bold">عدد: {activeModel.stock}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
-                  
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300">
-                    <span className="text-red-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
-                    {activeModel.stock > 0 && (
-                      <>
-                        <span>•</span>
-                        <span className="text-amber-300 font-bold">عدد: {activeModel.stock}</span>
-                      </>
+                  <div className="text-start border-s border-white/20 ps-3.5 ms-1 shrink-0">
+                    {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
+                      <span className="text-[10px] text-slate-400 line-through block font-medium">
+                        {activeModel.originalPrice.toLocaleString()} {t.currency}
+                      </span>
                     )}
+                    <div className="text-base sm:text-xl font-black text-red-500 leading-none">
+                      {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="text-start border-s border-white/20 ps-3.5 ms-1">
-                  {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
-                    <span className="text-[10px] text-slate-400 line-through block font-medium">
-                      {activeModel.originalPrice.toLocaleString()} {t.currency}
-                    </span>
-                  )}
-                  <div className="text-base sm:text-xl font-black text-red-500 leading-none">
-                    {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
+                {/* Detailed Notes in Zen Mode (if present) */}
+                {activeModel.notes && (
+                  <div className="mt-2.5 pt-2 border-t border-white/15">
+                    <div className="flex items-start gap-1.5 text-[11px] sm:text-xs leading-relaxed text-slate-200">
+                      <span className="text-amber-400 font-black shrink-0 flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-amber-400" />
+                        <span>{t.notes || 'تێبینی'}:</span>
+                      </span>
+                      <p className="font-medium whitespace-pre-line text-slate-100/95 leading-relaxed">
+                        {activeModel.notes}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               /* Standard BOTTOM INFORMATION BAR (Morph Transition) */
@@ -985,13 +1003,23 @@ export default function SlideshowView({
                     </span>
                   </div>
 
-                  {/* Notes & Dimensions */}
+                  {/* Notes & Dimensions (Detailed and clear without truncation) */}
                   {activeModel.notes && (
-                    <p className={`mt-1 text-[11px] sm:text-xs max-w-3xl truncate ${
-                      isFullscreen ? 'text-slate-300' : 'text-slate-500'
+                    <div className={`mt-2 flex items-start gap-2 p-2 rounded-xl text-xs max-w-4xl border transition-colors ${
+                      isFullscreen 
+                        ? 'bg-white/10 border-white/15 text-slate-100 shadow-sm' 
+                        : 'bg-slate-50 border-slate-200/90 text-slate-800'
                     }`}>
-                      {activeModel.notes}
-                    </p>
+                      <span className={`font-black shrink-0 text-[11px] sm:text-xs flex items-center gap-1 ${
+                        isFullscreen ? 'text-amber-400' : 'text-red-600'
+                      }`}>
+                        <FileText className="w-3.5 h-3.5 shrink-0" />
+                        <span>{t.notes || 'تێبینی'}:</span>
+                      </span>
+                      <p className="leading-relaxed font-semibold whitespace-pre-line text-[11px] sm:text-xs">
+                        {activeModel.notes}
+                      </p>
+                    </div>
                   )}
 
                 </div>
