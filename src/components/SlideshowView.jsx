@@ -908,11 +908,20 @@ export default function SlideshowView({
               <div className="absolute bottom-4 start-4 z-30 bg-black/85 backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl shadow-2xl text-white select-none pointer-events-none animate-fadeIn max-w-sm sm:max-w-xl">
                 <div className="flex items-start justify-between gap-3.5">
                   <div>
-                    {/* Outlet Last Piece / Stock Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide mb-1.5 shadow-xs">
-                      <span>ASHLEY OUTLET</span>
-                      <span>•</span>
-                      <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+                    {/* Outlet Last Piece / Stock Badge & Large Discount Badge */}
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide shadow-xs">
+                        <span>ASHLEY OUTLET</span>
+                        <span>•</span>
+                        <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+                      </div>
+
+                      {discountPercent > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-white/20">
+                          <span>{discountPercent}%</span>
+                          <span className="text-[10px] font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
@@ -930,11 +939,18 @@ export default function SlideshowView({
 
                   <div className="text-start border-s border-white/20 ps-3.5 ms-1 shrink-0">
                     {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
-                      <span className="text-[10px] text-slate-400 line-through block font-medium">
-                        {activeModel.originalPrice.toLocaleString()} {t.currency}
-                      </span>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs text-slate-400 line-through font-medium">
+                          {activeModel.originalPrice.toLocaleString()} {t.currency}
+                        </span>
+                        {discountPercent > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-rose-600 text-white text-[11px] font-black shadow-xs">
+                            %{discountPercent}
+                          </span>
+                        )}
+                      </div>
                     )}
-                    <div className="text-base sm:text-xl font-black text-red-500 leading-none">
+                    <div className="text-lg sm:text-2xl font-black text-red-500 leading-none">
                       {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
                     </div>
                   </div>
@@ -988,6 +1004,13 @@ export default function SlideshowView({
                       {activeModel.name}
                     </h2>
 
+                    {discountPercent > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-red-500/30">
+                        <span>{discountPercent}%</span>
+                        <span className="text-[10px] sm:text-xs font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
+                      </span>
+                    )}
+
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
                       isOutOfStock ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
                     }`}>
@@ -1031,21 +1054,22 @@ export default function SlideshowView({
                   isFullscreen ? 'border-white/10' : 'border-slate-200'
                 }`}>
                   
-                  <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-0">
+                  <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-1">
                     {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <span className="text-xs sm:text-sm text-slate-400 line-through font-semibold">
                           {activeModel.originalPrice.toLocaleString()} {t.currency}
                         </span>
                         {discountPercent > 0 && (
-                          <span className="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.2 rounded-sm">
-                            {discountPercent}% OFF
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-red-400/25">
+                            <span>{discountPercent}%</span>
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
                           </span>
                         )}
                       </div>
                     )}
 
-                    <div className="text-xl sm:text-2xl font-black text-red-600 leading-none flex items-baseline gap-1">
+                    <div className="text-2xl sm:text-3xl font-black text-red-600 leading-none flex items-baseline gap-1">
                       <span>{activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'}</span>
                       <span className="text-xs font-bold text-red-600/80">{t.currency}</span>
                     </div>
