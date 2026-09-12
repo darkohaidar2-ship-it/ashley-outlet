@@ -56,6 +56,14 @@ export default function App() {
     return '';
   });
 
+  const [sortBy, setSortBy] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('sort') || 'name-asc';
+    }
+    return 'name-asc';
+  });
+
   // Modals & Slideshow state
   const [detailModel, setDetailModel] = useState(null);
   const [slideshowIndex, setSlideshowIndex] = useState(0);
@@ -184,6 +192,9 @@ export default function App() {
     if (searchQuery && searchQuery.trim() !== '') {
       params.set('search', searchQuery.trim());
     }
+    if (sortBy && sortBy !== 'name-asc') {
+      params.set('sort', sortBy);
+    }
 
     const qs = params.toString();
     const targetUrl = qs ? `${path}?${qs}` : path;
@@ -198,7 +209,7 @@ export default function App() {
         window.history.pushState({ viewMode, modelId: detailModel?.id }, '', targetUrl);
       }
     }
-  }, [viewMode, detailModel?.id, selectedCategory, selectedCollection, searchQuery]);
+  }, [viewMode, detailModel?.id, selectedCategory, selectedCollection, searchQuery, sortBy]);
 
   // Browser Back/Forward navigation support
   useEffect(() => {
@@ -228,6 +239,7 @@ export default function App() {
       setSelectedCategory(params.get('category') || 'all');
       setSelectedCollection(params.get('collection') || 'all');
       setSearchQuery(params.get('search') || '');
+      setSortBy(params.get('sort') || 'name-asc');
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -334,9 +346,9 @@ export default function App() {
     };
   }, []);
 
-  // Filter Models for Grid View
+  // Filter & Sort Models for Grid View
   const filteredModels = useMemo(() => {
-    return (data.models || []).filter((model) => {
+    const list = (data.models || []).filter((model) => {
       // 1. Category Filter
       if (selectedCategory !== 'all' && model.categoryId !== selectedCategory) {
         return false;
@@ -358,7 +370,37 @@ export default function App() {
 
       return true;
     });
-  }, [data.models, selectedCategory, selectedCollection, searchQuery]);
+
+    // Natural alphanumeric sorting
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name-desc') {
+        return (b.name || '').localeCompare(a.name || '', undefined, { numeric: true, sensitivity: 'base' });
+      }
+      if (sortBy === 'price-asc') {
+        const pA = a.salePrice || a.originalPrice || 0;
+        const pB = b.salePrice || b.originalPrice || 0;
+        return pA - pB;
+      }
+      if (sortBy === 'price-desc') {
+        const pA = a.salePrice || a.originalPrice || 0;
+        const pB = b.salePrice || b.originalPrice || 0;
+        return pB - pA;
+      }
+      if (sortBy === 'discount-desc') {
+        const dA = a.originalPrice && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
+        const dB = b.originalPrice && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
+        return dB - dA;
+      }
+      if (sortBy === 'stock-desc') {
+        return (b.stock || 0) - (a.stock || 0);
+      }
+      if (sortBy === 'newest') {
+        return (b.id || '').localeCompare(a.id || '');
+      }
+      // Default: 'name-asc' (A to Z)
+      return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [data.models, selectedCategory, selectedCollection, searchQuery, sortBy]);
 
   // Robust Print Handlers
   const handlePrintSingle = (model) => {
@@ -370,7 +412,7 @@ export default function App() {
   };
 
   const handleBatchPrint = () => {
-    const list = viewMode === 'grid' ? filteredModels : data.models;
+    const list = viewMode === 'grid' ? filteredModels : (data.models || []);
     if (!list || list.length === 0) return;
     setModelsToPrint(list);
     setTimeout(() => {
@@ -394,7 +436,8 @@ export default function App() {
 
   // Open slideshow on a specific model
   const openSlideshowOnModel = (model) => {
-    const idx = (data.models || []).findIndex(m => m.id === model.id);
+    const list = filteredModels.length > 0 ? filteredModels : (data.models || []);
+    const idx = list.findIndex(m => m.id === model.id);
     if (idx !== -1) {
       setSlideshowIndex(idx);
     }
@@ -516,7 +559,8 @@ export default function App() {
           /* SLIDESHOW VIEW: Left Mini-window + Fullscreen Hero Showcase */
           <>
             <SlideshowView
-              models={data.models || []}
+              models={filteredModels.length > 0 ? filteredModels : (data.models || [])}
+              allModels={data.models || []}
               categories={data.categories || []}
               collections={data.collections || []}
               t={t}
@@ -524,6 +568,8 @@ export default function App() {
               isAdmin={isAdmin}
               logoUrl={data.settings?.logoUrl || ''}
               settings={data.settings || {}}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
               onPrintSingle={handlePrintSingle}
               onEditModel={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
               onOpenSettings={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
@@ -546,6 +592,8 @@ export default function App() {
               setSelectedCollection={setSelectedCollection}
               totalCount={data.models?.length || 0}
               filteredCount={filteredModels.length}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
             />
 
             {/* Product Grid */}
@@ -587,6 +635,8 @@ export default function App() {
         {/* Product Full Details Modal */}
         <ProductModal
           model={detailModel}
+          models={filteredModels.length > 0 ? filteredModels : (data.models || [])}
+          onSelectModel={(m) => setDetailModel(m)}
           t={t}
           categoryName={detailModel ? getCategoryName(detailModel.categoryId) : ''}
           collectionName={detailModel ? getCollectionName(detailModel.collectionId) : ''}

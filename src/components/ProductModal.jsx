@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { downloadModelImage } from '../services/imageExportService';
 
 export default function ProductModal({
   model,
+  models = [],
+  onSelectModel,
   t,
   categoryName,
   collectionName,
@@ -13,6 +15,39 @@ export default function ProductModal({
   onOpenSlideshow
 }) {
   const [copied, setCopied] = useState(false);
+
+  const currentIndex = models.findIndex(m => m.id === model?.id);
+  const hasMultiple = models.length > 1 && currentIndex !== -1 && Boolean(onSelectModel);
+
+  const handlePrev = () => {
+    if (!hasMultiple) return;
+    const prevIdx = (currentIndex - 1 + models.length) % models.length;
+    onSelectModel(models[prevIdx]);
+  };
+
+  const handleNext = () => {
+    if (!hasMultiple) return;
+    const nextIdx = (currentIndex + 1) % models.length;
+    onSelectModel(models[nextIdx]);
+  };
+
+  // Keyboard Arrow navigation for Album browsing
+  useEffect(() => {
+    if (!hasMultiple) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowRight') {
+        if (t?.dir === 'rtl') handlePrev();
+        else handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        if (t?.dir === 'rtl') handleNext();
+        else handlePrev();
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasMultiple, currentIndex, models, t?.dir]);
 
   if (!model) return null;
 
@@ -69,6 +104,39 @@ export default function ProductModal({
             <div className="absolute top-4 start-4 bg-red-600 text-white font-black text-sm px-3 py-1.5 rounded-xl shadow-lg">
               {discountPercent}% {t.saveDiscount}
             </div>
+          )}
+
+          {/* Previous / Next Navigation Chevrons for Album Browsing */}
+          {hasMultiple && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePrev();
+                }}
+                className="absolute start-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer z-10"
+                title={t.previous || 'پێشوو'}
+              >
+                <ChevronLeft className="w-5 h-5 rtl:rotate-180" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNext();
+                }}
+                className="absolute end-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/70 text-white backdrop-blur-md flex items-center justify-center transition-all shadow-md active:scale-95 cursor-pointer z-10"
+                title={t.next || 'دواتر'}
+              >
+                <ChevronRight className="w-5 h-5 rtl:rotate-180" />
+              </button>
+
+              {/* Album Position Indicator */}
+              <div className="absolute bottom-3 start-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md text-white/90 text-[10px] font-bold px-2.5 py-0.5 rounded-full z-10 select-none font-mono">
+                {currentIndex + 1} / {models.length}
+              </div>
+            </>
           )}
 
           <button

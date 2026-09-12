@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowUpDown } from 'lucide-react';
 
 export default function FilterBar({
   t,
@@ -10,7 +11,9 @@ export default function FilterBar({
   selectedCollection,
   setSelectedCollection,
   totalCount,
-  filteredCount
+  filteredCount,
+  sortBy = 'name-asc',
+  setSortBy
 }) {
   // Collections that belong to current category
   const relevantCollections = selectedCategory === 'all'
@@ -25,8 +28,9 @@ export default function FilterBar({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 no-print">
-      {/* Single Unified Horizontal Pill Strip */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+        {/* Single Unified Horizontal Pill Strip */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
         
         {/* All Pill with Count */}
         <button
@@ -90,6 +94,28 @@ export default function FilterBar({
               );
             })}
           </>
+        )}
+        </div>
+
+        {/* Sort Selector Dropdown */}
+        {setSortBy && (
+          <div className="shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs hover:border-slate-300 transition-all">
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              aria-label={t.sortBy || 'سۆرت'}
+              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer pe-1 py-0.5"
+            >
+              <option value="name-asc">{t.sortAZ || 'A ➔ Z (ئەلفوبێ)'}</option>
+              <option value="name-desc">{t.sortZA || 'Z ➔ A (پێچەوانە)'}</option>
+              <option value="price-asc">{t.sortPriceLow || 'نرخ: کەم بۆ زۆر'}</option>
+              <option value="price-desc">{t.sortPriceHigh || 'نرخ: زۆر بۆ کەم'}</option>
+              <option value="discount-desc">{t.sortDiscount || 'بەرزترین داشکاندن'}</option>
+              <option value="stock-desc">{t.sortStock || 'زۆرترین عدد'}</option>
+              <option value="newest">{t.sortNewest || 'نوێترین'}</option>
+            </select>
+          </div>
         )}
       </div>
     </div>

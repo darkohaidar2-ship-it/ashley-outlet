@@ -83,7 +83,15 @@ export const translations = {
     seconds: 'چرکە',
     resetDefaults: 'گەڕاندنەوە بۆ بنەڕەت',
     uiScaleLabel: 'قەبارەی گشتی وێبسایت و تێکست (زووم / قەبارە)',
-    uiScaleDesc: 'بچووککردنەوەی گشتی پەڕە و فۆنتەکان بە شێوازی زۆر ورد و شیک (وەک زووم ئاوتی ٨٠٪)'
+    uiScaleDesc: 'بچووککردنەوەی گشتی پەڕە و فۆنتەکان بە شێوازی زۆر ورد و شیک (وەک زووم ئاوتی ٨٠٪)',
+    sortBy: 'ڕیزبەندی',
+    sortAZ: 'A ➔ Z (ئەلفوبێ)',
+    sortZA: 'Z ➔ A (پێچەوانە)',
+    sortPriceLow: 'نرخ: کەم بۆ زۆر',
+    sortPriceHigh: 'نرخ: زۆر بۆ کەم',
+    sortDiscount: 'بەرزترین داشکاندن',
+    sortStock: 'زۆرترین بڕ (عدد)',
+    sortNewest: 'نوێترین زیادکراو'
   },
   ar: {
     dir: 'rtl',
@@ -169,7 +177,15 @@ export const translations = {
     seconds: 'ثواني',
     resetDefaults: 'استعادة الافتراضي',
     uiScaleLabel: 'حجم الموقع والنصوص (Zoom / Scale)',
-    uiScaleDesc: 'تصغير وترتيب النصوص والموقع العام لتصميم دقيق ومضغوط (مثل تصغير 80%)'
+    uiScaleDesc: 'تصغير وترتيب النصوص والموقع العام لتصميم دقيق ومضغوط (مثل تصغير 80%)',
+    sortBy: 'ترتيب حسب',
+    sortAZ: 'A ➔ Z (أبجدي)',
+    sortZA: 'Z ➔ A (عكسي)',
+    sortPriceLow: 'السعر: من الأقل للأعلى',
+    sortPriceHigh: 'السعر: من الأعلى للأقل',
+    sortDiscount: 'أعلى نسبة خصم',
+    sortStock: 'أعلى كمية (متوفر)',
+    sortNewest: 'الأحدث أولاً'
   },
   en: {
     dir: 'ltr',
@@ -255,6 +271,14 @@ export const translations = {
     seconds: 'seconds',
     resetDefaults: 'Reset to Defaults',
     uiScaleLabel: 'UI & Font Scale (Zoom / Density)',
-    uiScaleDesc: 'Zoom out scale for more refined, compact high-density layout (e.g. 80%)'
+    uiScaleDesc: 'Zoom out scale for more refined, compact high-density layout (e.g. 80%)',
+    sortBy: 'Sort by',
+    sortAZ: 'A ➔ Z (Alphabetical)',
+    sortZA: 'Z ➔ A (Reverse)',
+    sortPriceLow: 'Price: Low to High',
+    sortPriceHigh: 'Price: High to Low',
+    sortDiscount: 'Highest Discount',
+    sortStock: 'Highest Stock',
+    sortNewest: 'Newest Added'
   }
 };

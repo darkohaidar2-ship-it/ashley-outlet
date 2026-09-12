@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -8,24 +8,26 @@ import {
   CheckCircle2, 
   AlertCircle, 
   Filter, 
-  Edit3,
-  Maximize2,
-  Minimize2,
-  Sliders,
-  ImageOff,
-  X,
-  RotateCcw,
-  Sparkles,
-  Lock,
-  Unlock,
-  Download,
-  FolderArchive,
-  FileText
+  Edit3, 
+  Maximize2, 
+  Minimize2, 
+  Sliders, 
+  ImageOff, 
+  X, 
+  RotateCcw, 
+  Sparkles, 
+  Lock, 
+  Unlock, 
+  Download, 
+  FolderArchive, 
+  FileText,
+  ArrowUpDown
 } from 'lucide-react';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 
 export default function SlideshowView({
   models,
+  allModels,
   categories,
   collections,
   t,
@@ -33,6 +35,8 @@ export default function SlideshowView({
   isAdmin,
   logoUrl,
   settings = {},
+  sortBy = 'name-asc',
+  setSortBy,
   onPrintSingle,
   onEditModel,
   onOpenSettings,
@@ -42,6 +46,7 @@ export default function SlideshowView({
   const [isPlaying, setIsPlaying] = useState(false);
   const [sidebarCategory, setSidebarCategory] = useState('all');
   const [sidebarCollection, setSidebarCollection] = useState('all');
+  const [localSort, setLocalSort] = useState(sortBy || 'name-asc');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isControlsVisible, setIsControlsVisible] = useState(true);
@@ -117,16 +122,57 @@ export default function SlideshowView({
     };
   }, [isPlaying, isFullscreen, zenMode]);
 
-  // Filter models strictly by Category & Collection
-  const filteredModels = models.filter((model) => {
-    if (sidebarCategory !== 'all' && model.categoryId !== sidebarCategory) {
-      return false;
-    }
-    if (sidebarCollection !== 'all' && model.collectionId !== sidebarCollection) {
-      return false;
-    }
-    return true;
-  });
+  useEffect(() => {
+    if (sortBy) setLocalSort(sortBy);
+  }, [sortBy]);
+
+  const handleSortChange = (newSort) => {
+    setLocalSort(newSort);
+    if (setSortBy) setSortBy(newSort);
+    setCurrentIndex(0);
+  };
+
+  // Filter & Sort models
+  const filteredModels = useMemo(() => {
+    const list = models.filter((model) => {
+      if (sidebarCategory !== 'all' && model.categoryId !== sidebarCategory) {
+        return false;
+      }
+      if (sidebarCollection !== 'all' && model.collectionId !== sidebarCollection) {
+        return false;
+      }
+      return true;
+    });
+
+    return [...list].sort((a, b) => {
+      if (localSort === 'name-desc') {
+        return (b.name || '').localeCompare(a.name || '', undefined, { numeric: true, sensitivity: 'base' });
+      }
+      if (localSort === 'price-asc') {
+        const pA = a.salePrice || a.originalPrice || 0;
+        const pB = b.salePrice || b.originalPrice || 0;
+        return pA - pB;
+      }
+      if (localSort === 'price-desc') {
+        const pA = a.salePrice || a.originalPrice || 0;
+        const pB = b.salePrice || b.originalPrice || 0;
+        return pB - pA;
+      }
+      if (localSort === 'discount-desc') {
+        const dA = a.originalPrice && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
+        const dB = b.originalPrice && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
+        return dB - dA;
+      }
+      if (localSort === 'stock-desc') {
+        return (b.stock || 0) - (a.stock || 0);
+      }
+      if (localSort === 'newest') {
+        return (b.id || '').localeCompare(a.id || '');
+      }
+      // Default: 'name-asc' (A to Z)
+      return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [models, sidebarCategory, sidebarCollection, localSort]);
 
   // Keep index within bounds when filtering
   useEffect(() => {
@@ -453,11 +499,31 @@ export default function SlideshowView({
                 </select>
               </div>
 
-              {(sidebarCategory !== 'all' || sidebarCollection !== 'all') && (
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                  {t.sortBy || 'ڕیزبەندی / سۆرت'}
+                </label>
+                <select
+                  value={localSort}
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                >
+                  <option value="name-asc">{t.sortAZ || 'A ➔ Z (ئەلفوبێ)'}</option>
+                  <option value="name-desc">{t.sortZA || 'Z ➔ A (پێچەوانە)'}</option>
+                  <option value="price-asc">{t.sortPriceLow || 'نرخ: کەم بۆ زۆر'}</option>
+                  <option value="price-desc">{t.sortPriceHigh || 'نرخ: زۆر بۆ کەم'}</option>
+                  <option value="discount-desc">{t.sortDiscount || 'بەرزترین داشکاندن'}</option>
+                  <option value="stock-desc">{t.sortStock || 'زۆرترین عدد'}</option>
+                  <option value="newest">{t.sortNewest || 'نوێترین'}</option>
+                </select>
+              </div>
+
+              {(sidebarCategory !== 'all' || sidebarCollection !== 'all' || localSort !== 'name-asc') && (
                 <button
                   onClick={() => {
                     setSidebarCategory('all');
                     setSidebarCollection('all');
+                    handleSortChange('name-asc');
                   }}
                   className="w-full py-1 text-center text-[10px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >

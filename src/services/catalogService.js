@@ -71,7 +71,9 @@ export const catalogService = {
           name: c.name
         }));
 
-        const models = (modRes.data || []).map(mapModelFromDB);
+        const models = (modRes.data || []).map(mapModelFromDB).sort((a, b) => 
+          (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' })
+        );
 
         const settings = mapSettingsFromDB(setRes.data) || {
           logoUrl: '',

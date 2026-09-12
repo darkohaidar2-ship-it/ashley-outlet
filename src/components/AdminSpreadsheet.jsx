@@ -12,7 +12,10 @@ import {
   Check, 
   AlertCircle,
   FolderPlus,
-  FolderArchive
+  FolderArchive,
+  ArrowUpDown,
+  ArrowDownAZ,
+  ArrowUpZA
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
@@ -26,7 +29,11 @@ export default function AdminSpreadsheet({
   onSaveBulk,
   onClose
 }) {
-  const [tableData, setTableData] = useState(() => JSON.parse(JSON.stringify(models || [])));
+  const [tableData, setTableData] = useState(() => {
+    const list = JSON.parse(JSON.stringify(models || []));
+    return list.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+  });
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState(null);
@@ -53,6 +60,63 @@ export default function AdminSpreadsheet({
     } finally {
       setIsExportingImages(false);
     }
+  };
+
+  // Interactive Column Sorting
+  const handleSortColumn = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+
+    setTableData(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        let valA = a[key] ?? '';
+        let valB = b[key] ?? '';
+
+        if (key === 'categoryId') {
+          const catA = categories.find(c => c.id === a.categoryId);
+          const catB = categories.find(c => c.id === b.categoryId);
+          valA = catA?.name_ku || catA?.name || '';
+          valB = catB?.name_ku || catB?.name || '';
+        } else if (key === 'collectionId') {
+          const colA = collections.find(c => c.id === a.collectionId);
+          const colB = collections.find(c => c.id === b.collectionId);
+          valA = colA?.name || '';
+          valB = colB?.name || '';
+        } else if (key === 'stock' || key === 'originalPrice' || key === 'salePrice') {
+          const numA = parseFloat(valA) || 0;
+          const numB = parseFloat(valB) || 0;
+          return direction === 'asc' ? numA - numB : numB - numA;
+        }
+
+        const comp = String(valA).localeCompare(String(valB), undefined, { numeric: true, sensitivity: 'base' });
+        return direction === 'asc' ? comp : -comp;
+      });
+      return sorted;
+    });
+  };
+
+  // Quick alphabetical sort for toolbar buttons
+  const handleQuickSort = (direction) => {
+    setSortConfig({ key: 'name', direction });
+    setTableData(prev => {
+      const sorted = [...prev].sort((a, b) => {
+        const comp = (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
+        return direction === 'asc' ? comp : -comp;
+      });
+      return sorted;
+    });
+  };
+
+  const renderSortIndicator = (colKey) => {
+    if (sortConfig.key !== colKey) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-400 group-hover:text-slate-600 inline-block ms-1 opacity-50 transition-opacity" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <span className="text-red-600 font-black ms-1 text-[12px]">▲</span> 
+      : <span className="text-red-600 font-black ms-1 text-[12px]">▼</span>;
   };
 
   // Handle cell text edits
@@ -290,6 +354,36 @@ export default function AdminSpreadsheet({
             <span>{t.exportExcel}</span>
           </button>
 
+          {/* Quick A-Z / Z-A Sorting */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => handleQuickSort('asc')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                sortConfig.key === 'name' && sortConfig.direction === 'asc'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
+              }`}
+              title="سۆرتی ئەلفوبێ (A بۆ Z)"
+            >
+              <ArrowDownAZ className="w-3.5 h-3.5" />
+              <span>A ➔ Z</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickSort('desc')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                sortConfig.key === 'name' && sortConfig.direction === 'desc'
+                  ? 'bg-red-600 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
+              }`}
+              title="سۆرتی پێچەوانە (Z بۆ A)"
+            >
+              <ArrowUpZA className="w-3.5 h-3.5" />
+              <span>Z ➔ A</span>
+            </button>
+          </div>
+
           {/* Export All Images (ZIP) */}
           <button
             onClick={handleDownloadAllImages}
@@ -332,12 +426,73 @@ export default function AdminSpreadsheet({
             <tr>
               <th className="p-2 w-10 text-center border-e border-slate-200">#</th>
               <th className="p-2 w-28 text-center border-e border-slate-200">{t.uploadImage} (Drag & Drop)</th>
-              <th className="p-2 min-w-[200px] text-start border-e border-slate-200">{t.modelName} *</th>
-              <th className="p-2 min-w-[120px] text-start border-e border-slate-200">{t.category}</th>
-              <th className="p-2 min-w-[120px] text-start border-e border-slate-200">{t.collection}</th>
-              <th className="p-2 w-20 text-center border-e border-slate-200">{t.stockCount}</th>
-              <th className="p-2 w-24 text-center border-e border-slate-200">{t.oldPriceLabel}</th>
-              <th className="p-2 w-28 text-center border-e border-slate-200 text-red-600">{t.newPriceLabel} *</th>
+              
+              <th 
+                onClick={() => handleSortColumn('name')}
+                className="p-2 min-w-[200px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت (A بۆ Z / پێچەوانە)"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span>{t.modelName} *</span>
+                  {renderSortIndicator('name')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('categoryId')}
+                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی کەتەگۆری"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span>{t.category}</span>
+                  {renderSortIndicator('categoryId')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('collectionId')}
+                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی سێت"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span>{t.collection}</span>
+                  {renderSortIndicator('collectionId')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('stock')}
+                className="p-2 w-20 text-center border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی عدد"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <span>{t.stockCount}</span>
+                  {renderSortIndicator('stock')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('originalPrice')}
+                className="p-2 w-24 text-center border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی نرخی پێشوو"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <span>{t.oldPriceLabel}</span>
+                  {renderSortIndicator('originalPrice')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('salePrice')}
+                className="p-2 w-28 text-center border-e border-slate-200 text-red-600 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی نرخی ئاوت لێت"
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <span>{t.newPriceLabel} *</span>
+                  {renderSortIndicator('salePrice')}
+                </div>
+              </th>
+
               <th className="p-2 min-w-[200px] text-start border-e border-slate-200">{t.notes}</th>
               <th className="p-2 w-12 text-center"></th>
             </tr>
