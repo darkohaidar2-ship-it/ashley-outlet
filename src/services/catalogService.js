@@ -19,12 +19,27 @@ function mapModelFromDB(m) {
 // Helper to map DB row to frontend Settings object
 function mapSettingsFromDB(s) {
   if (!s) return null;
+  let extra = {};
+  if (s.logo_url && s.logo_url.includes('#cfg=')) {
+    try {
+      const cfgStr = decodeURIComponent(s.logo_url.split('#cfg=')[1]);
+      extra = JSON.parse(cfgStr);
+    } catch (e) {}
+  }
+  const stage1 = extra.stage1Time !== undefined ? parseFloat(extra.stage1Time) : 3.0;
+  const zoomMotion = extra.zoomMotionTime !== undefined ? parseFloat(extra.zoomMotionTime) : 5.0;
+  const stage3 = extra.stage3Time !== undefined ? parseFloat(extra.stage3Time) : 4.0;
+  const computedDwell = stage1 + zoomMotion + stage3;
+
   return {
-    logoUrl: s.logo_url || '',
-    slideshowDwellTime: s.slideshow_dwell_time !== undefined ? parseFloat(s.slideshow_dwell_time) : 4.5,
+    logoUrl: s.logo_url ? s.logo_url.split('#cfg=')[0] : '',
+    slideshowDwellTime: s.slideshow_dwell_time !== undefined ? parseFloat(s.slideshow_dwell_time) : computedDwell,
     slideshowTransitionTime: s.slideshow_transition_time !== undefined ? parseFloat(s.slideshow_transition_time) : 1.0,
     slideshowShimmerTime: s.slideshow_shimmer_time !== undefined ? parseFloat(s.slideshow_shimmer_time) : 7.0,
-    uiScale: s.ui_scale !== undefined ? parseFloat(s.ui_scale) : 0.80
+    uiScale: s.ui_scale !== undefined ? parseFloat(s.ui_scale) : 1.0,
+    stage1Time: stage1,
+    zoomMotionTime: zoomMotion,
+    stage3Time: stage3
   };
 }
 
@@ -349,15 +364,26 @@ export const catalogService = {
 
   // 9. Save Settings (Timings, UI Zoom, Logo)
   async saveSettings(settingsData) {
+    const stage1Time = settingsData.stage1Time !== undefined ? parseFloat(settingsData.stage1Time) : 3.0;
+    const zoomMotionTime = settingsData.zoomMotionTime !== undefined ? parseFloat(settingsData.zoomMotionTime) : 5.0;
+    const stage3Time = settingsData.stage3Time !== undefined ? parseFloat(settingsData.stage3Time) : 4.0;
+    const totalDwellTime = stage1Time + zoomMotionTime + stage3Time;
+
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time };
+    const rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
+    const encodedLogo = rawLogo 
+      ? `${rawLogo}#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}` 
+      : `#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}`;
+
     if (isSupabaseConfigured && supabase) {
       try {
         const dbSettings = {
           id: 'global_settings',
-          logo_url: settingsData.logoUrl !== undefined ? settingsData.logoUrl : '',
-          slideshow_dwell_time: settingsData.slideshowDwellTime !== undefined ? parseFloat(settingsData.slideshowDwellTime) : 4.5,
+          logo_url: encodedLogo,
+          slideshow_dwell_time: totalDwellTime,
           slideshow_transition_time: settingsData.slideshowTransitionTime !== undefined ? parseFloat(settingsData.slideshowTransitionTime) : 1.0,
           slideshow_shimmer_time: settingsData.slideshowShimmerTime !== undefined ? parseFloat(settingsData.slideshowShimmerTime) : 7.0,
-          ui_scale: settingsData.uiScale !== undefined ? parseFloat(settingsData.uiScale) : 0.80,
+          ui_scale: settingsData.uiScale !== undefined ? parseFloat(settingsData.uiScale) : 1.0,
           updated_at: new Date().toISOString()
         };
 
@@ -371,7 +397,7 @@ export const catalogService = {
     await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settingsData)
+      body: JSON.stringify({ ...settingsData, stage1Time, zoomMotionTime, stage3Time, slideshowDwellTime: totalDwellTime })
     });
   }
 };

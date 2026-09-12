@@ -14,7 +14,10 @@ import {
   RotateCcw, 
   Image as ImageIcon,
   ZoomIn,
-  Trash2
+  Trash2,
+  Camera,
+  Maximize2,
+  Scan
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 
@@ -80,10 +83,13 @@ export default function AdminModal({
   });
 
   // Slideshow Timing & UI Scale Settings State
-  const [dwellTime, setDwellTime] = useState(4.5);
+  const [stage1Time, setStage1Time] = useState(3.0);
+  const [zoomMotionTime, setZoomMotionTime] = useState(5.0);
+  const [stage3Time, setStage3Time] = useState(4.0);
+  const [dwellTime, setDwellTime] = useState(12.0);
   const [transitionTime, setTransitionTime] = useState(1.0);
   const [shimmerTime, setShimmerTime] = useState(7.0);
-  const [uiScale, setUiScale] = useState(0.80);
+  const [uiScale, setUiScale] = useState(1.0);
   const [settingsTab, setSettingsTab] = useState('slideshow'); // 'slideshow' | 'logo'
 
   useEffect(() => {
@@ -116,6 +122,9 @@ export default function AdminModal({
     }
 
     if (settings) {
+      if (settings.stage1Time !== undefined) setStage1Time(Number(settings.stage1Time));
+      if (settings.zoomMotionTime !== undefined) setZoomMotionTime(Number(settings.zoomMotionTime));
+      if (settings.stage3Time !== undefined) setStage3Time(Number(settings.stage3Time));
       if (settings.slideshowDwellTime !== undefined) setDwellTime(Number(settings.slideshowDwellTime));
       if (settings.slideshowTransitionTime !== undefined) setTransitionTime(Number(settings.slideshowTransitionTime));
       if (settings.slideshowShimmerTime !== undefined) setShimmerTime(Number(settings.slideshowShimmerTime));
@@ -137,7 +146,10 @@ export default function AdminModal({
   }, [editingModel, isOpen, categories, collections, settings, currentLogo, type]);
 
   const handleResetDefaults = () => {
-    setDwellTime(4.5);
+    setStage1Time(3.0);
+    setZoomMotionTime(5.0);
+    setStage3Time(4.0);
+    setDwellTime(12.0);
     setTransitionTime(1.0);
     setShimmerTime(7.0);
     setUiScale(0.80);
@@ -595,9 +607,17 @@ export default function AdminModal({
                 }
               }
               
+              const s1 = Math.max(0.5, parseFloat(stage1Time) || 3.0);
+              const s2 = Math.max(0.5, parseFloat(zoomMotionTime) || 5.0);
+              const s3 = Math.max(0.5, parseFloat(stage3Time) || 4.0);
+              const totalDwell = Number((s1 + s2 + s3).toFixed(1));
+
               const payload = {
                 logoUrl: finalLogo,
-                slideshowDwellTime: Math.max(1, parseFloat(dwellTime) || 4.5),
+                slideshowDwellTime: totalDwell,
+                stage1Time: s1,
+                zoomMotionTime: s2,
+                stage3Time: s3,
                 slideshowTransitionTime: Math.max(0.1, parseFloat(transitionTime) || 1.0),
                 slideshowShimmerTime: Math.max(1, parseFloat(shimmerTime) || 7.0),
                 uiScale: Math.max(0.65, Math.min(1.2, parseFloat(uiScale) || 0.80))
@@ -643,57 +663,92 @@ export default function AdminModal({
             {settingsTab === 'slideshow' && (
               <div className="space-y-3.5">
                 
-                {/* 1. Dwell / Hold Time */}
-                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
-                  <div className="flex items-center justify-between gap-2 mb-1">
+                {/* 3-Stage Overall Timeline Card */}
+                <div className="p-3.5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl text-white shadow-md border border-slate-700/60">
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center shrink-0">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-slate-800 block">
-                          {t.dwellTimeLabel}
-                        </label>
-                      </div>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-xs font-black tracking-wide text-slate-200">
+                        {t.totalDwellTimeLabel || 'کۆی گشتی کاتی مانەوە لەسەر مۆدێل'}
+                      </span>
                     </div>
-                    <span className="px-2.5 py-1 bg-white border border-red-200 text-red-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
-                      {dwellTime} {t.seconds}
+                    <span className="px-2.5 py-0.5 rounded-full bg-red-600/90 text-white text-xs font-black tracking-wider shadow-xs">
+                      {(parseFloat(stage1Time || 3) + parseFloat(zoomMotionTime || 5) + parseFloat(stage3Time || 4)).toFixed(1)} {t.seconds}
                     </span>
                   </div>
 
-                  {/* Range Slider & Synced Number */}
+                  {/* Visual 3-Stage Progress Timeline */}
+                  <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold">
+                    <div className="bg-indigo-950/70 border border-indigo-500/40 rounded-xl p-2">
+                      <span className="text-indigo-300 block text-[9px] font-medium">قۆناغی ١</span>
+                      <span className="text-white font-extrabold">{stage1Time}s</span>
+                      <span className="text-[9px] text-slate-300 block mt-0.5">تەواوی وێنە</span>
+                    </div>
+                    <div className="bg-emerald-950/70 border border-emerald-500/40 rounded-xl p-2">
+                      <span className="text-emerald-300 block text-[9px] font-medium">قۆناغی ٢</span>
+                      <span className="text-white font-extrabold">{zoomMotionTime}s</span>
+                      <span className="text-[9px] text-slate-300 block mt-0.5">زووم و مۆشن</span>
+                    </div>
+                    <div className="bg-rose-950/70 border border-rose-500/40 rounded-xl p-2">
+                      <span className="text-rose-300 block text-[9px] font-medium">قۆناغی ٣</span>
+                      <span className="text-white font-extrabold">{stage3Time}s</span>
+                      <span className="text-[9px] text-slate-300 block mt-0.5">کۆتایی تەواو</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stage 1: Initial Full View Duration */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                        <Maximize2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block">
+                          {t.stage1TimeLabel || 'قۆناغی ١: نیشاندانی تەواوی وێنە لە سەرەتاوە'}
+                        </label>
+                        <span className="text-[10px] text-slate-500 block">
+                          {t.stage1TimeDesc || 'چرکەی نیشاندانی سەرەتایی وێنەکە پێش ئەوەی کامێرە زووم بکات'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-indigo-200 text-indigo-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
+                      {stage1Time} {t.seconds}
+                    </span>
+                  </div>
+
                   <div className="mt-3 flex items-center gap-3">
                     <input
                       type="range"
                       min="1"
-                      max="20"
+                      max="15"
                       step="0.5"
-                      value={dwellTime}
-                      onChange={(e) => setDwellTime(parseFloat(e.target.value))}
-                      className="w-full accent-red-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                      value={stage1Time}
+                      onChange={(e) => setStage1Time(parseFloat(e.target.value))}
+                      className="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
                     />
                     <input
                       type="number"
                       min="1"
-                      max="60"
+                      max="30"
                       step="0.5"
-                      value={dwellTime}
-                      onChange={(e) => setDwellTime(parseFloat(e.target.value) || 1)}
+                      value={stage1Time}
+                      onChange={(e) => setStage1Time(parseFloat(e.target.value) || 1)}
                       className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center text-slate-800 shadow-2xs"
                     />
                   </div>
 
-                  {/* Presets */}
-                  <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
-                    {[3, 4.5, 6, 8, 10, 15].map((val) => (
+                    {[2, 3, 4, 5].map((val) => (
                       <button
                         key={val}
                         type="button"
-                        onClick={() => setDwellTime(val)}
+                        onClick={() => setStage1Time(val)}
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
-                          dwellTime === val 
-                            ? 'bg-red-600 text-white shadow-xs' 
+                          stage1Time === val 
+                            ? 'bg-indigo-600 text-white shadow-xs' 
                             : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
                         }`}
                       >
@@ -703,7 +758,129 @@ export default function AdminModal({
                   </div>
                 </div>
 
-                {/* 2. Transition Duration (Morph Speed) */}
+                {/* Stage 2: Zoom & Pan Motion Duration */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                        <Camera className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block">
+                          {t.stage2TimeLabel || 'قۆناغی ٢: زووم ئین و مۆشنی کامێرە (چەپ بۆ ڕاست)'}
+                        </label>
+                        <span className="text-[10px] text-slate-500 block">
+                          {t.stage2TimeDesc || 'چرکەی زوومی ورد و جوڵەی کامێرە بەسەر دیزاین و وردەکاری کاڵاکەدا'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-emerald-200 text-emerald-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
+                      {zoomMotionTime} {t.seconds}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="2"
+                      max="20"
+                      step="0.5"
+                      value={zoomMotionTime}
+                      onChange={(e) => setZoomMotionTime(parseFloat(e.target.value))}
+                      className="w-full accent-emerald-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    />
+                    <input
+                      type="number"
+                      min="2"
+                      max="40"
+                      step="0.5"
+                      value={zoomMotionTime}
+                      onChange={(e) => setZoomMotionTime(parseFloat(e.target.value) || 2)}
+                      className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center text-slate-800 shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
+                    {[3, 4, 5, 6, 8, 10].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setZoomMotionTime(val)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
+                          zoomMotionTime === val 
+                            ? 'bg-emerald-600 text-white shadow-xs' 
+                            : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {val} {t.seconds}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stage 3: Final Full View Duration */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                        <Scan className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block">
+                          {t.stage3TimeLabel || 'قۆناغی ٣: نیشاندانی تەواوی کۆتایی پێش مۆدێلی دواتر'}
+                        </label>
+                        <span className="text-[10px] text-slate-500 block">
+                          {t.stage3TimeDesc || 'چرکەی نیشاندانی وێنەکە دوای زووم پێش تێپەڕین بۆ مۆدێلی داهاتوو'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-rose-200 text-rose-600 font-extrabold text-xs rounded-xl shadow-xs shrink-0">
+                      {stage3Time} {t.seconds}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="1"
+                      max="15"
+                      step="0.5"
+                      value={stage3Time}
+                      onChange={(e) => setStage3Time(parseFloat(e.target.value))}
+                      className="w-full accent-rose-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      step="0.5"
+                      value={stage3Time}
+                      onChange={(e) => setStage3Time(parseFloat(e.target.value) || 1)}
+                      className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs font-bold text-center text-slate-800 shadow-2xs"
+                    />
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
+                    {[2, 3, 4, 5, 6].map((val) => (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => setStage3Time(val)}
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg transition-all ${
+                          stage3Time === val 
+                            ? 'bg-rose-600 text-white shadow-xs' 
+                            : 'bg-white hover:bg-slate-200 text-slate-600 border border-slate-200'
+                        }`}
+                      >
+                        {val} {t.seconds}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Transition Duration (Morph Speed) */}
                 <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2">
@@ -763,7 +940,7 @@ export default function AdminModal({
                   </div>
                 </div>
 
-                {/* 3. Shimmer Wave Cycle */}
+                {/* Shimmer Wave Cycle */}
                 <div className="p-3.5 bg-slate-50 border border-slate-200/90 rounded-2xl">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <div className="flex items-center gap-2">

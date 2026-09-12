@@ -49,8 +49,6 @@ export default function SlideshowView({
   const zenUnlockTimer = useRef(null);
   const hideControlsTimer = useRef(null);
   const containerRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
 
@@ -139,20 +137,76 @@ export default function SlideshowView({
   const activeModel = filteredModels[currentIndex] || filteredModels[0];
 
   // Dynamic timing controls (under Admin settings control)
-  const dwellTime = Math.max(1, parseFloat(settings?.slideshowDwellTime) || 4.5);
+  const stage1Time = Math.max(0.5, parseFloat(settings?.stage1Time) || 3.0);
+  const zoomMotionTime = Math.max(0.5, parseFloat(settings?.zoomMotionTime) || 5.0);
+  const stage3Time = Math.max(0.5, parseFloat(settings?.stage3Time) || 4.0);
+  const dwellTime = stage1Time + zoomMotionTime + stage3Time;
   const transitionTime = Math.max(0.1, parseFloat(settings?.slideshowTransitionTime) || 1.0);
   const shimmerTime = Math.max(1, parseFloat(settings?.slideshowShimmerTime) || 7.0);
 
-  // Auto play timer with admin-controlled dwell time
+  // 3-Stage Cinematic Presentation State: 1 = Initial Full, 2 = Pan & Zoom across details, 3 = Ending Full
+  const [cinemaStage, setCinemaStage] = useState(1);
+
+  // Multi-touch Pinch to Zoom & Pan State (up to 4.5x)
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const isPinchingRef = useRef(false);
+  const initialDistanceRef = useRef(0);
+  const initialScaleRef = useRef(1);
+  const initialPanOffsetRef = useRef({ x: 0, y: 0 });
+  const singleTouchStartRef = useRef({ x: 0, y: 0 });
+  const lastTapRef = useRef(0);
+
+  // Preload adjacent images off the main thread to eliminate stutter on Next / Prev
   useEffect(() => {
-    let timer;
+    if (!filteredModels.length) return;
+    const nextIdx1 = (currentIndex + 1) % filteredModels.length;
+    const nextIdx2 = (currentIndex + 2) % filteredModels.length;
+    const prevIdx = (currentIndex - 1 + filteredModels.length) % filteredModels.length;
+
+    [nextIdx1, nextIdx2, prevIdx].forEach((idx) => {
+      const src = filteredModels[idx]?.image;
+      if (src) {
+        const img = new Image();
+        img.src = src;
+        if (img.decode) {
+          img.decode().catch(() => {});
+        }
+      }
+    });
+  }, [currentIndex, filteredModels]);
+
+  // 3-Stage presentation timeline runner
+  useEffect(() => {
+    // Reset manual zoom and cinema stage on slide change
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+    setCinemaStage(1);
+
+    const t1 = setTimeout(() => {
+      setCinemaStage(2);
+    }, stage1Time * 1000);
+
+    const t2 = setTimeout(() => {
+      setCinemaStage(3);
+    }, (stage1Time + zoomMotionTime) * 1000);
+
+    let nextTimer;
     if (isPlaying && filteredModels.length > 1) {
-      timer = setInterval(() => {
-        setCurrentIndex((prev) => (prev + 1) % filteredModels.length);
+      nextTimer = setTimeout(() => {
+        // Advance only if user isn't actively inspecting the photo with pinch zoom
+        if (zoomScale <= 1.05) {
+          goToNext();
+        }
       }, dwellTime * 1000);
     }
-    return () => clearInterval(timer);
-  }, [isPlaying, filteredModels.length, dwellTime]);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (nextTimer) clearTimeout(nextTimer);
+    };
+  }, [currentIndex, isPlaying, stage1Time, zoomMotionTime, stage3Time, dwellTime, filteredModels.length]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -177,29 +231,90 @@ export default function SlideshowView({
     setCurrentIndex((prev) => (prev - 1 + filteredModels.length) % filteredModels.length);
   };
 
-  // Touch Swipe Gesture for iPad, Tablets and Mobile
+  // Multi-Touch Start: 2-finger pinch or 1-finger swipe / pan
   const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
+    if (e.touches.length === 2) {
+      isPinchingRef.current = true;
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      initialDistanceRef.current = dist;
+      initialScaleRef.current = zoomScale;
+      initialPanOffsetRef.current = { ...panOffset };
+    } else if (e.touches.length === 1) {
+      singleTouchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+      initialPanOffsetRef.current = { ...panOffset };
+
+      // Double-tap detection: reset zoom or zoom in to 2.5x
+      const now = Date.now();
+      if (now - lastTapRef.current < 320) {
+        if (zoomScale > 1.05) {
+          setZoomScale(1);
+          setPanOffset({ x: 0, y: 0 });
+        } else {
+          setZoomScale(2.5);
+        }
+        lastTapRef.current = 0;
+        return;
+      }
+      lastTapRef.current = now;
+    }
   };
 
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null || touchStartY.current === null) return;
-    const deltaX = touchStartX.current - e.changedTouches[0].clientX;
-    const deltaY = touchStartY.current - e.changedTouches[0].clientY;
+  // Multi-Touch Move: handles continuous pinch scaling or pan
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2 && isPinchingRef.current) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      if (initialDistanceRef.current > 0) {
+        const factor = dist / initialDistanceRef.current;
+        const newScale = Math.min(4.5, Math.max(1, initialScaleRef.current * factor));
+        setZoomScale(newScale);
+      }
+    } else if (e.touches.length === 1 && zoomScale > 1.05) {
+      const deltaX = e.touches[0].clientX - singleTouchStartRef.current.x;
+      const deltaY = e.touches[0].clientY - singleTouchStartRef.current.y;
+      const maxPanX = (window.innerWidth * (zoomScale - 1)) / 2;
+      const maxPanY = (window.innerHeight * (zoomScale - 1)) / 2;
+      setPanOffset({
+        x: Math.min(maxPanX, Math.max(-maxPanX, initialPanOffsetRef.current.x + deltaX)),
+        y: Math.min(maxPanY, Math.max(-maxPanY, initialPanOffsetRef.current.y + deltaY))
+      });
+    }
+  };
 
-    // Detect horizontal swipe with minimum threshold
-    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (deltaX > 0) {
-        // Swiped left (in RTL: next / in LTR: next)
-        goToNext();
-      } else {
-        // Swiped right
-        goToPrev();
+  // Multi-Touch End: handles pinch release or swipe navigation
+  const handleTouchEnd = (e) => {
+    if (e.touches.length === 0) {
+      if (isPinchingRef.current) {
+        isPinchingRef.current = false;
+        if (zoomScale < 1.05) {
+          setZoomScale(1);
+          setPanOffset({ x: 0, y: 0 });
+        }
+        return;
+      }
+
+      if (zoomScale <= 1.05 && singleTouchStartRef.current) {
+        const touch = e.changedTouches[0];
+        const deltaX = singleTouchStartRef.current.x - touch.clientX;
+        const deltaY = singleTouchStartRef.current.y - touch.clientY;
+
+        if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (deltaX > 0) {
+            goToNext();
+          } else {
+            goToPrev();
+          }
+        }
       }
     }
-    touchStartX.current = null;
-    touchStartY.current = null;
   };
 
   // Fullscreen toggle with iOS/iPadOS Safari fallback
@@ -620,16 +735,34 @@ export default function SlideshowView({
               onMouseMove={() => {
                 if (!zenMode) resetControlsVisibility();
               }}
-              className={`flex-1 relative flex flex-col items-center justify-center overflow-hidden touch-pan-y select-none cursor-pointer ${
+              className={`flex-1 relative flex flex-col items-center justify-center overflow-hidden select-none cursor-pointer ${
                 zenMode ? 'p-0' : 'p-1 sm:p-2.5'
               }`}
               onTouchStart={(e) => {
                 handleTouchStart(e);
                 handleScreenInteraction();
               }}
+              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
               
+              {/* Floating Touchscreen Zoom Indicator & Reset Button */}
+              {zoomScale > 1.05 && (
+                <div className="absolute top-14 sm:top-16 start-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-xl text-white text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-3 border border-white/20 shadow-2xl pointer-events-auto animate-fadeIn">
+                  <span className="text-amber-400 font-mono">🔍 {zoomScale.toFixed(1)}x</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoomScale(1);
+                      setPanOffset({ x: 0, y: 0 });
+                    }}
+                    className="bg-white/20 hover:bg-white/30 active:scale-95 text-[11px] px-2.5 py-0.5 rounded-full font-bold transition-all cursor-pointer"
+                  >
+                    دووجار کرتە / ئاسایی
+                  </button>
+                </div>
+              )}
+
               {/* Frosted Glass Frame with Dynamic CSS Variables */}
               <div 
                 className={`w-full h-full flex items-center justify-center relative overflow-hidden ${
@@ -647,28 +780,54 @@ export default function SlideshowView({
                   style={{ animationDuration: `${shimmerTime}s` }}
                 />
 
-                {/* Luxury Ambient Glow in Zen Mode & Fullscreen */}
+                {/* Luxury Ambient Glow in Zen Mode & Fullscreen (GPU-optimized for butter smooth 60fps) */}
                 {(zenMode || isFullscreen) && activeModel?.image && (
                   <div 
-                    className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-35 scale-125 pointer-events-none transition-all duration-1000 -z-0"
+                    className="absolute inset-0 bg-cover bg-center filter blur-xl opacity-25 scale-110 pointer-events-none transition-opacity duration-700 -z-0 gpu-layer"
                     style={{ backgroundImage: `url(${activeModel.image})` }}
                   />
                 )}
 
-                {/* Morph Image or Explicit No Image Banner */}
+                {/* Morph Container with separation of slide entry vs internal camera motion */}
                 {activeModel.image ? (
-                  <img
+                  <div
                     key={activeModel.id}
-                    src={activeModel.image}
-                    alt={activeModel.name}
                     style={{ animationDuration: `${transitionTime}s` }}
-                    className={`animate-morph-image drop-shadow-2xl z-10 select-none pointer-events-none transition-all duration-500 ${
-                      zenMode || isFullscreen
-                        ? 'w-full h-full max-h-screen max-w-full object-contain p-2 sm:p-4'
-                        : 'max-h-[88vh] max-w-full w-auto h-auto object-contain'
-                    }`}
-                    draggable={false}
-                  />
+                    className="animate-morph-image w-full h-full flex items-center justify-center relative overflow-hidden gpu-layer"
+                  >
+                    <img
+                      src={activeModel.image}
+                      alt={activeModel.name}
+                      style={
+                        zoomScale > 1.05
+                          ? {
+                              transform: `translate3d(${panOffset.x}px, ${panOffset.y}px, 0) scale(${zoomScale})`,
+                              transition: isPinchingRef.current ? 'none' : 'transform 0.15s ease-out'
+                            }
+                          : cinemaStage === 2
+                          ? {
+                              animation: `cinematicCameraPan ${zoomMotionTime}s cubic-bezier(0.4, 0, 0.2, 1) forwards`
+                            }
+                          : cinemaStage === 3
+                          ? {
+                              transform: 'scale(1) translate3d(0, 0, 0)',
+                              transition: 'transform 0.8s cubic-bezier(0.25, 1, 0.5, 1)'
+                            }
+                          : {
+                              transform: 'scale(1) translate3d(0, 0, 0)',
+                              transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+                            }
+                      }
+                      className={`z-10 select-none transition-all gpu-layer ${
+                        isFullscreen || zenMode ? '' : 'drop-shadow-xl'
+                      } ${
+                        zenMode || isFullscreen
+                          ? 'w-full h-full max-h-screen max-w-full object-contain p-2 sm:p-4'
+                          : 'max-h-[88vh] max-w-full w-auto h-auto object-contain'
+                      }`}
+                      draggable={false}
+                    />
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-8 bg-white/75 backdrop-blur-md rounded-3xl border border-slate-200/90 text-slate-400 shadow-lg z-10 select-none max-w-xs text-center">
                     <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-3 text-slate-400 shadow-inner">

@@ -92,6 +92,28 @@
   will-change: transform, opacity;
 }
 
+/* 3-Stage Presentation: Stage 2 Cinematic Pan & Zoom */
+@keyframes cinematicCameraPan {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  16% {
+    transform: scale(1.28) translate3d(6%, 0, 0);
+  }
+  84% {
+    transform: scale(1.28) translate3d(-6%, 0, 0);
+  }
+  100% {
+    transform: scale(1.28) translate3d(-6%, 0, 0);
+  }
+}
+
+.gpu-layer {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
 @keyframes slideInRightDrawer {
   0% {
     transform: translateX(100%);
