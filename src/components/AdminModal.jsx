@@ -11,7 +11,6 @@ import {
   Clock, 
   Sparkles, 
   MoveRight, 
-  RotateCcw, 
   Image as ImageIcon,
   ZoomIn,
   Trash2,
@@ -147,18 +146,6 @@ export default function AdminModal({
     }
   }, [editingModel, isOpen, categories, collections, settings, currentLogo, type]);
 
-  const handleResetDefaults = () => {
-    setStage1Time(3.0);
-    setZoomMotionTime(5.0);
-    setStage3Time(4.0);
-    setZoomScaleRatio(1.28);
-    setDwellTime(12.0);
-    setTransitionTime(1.0);
-    setShimmerTime(7.0);
-    setUiScale(0.80);
-    document.documentElement.style.setProperty('--ui-scale', '0.80');
-    document.documentElement.style.zoom = 0.80;
-  };
 
   // Handle Login Submit
   const handleLoginSubmit = (e) => {
@@ -1121,21 +1108,11 @@ export default function AdminModal({
               </div>
             )}
 
-            {/* Bottom Actions: Save & Reset Defaults */}
-            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={handleResetDefaults}
-                className="px-3.5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
-                title={t.resetDefaults}
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                <span>{t.resetDefaults}</span>
-              </button>
-
+            {/* Bottom Actions: Save Settings */}
+            <div className="pt-2 border-t border-slate-100">
               <button
                 type="submit"
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm"
+                className="w-full py-3 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
               >
                 <Save className="w-4 h-4" />
                 <span>{t.save}</span>
