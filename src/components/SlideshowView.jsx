@@ -17,8 +17,11 @@ import {
   RotateCcw,
   Sparkles,
   Lock,
-  Unlock
+  Unlock,
+  Download,
+  FolderArchive
 } from 'lucide-react';
+import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 
 export default function SlideshowView({
   models,
@@ -48,6 +51,25 @@ export default function SlideshowView({
   const containerRef = useRef(null);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
+  const [isExportingImages, setIsExportingImages] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
+
+  // Download all slideshow images in a ZIP named after each model
+  const handleDownloadAllImages = async () => {
+    setIsExportingImages(true);
+    setExportProgress({ current: 0, total: 0, text: 'ئامادەکاری...' });
+    try {
+      const targetList = filteredModels.length > 0 ? filteredModels : models;
+      const count = await downloadAllImagesAsZip(targetList, (current, total) => {
+        setExportProgress({ current, total, text: `${current} / ${total}` });
+      });
+      alert(`بە سەرکەوتوویی ${count} وێنە لە ناو فایلی ZIP بە ناوی مۆدێلەکان خەزن کرا!`);
+    } catch (err) {
+      alert(err.message || 'هەڵەیەک ڕوویدا لە کاتی داگرتنی وێنەکان');
+    } finally {
+      setIsExportingImages(false);
+    }
+  };
 
   // Screen interaction handler: shows lock button temporarily in Zen mode
   const handleScreenInteraction = () => {
@@ -230,8 +252,8 @@ export default function SlideshowView({
     <div 
       ref={containerRef}
       className={`w-full flex flex-col overflow-hidden no-print select-none transition-all relative ${
-        isFullscreen 
-          ? 'fixed inset-0 z-50 h-screen w-screen bg-slate-950 p-0' 
+        isFullscreen || zenMode
+          ? 'fixed inset-0 z-50 h-screen w-screen bg-black p-0' 
           : 'h-[calc(100dvh-54px)] sm:h-[calc(100dvh-60px)] md:h-[calc(100dvh-68px)] bg-slate-100 p-1.5 sm:p-2.5 md:p-3'
       }`}
     >
@@ -377,14 +399,31 @@ export default function SlideshowView({
               )}
             </div>
 
+            {/* Bulk Download All Images Button in Drawer */}
+            <div className="p-3 border-t border-slate-200 bg-slate-50/90 shrink-0">
+              <button
+                onClick={handleDownloadAllImages}
+                disabled={isExportingImages}
+                className="w-full py-2.5 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer active:scale-95"
+                title="خەزنکردنی هەموو وێنەکانی کەتەلۆگ لە ناو یەک فایلی ZIP"
+              >
+                {isExportingImages ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FolderArchive className="w-4 h-4" />
+                )}
+                <span>{isExportingImages ? exportProgress.text : 'خەزنکردنی هەموو وێنەکان (ZIP)'}</span>
+              </button>
+            </div>
+
           </aside>
         </div>
       )}
 
       {/* 2. FULLSCREEN HERO MODEL & BOTTOM INFO BAR (مۆدێلە گەورەکە بە ستایلی مۆرف) */}
       <main className={`flex-1 overflow-hidden flex flex-col relative transition-all ${
-        isFullscreen 
-          ? 'bg-slate-950 border-0 rounded-none' 
+        isFullscreen || zenMode
+          ? 'bg-black border-0 rounded-none' 
           : 'bg-white border border-slate-200 rounded-2xl shadow-xs'
       }`}>
         
@@ -540,6 +579,17 @@ export default function SlideshowView({
                   <span>{t.print}</span>
                 </button>
 
+                {/* Download Current Model Image */}
+                {activeModel?.image && (
+                  <button
+                    onClick={() => downloadModelImage(activeModel)}
+                    className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 hover:text-purple-600 border border-slate-200 shadow-md backdrop-blur-md transition-all active:scale-95 cursor-pointer"
+                    title="داگرتنی ئەم وێنەیە بە ناوی مۆدێل"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
                 {isAdmin && (
                   <button
                     onClick={() => onEditModel(activeModel)}
@@ -582,7 +632,7 @@ export default function SlideshowView({
               
               {/* Frosted Glass Frame with Dynamic CSS Variables */}
               <div 
-                className={`w-full h-full flex items-center justify-center relative ${
+                className={`w-full h-full flex items-center justify-center relative overflow-hidden ${
                   zenMode ? 'p-0 bg-transparent border-0' : 'glass-image-frame p-1.5 sm:p-3'
                 }`}
                 style={{
@@ -597,6 +647,14 @@ export default function SlideshowView({
                   style={{ animationDuration: `${shimmerTime}s` }}
                 />
 
+                {/* Luxury Ambient Glow in Zen Mode & Fullscreen */}
+                {(zenMode || isFullscreen) && activeModel?.image && (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-35 scale-125 pointer-events-none transition-all duration-1000 -z-0"
+                    style={{ backgroundImage: `url(${activeModel.image})` }}
+                  />
+                )}
+
                 {/* Morph Image or Explicit No Image Banner */}
                 {activeModel.image ? (
                   <img
@@ -604,7 +662,11 @@ export default function SlideshowView({
                     src={activeModel.image}
                     alt={activeModel.name}
                     style={{ animationDuration: `${transitionTime}s` }}
-                    className="animate-morph-image max-h-[88vh] max-w-full w-auto h-auto object-contain drop-shadow-2xl z-10 select-none pointer-events-none"
+                    className={`animate-morph-image drop-shadow-2xl z-10 select-none pointer-events-none transition-all duration-500 ${
+                      zenMode || isFullscreen
+                        ? 'w-full h-full max-h-screen max-w-full object-contain p-2 sm:p-4'
+                        : 'max-h-[88vh] max-w-full w-auto h-auto object-contain'
+                    }`}
                     draggable={false}
                   />
                 ) : (

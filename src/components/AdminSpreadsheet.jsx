@@ -11,9 +11,11 @@ import {
   ImageOff,
   Check, 
   AlertCircle,
-  FolderPlus
+  FolderPlus,
+  FolderArchive
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
+import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 
 export default function AdminSpreadsheet({
   models,
@@ -29,7 +31,29 @@ export default function AdminSpreadsheet({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [deleteCandidate, setDeleteCandidate] = useState(null); // 2-Factor deletion state
+  const [isExportingImages, setIsExportingImages] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const fileInputRef = useRef(null);
+
+  // Download all images in a ZIP named after models
+  const handleDownloadAllImages = async () => {
+    setIsExportingImages(true);
+    setExportProgress({ current: 0, total: 0, text: 'ئامادەکاری...' });
+    try {
+      const count = await downloadAllImagesAsZip(tableData, (current, total, modelName) => {
+        setExportProgress({
+          current,
+          total,
+          text: `${current} / ${total}`
+        });
+      });
+      alert(`بە سەرکەوتوویی ${count} وێنە لە فایلی ZIP بە ناوی مۆدێلەکان خەزن کران!`);
+    } catch (err) {
+      alert(err.message || 'کێشەیەک لە کاتی داگرتنی وێنەکان دروستبوو');
+    } finally {
+      setIsExportingImages(false);
+    }
+  };
 
   // Handle cell text edits
   const handleCellChange = (index, field, value) => {
@@ -266,6 +290,21 @@ export default function AdminSpreadsheet({
             <span>{t.exportExcel}</span>
           </button>
 
+          {/* Export All Images (ZIP) */}
+          <button
+            onClick={handleDownloadAllImages}
+            disabled={isExportingImages}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="خەزنکردنی هەموو وێنەکان لە یەک فایلی ZIP بە ناوی مۆدێلەکانەوە"
+          >
+            {isExportingImages ? (
+              <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <FolderArchive className="w-3.5 h-3.5 text-purple-600" />
+            )}
+            <span>{isExportingImages ? exportProgress.text : 'خەزنکردنی وێنەکان (ZIP)'}</span>
+          </button>
+
           {/* Save All */}
           <button
             onClick={handleSaveAll}
@@ -346,16 +385,31 @@ export default function AdminSpreadsheet({
                         </div>
                       )}
 
-                      {/* Drop/Upload overlay */}
-                      <label className="absolute inset-0 bg-black/60 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer font-bold">
-                        <span>{row.image ? 'گۆڕین' : 'دانان'}</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleFileInputChange(e, idx)}
-                          className="hidden"
-                        />
-                      </label>
+                      {/* Drop/Upload overlay & direct image download */}
+                      <div className="absolute inset-0 bg-black/65 text-white text-[9px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 p-1">
+                        <label className="bg-white/20 hover:bg-white/30 px-1.5 py-0.5 rounded cursor-pointer font-bold leading-tight">
+                          <span>{row.image ? 'گۆڕین' : 'دانان'}</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleFileInputChange(e, idx)}
+                            className="hidden"
+                          />
+                        </label>
+                        {row.image && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadModelImage(row);
+                            }}
+                            className="p-1 bg-white/20 hover:bg-white/40 rounded text-white cursor-pointer transition-colors"
+                            title="داگرتنی ئەم وێنەیە بە ناوی مۆدێل"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </td>
 

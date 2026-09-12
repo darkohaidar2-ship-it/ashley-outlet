@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check } from 'lucide-react';
+import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check, Download } from 'lucide-react';
+import { downloadModelImage } from '../services/imageExportService';
 
 export default function ProductModal({
   model,
@@ -179,7 +180,7 @@ export default function ProductModal({
             )}
           </div>
 
-          {/* Action Buttons: Print & Share Link */}
+          {/* Action Buttons: Print, Download Image & Share Link */}
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
             <button
               onClick={() => onPrint(model)}
@@ -188,9 +189,19 @@ export default function ProductModal({
               <Printer className="w-5 h-5 text-red-500" />
               <span>{t.print}</span>
             </button>
+            {model.image && (
+              <button
+                onClick={() => downloadModelImage(model)}
+                className="py-3.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-98 shadow-xs"
+                title="داگرتنی وێنەکە بە ناوی مۆدێل"
+              >
+                <Download className="w-4 h-4 text-purple-600" />
+                <span className="text-xs text-slate-700">وێنە</span>
+              </button>
+            )}
             <button
               onClick={handleCopyLink}
-              className="py-3.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs"
+              className="py-3.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-98 shadow-xs"
               title="کۆپیکردنی لینکی مۆدێل"
             >
               {copied ? (
