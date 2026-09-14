@@ -1,5 +1,6 @@
 import React from 'react';
 import { getStatusBadgeStyle, getStatusColor, hexToRgba } from '../utils/statusColors';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 export default function PrintSheet({
   modelsToPrint,
@@ -132,10 +133,11 @@ export default function PrintSheet({
             >
               {model.image ? (
                 <img
-                  src={model.image}
+                  src={getOptimizedImageUrl(model.image, 'print')}
                   alt={model.name}
                   className="max-h-full max-w-full object-contain p-2"
                   crossOrigin="anonymous"
+                  decoding="async"
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">

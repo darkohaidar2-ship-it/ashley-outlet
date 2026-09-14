@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv, ImageOff } from 'lucide-react';
 import { getStatusBadgeStyle } from '../utils/statusColors';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 export default function ProductCard({
   model,
@@ -33,10 +34,11 @@ export default function ProductCard({
       >
         {model.image && !hasImgError ? (
           <img
-            src={model.image}
+            src={getOptimizedImageUrl(model.image, 'card')}
             alt={model.name}
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
             onError={() => setHasImgError(true)}
           />
         ) : (

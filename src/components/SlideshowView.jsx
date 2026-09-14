@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 import { getStatusBadgeStyle } from '../utils/statusColors';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 export default function SlideshowView({
   models,
@@ -227,7 +228,8 @@ export default function SlideshowView({
       const src = filteredModels[idx]?.image;
       if (src) {
         const img = new Image();
-        img.src = src;
+        img.decoding = 'async';
+        img.src = getOptimizedImageUrl(src, 'hero');
         if (img.decode) {
           img.decode().catch(() => {});
         }
@@ -593,8 +595,9 @@ export default function SlideshowView({
                     >
                       {model.image ? (
                         <img
-                          src={model.image}
+                          src={getOptimizedImageUrl(model.image, 'thumb')}
                           alt={model.name}
+                          decoding="async"
                           className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0 bg-slate-50"
                         />
                       ) : (
@@ -897,7 +900,7 @@ export default function SlideshowView({
                 {(zenMode || isFullscreen) && activeModel?.image && (
                   <div 
                     className="absolute inset-0 bg-cover bg-center filter blur-xl opacity-25 scale-110 pointer-events-none transition-opacity duration-700 -z-0 gpu-layer"
-                    style={{ backgroundImage: `url(${activeModel.image})` }}
+                    style={{ backgroundImage: `url(${getOptimizedImageUrl(activeModel.image, 'thumb')})` }}
                   />
                 )}
 
@@ -909,8 +912,9 @@ export default function SlideshowView({
                     className="animate-morph-image w-full h-full flex items-center justify-center relative overflow-hidden gpu-layer"
                   >
                     <img
-                      src={activeModel.image}
+                      src={getOptimizedImageUrl(activeModel.image, 'hero')}
                       alt={activeModel.name}
+                      decoding="async"
                       style={
                         zoomScale > 1.05
                           ? {

@@ -32,6 +32,7 @@ import {
   getStatusDotStyle,
   normalizeHex 
 } from '../utils/statusColors';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 export default function AdminSpreadsheet({
   models,
@@ -738,8 +739,9 @@ export default function AdminSpreadsheet({
                     <div className="relative group flex items-center justify-center">
                       {row.image ? (
                         <img
-                          src={row.image}
+                          src={getOptimizedImageUrl(row.image, 'thumb')}
                           alt={row.name}
+                          decoding="async"
                           className="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-2xs"
                         />
                       ) : (

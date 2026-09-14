@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { getOriginalImageUrl } from '../utils/imageUrl';
 
 /**
  * Sanitize filename to be valid across Windows, macOS, and Linux
@@ -14,13 +15,15 @@ export function sanitizeFileName(name) {
 
 /**
  * Fetches an image URL and returns a Blob with a fallback to Canvas
+ * ALWAYS uses the raw original uncompressed URL to preserve 100% full quality.
  */
 export async function fetchImageBlob(imageUrl) {
   if (!imageUrl) throw new Error('No image URL provided');
+  const targetUrl = getOriginalImageUrl(imageUrl);
 
-  // Direct fetch attempt
+  // Direct fetch attempt (full original file)
   try {
-    const res = await fetch(imageUrl, { mode: 'cors' });
+    const res = await fetch(targetUrl, { mode: 'cors' });
     if (res.ok) {
       const blob = await res.blob();
       if (blob && blob.size > 0) return blob;
@@ -29,7 +32,7 @@ export async function fetchImageBlob(imageUrl) {
     // Continue to canvas fallback
   }
 
-  // Fallback: load into Image element and extract via HTML5 canvas
+  // Fallback: load into Image element and extract via HTML5 canvas at 100% full quality
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -46,14 +49,14 @@ export async function fetchImageBlob(imageUrl) {
             else reject(new Error('Canvas toBlob returned null'));
           },
           'image/jpeg',
-          0.92
+          1.0
         );
       } catch (canvasErr) {
         reject(canvasErr);
       }
     };
     img.onerror = () => reject(new Error('Failed to load image in canvas fallback'));
-    img.src = imageUrl;
+    img.src = targetUrl;
   });
 }
 
@@ -88,7 +91,7 @@ export async function downloadModelImage(model) {
     return true;
   } catch (err) {
     console.warn('Blob download failed, using direct anchor fallback:', err);
-    triggerFileDownload(model.image, filename);
+    triggerFileDownload(getOriginalImageUrl(model.image), filename);
     return true;
   }
 }

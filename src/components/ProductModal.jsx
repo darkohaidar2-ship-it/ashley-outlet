@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { downloadModelImage } from '../services/imageExportService';
 import { getStatusBadgeStyle } from '../utils/statusColors';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 export default function ProductModal({
   model,
@@ -87,9 +88,10 @@ export default function ProductModal({
         <div className="relative md:w-1/2 bg-slate-100 min-h-[260px] md:min-h-full flex items-center justify-center overflow-hidden">
           {model.image ? (
             <img
-              src={model.image}
+              src={getOptimizedImageUrl(model.image, 'hero')}
               alt={model.name}
               className="w-full h-full object-cover"
+              decoding="async"
             />
           ) : (
             <div className="w-full h-full min-h-[260px] flex flex-col items-center justify-center p-6 text-center select-none bg-slate-50">
