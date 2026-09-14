@@ -22,13 +22,11 @@ import {
   Palette,
   Printer,
   Ticket,
-  FileDown,
   X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 import StickerSheet from './StickerSheet';
-import { exportStickersToPdf } from '../utils/stickerPdfExport';
 import { 
   STATUS_COLOR_PALETTE, 
   DEFAULT_STATUS_COLORS, 
@@ -80,7 +78,6 @@ export default function AdminSpreadsheet({
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const [stickerModal, setStickerModal] = useState({ isOpen: false, items: [] });
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
   // Open sticker modal for a single model
@@ -104,30 +101,6 @@ export default function AdminSpreadsheet({
     setTimeout(() => {
       document.body.classList.remove('print-stickers');
     }, 1200);
-  };
-
-  // Direct PDF generation and download
-  const handleSaveStickersAsPdf = async () => {
-    if (!stickerModal.items || stickerModal.items.length === 0) return;
-    setIsExportingPdf(true);
-    try {
-      const previewWrapper = document.getElementById('sticker-preview-wrapper');
-      if (!previewWrapper) {
-        handleExecuteStickerPrint();
-        return;
-      }
-      const filename = stickerModal.items.length === 1
-        ? `Ashley_Sticker_${(stickerModal.items[0].name || 'item').replace(/[^a-zA-Z0-9_\-\u0600-\u06FF]/g, '_')}.pdf`
-        : `Ashley_Stickers_${stickerModal.items.length}_items.pdf`;
-
-      await exportStickersToPdf(previewWrapper, filename);
-    } catch (err) {
-      console.error('Direct PDF export failed, fallback to print:', err);
-      // Fall back to print dialog where user can choose Save as PDF
-      handleExecuteStickerPrint();
-    } finally {
-      setIsExportingPdf(false);
-    }
   };
 
   // Sync customStatuses & colors with settings
@@ -1363,25 +1336,12 @@ export default function AdminSpreadsheet({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleSaveStickersAsPdf}
-                  disabled={isExportingPdf}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                  title="دابەزاندنی ڕاستەوخۆ بە فایلی PDF"
-                >
-                  {isExportingPdf ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FileDown className="w-4 h-4 text-emerald-100" />
-                  )}
-                  <span>{isExportingPdf ? 'ئامادەکردنی PDF...' : 'خەزنکردن بە PDF'}</span>
-                </button>
-                <button
-                  type="button"
                   onClick={handleExecuteStickerPrint}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+                  title="چاپکردن یان خەزنکردن وەک فایلی PDF"
                 >
-                  <Printer className="w-4 h-4 text-rose-500" />
-                  <span>چاپکردن (Print)</span>
+                  <Printer className="w-4 h-4 text-white" />
+                  <span>چاپکردن / Save as PDF</span>
                 </button>
                 <button
                   type="button"
@@ -1414,32 +1374,20 @@ export default function AdminSpreadsheet({
 
             {/* Modal Footer */}
             <div className="p-3.5 border-t border-slate-200 bg-white flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs text-slate-500 font-semibold">
-                لەزگەی قەبارە ستاندارد بە لۆگۆ، بەروار، ناوی مۆدێل بە گەورەیی، تێبینی و ڕەنگی دۆخەکە
-              </span>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveStickersAsPdf}
-                  disabled={isExportingPdf}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  {isExportingPdf ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <FileDown className="w-4 h-4" />
-                  )}
-                  <span>خەزنکردن بە PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExecuteStickerPrint}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
-                >
-                  <Printer className="w-4 h-4" />
-                  <span>دەستپێکردنی چاپ ({stickerModal.items.length})</span>
-                </button>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs text-slate-600 font-bold">
+                  بۆ خەزنکردن بە PDF: لە پەنجەرەی چاپەکەدا بژاردەی <span className="text-rose-600 font-black">Save as PDF</span> هەڵبژێرە تا نووسینەکان بە تەواوی ڕوون و دروست بن.
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={handleExecuteStickerPrint}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>دەستپێکردنی چاپ / PDF ({stickerModal.items.length})</span>
+              </button>
             </div>
 
           </div>
