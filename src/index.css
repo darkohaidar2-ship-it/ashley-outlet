@@ -206,6 +206,16 @@
   }
 }
 
+/* Sticker Label Card Screen & Universal Styles */
+.sticker-label-card {
+  width: 100%;
+  max-width: 620px;
+  box-sizing: border-box;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+
 @media print {
   @page {
     size: auto;

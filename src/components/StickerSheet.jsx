@@ -2,6 +2,8 @@ import React from 'react';
 import { getStatusColor, hexToRgba } from '../utils/statusColors';
 
 export default function StickerSheet({
+  id,
+  className = '',
   stickersToPrint = [],
   categories = [],
   collections = [],
@@ -31,7 +33,7 @@ export default function StickerSheet({
   );
 
   return (
-    <div id="sticker-print-container" className="sticker-print-root">
+    <div id={id || undefined} className={`sticker-sheet-root ${className}`}>
       {stickersToPrint.map((model, idx) => {
         const catName = getCategoryName(model.categoryId);
         const colName = getCollectionName(model.collectionId);
@@ -47,7 +49,7 @@ export default function StickerSheet({
         return (
           <div
             key={model.id || idx}
-            className="sticker-label-card relative flex flex-col justify-between overflow-hidden"
+            className="sticker-label-card relative flex flex-col justify-between overflow-hidden p-5 sm:p-6 rounded-2xl shadow-md min-h-[300px]"
             style={{
               backgroundColor: themeColor,
               '--sticker-theme': themeColor,

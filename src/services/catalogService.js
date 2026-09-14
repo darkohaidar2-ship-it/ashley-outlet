@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { compressImageForUpload } from '../utils/imageCompressor';
 
 // Helper to map DB row to frontend Model object
 function mapModelFromDB(m) {
@@ -145,15 +146,22 @@ export const catalogService = {
 
   // 3. Upload image directly to Supabase Storage or Local server
   async uploadImage(file) {
+    let fileToUpload = file;
+    try {
+      fileToUpload = await compressImageForUpload(file);
+    } catch (compressErr) {
+      console.warn('Pre-upload compression skipped, uploading original:', compressErr);
+    }
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const fileExt = file.name.split('.').pop() || 'jpg';
+        const fileExt = (fileToUpload.name && fileToUpload.name.split('.').pop()) || 'jpg';
         const fileName = `ashley-${Date.now()}-${Math.round(Math.random() * 1e9)}.${fileExt}`;
         
         const { error: uploadError } = await supabase.storage
           .from('ashley-catalog')
-          .upload(fileName, file, {
-            cacheControl: '3600',
+          .upload(fileName, fileToUpload, {
+            cacheControl: '31536000',
             upsert: false
           });
 
@@ -174,7 +182,7 @@ export const catalogService = {
 
     // Local upload fallback
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', fileToUpload);
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
     const data = await res.json();
     return data.url;
