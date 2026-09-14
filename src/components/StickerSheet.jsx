@@ -37,14 +37,11 @@ export default function StickerSheet({
       {stickersToPrint.map((model, idx) => {
         const catName = getCategoryName(model.categoryId);
         const colName = getCollectionName(model.collectionId);
-        const discountPercent =
-          model.originalPrice && model.originalPrice > model.salePrice
-            ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
-            : 0;
 
         const itemStatus =
           model.itemType || (model.sku && model.sku !== model.name ? model.sku : 'ئاوتلێت');
         const themeColor = getStatusColor(itemStatus, statusColors);
+        const hasNotes = Boolean(model.notes && model.notes.trim());
 
         return (
           <div
@@ -107,9 +104,9 @@ export default function StickerSheet({
               </div>
             </div>
 
-            {/* Middle Section: Large Model Number in Distinct White Shape */}
-            <div className="my-2.5 bg-white text-slate-900 rounded-2xl p-3 sm:p-4 text-center shadow-lg border-2 border-white/60">
-              <div className="flex items-center justify-center gap-2 mb-0.5 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+            {/* Middle Section: Large Model Number */}
+            <div className={`bg-white text-slate-900 rounded-2xl p-4 text-center shadow-lg border-2 border-white/60 flex flex-col justify-center items-center ${hasNotes ? 'my-2.5 sm:p-4' : 'flex-1 my-3 sm:py-8'}`}>
+              <div className="flex items-center justify-center gap-2 mb-1 text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider">
                 <span>{catName || 'مۆبێلی ئاشڵی'}</span>
                 {colName && (
                   <>
@@ -120,63 +117,46 @@ export default function StickerSheet({
               </div>
 
               {/* Ultra-Large Model Number Typography */}
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-wider text-slate-900 leading-tight">
+              <h2 className={`${hasNotes ? 'text-3xl sm:text-4xl md:text-5xl' : 'text-4xl sm:text-5xl md:text-6xl'} font-black font-mono tracking-wider text-slate-900 leading-tight`}>
                 {model.name}
               </h2>
             </div>
 
-            {/* Large Notes Section in Distinct White Card */}
-            <div className="mb-2.5 bg-white/95 text-slate-900 rounded-2xl p-3 shadow-md border border-white/40 flex-1 flex flex-col justify-start">
-              <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider pb-1 border-b border-slate-200" style={{ color: themeColor }}>
-                <span>تێبینی و تایبەتمەندییەکان / NOTES:</span>
-                {model.stock > 0 && (
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.2 rounded-md font-bold text-[10px]">
-                    عدد: {model.stock} دانە
-                  </span>
-                )}
-              </div>
-              <p className="font-bold text-sm sm:text-base text-slate-900 mt-1.5 whitespace-pre-line leading-relaxed">
-                {model.notes || 'ئەم مۆدێلە بە باشترین کوالێتی و کەرەستەی ئاشڵی دروستکراوە.'}
-              </p>
-            </div>
-
-            {/* Bottom Bar: Pricing Pill & Quality Stamp */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/20 flex-wrap">
-              
-              {/* Price Container */}
-              <div className="bg-white text-slate-900 px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-2.5">
-                {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-                  <div className="flex items-center gap-1 text-[11px] text-slate-400 line-through font-semibold">
-                    <span>{model.originalPrice.toLocaleString()}</span>
-                  </div>
-                )}
-
-                <div className="flex items-baseline gap-1">
-                  <span
-                    className="text-lg sm:text-xl font-black leading-none"
-                    style={{ color: themeColor }}
-                  >
-                    {model.salePrice ? model.salePrice.toLocaleString() : '0'}
-                  </span>
-                  <span className="text-[11px] font-bold text-slate-600">د.ع</span>
+            {/* Notes Section: ONLY rendered if model.notes exists and has content */}
+            {hasNotes && (
+              <div className="mb-2.5 bg-white/95 text-slate-900 rounded-2xl p-3 shadow-md border border-white/40 flex-1 flex flex-col justify-start">
+                <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-wider pb-1 border-b border-slate-200" style={{ color: themeColor }}>
+                  <span>تێبینی و تایبەتمەندییەکان / NOTES:</span>
+                  {model.stock > 0 && (
+                    <span className="bg-emerald-100 text-emerald-800 px-2 py-0.2 rounded-md font-bold text-[10px]">
+                      عدد: {model.stock} دانە
+                    </span>
+                  )}
                 </div>
-
-                {discountPercent > 0 && (
-                  <span
-                    className="text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-xs"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    %{discountPercent} داشکاندن
-                  </span>
-                )}
+                <p className="font-bold text-sm sm:text-base text-slate-900 mt-1.5 whitespace-pre-line leading-relaxed">
+                  {model.notes}
+                </p>
               </div>
+            )}
+
+            {/* Bottom Bar: Stock Badge & Ashley Quality Stamp (NO PRICE) */}
+            <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-white/20 flex-wrap">
+              {model.stock > 0 && !hasNotes ? (
+                <div className="bg-white text-slate-900 px-3.5 py-1 rounded-xl shadow-md font-black text-xs flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: themeColor }} />
+                  <span>عدد: {model.stock} دانە</span>
+                </div>
+              ) : (
+                <div className="bg-white/20 text-white px-3 py-1 rounded-xl text-xs font-bold backdrop-blur-xs">
+                  {colName || catName || 'Ashley Outlet'}
+                </div>
+              )}
 
               {/* Ashley Outlet Verification Stamp */}
               <div className="bg-black/30 text-white px-2.5 py-1 rounded-lg text-[10px] font-bold backdrop-blur-xs flex items-center gap-1.5 ms-auto">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-xs" />
                 <span className="tracking-wide">ORIGINAL ASHLEY QUALITY</span>
               </div>
-
             </div>
 
           </div>
