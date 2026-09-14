@@ -35,9 +35,18 @@ function mapSettingsFromDB(s) {
   const customItemTypes = Array.isArray(extra.customItemTypes) && extra.customItemTypes.length > 0
     ? extra.customItemTypes
     : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
-  const customItemTypeColors = (extra.customItemTypeColors && typeof extra.customItemTypeColors === 'object')
+  const rawColors = (extra.customItemTypeColors && typeof extra.customItemTypeColors === 'object')
     ? extra.customItemTypeColors
-    : { 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' };
+    : {};
+  const customItemTypeColors = { 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' };
+  Object.keys(rawColors).forEach(k => {
+    const val = rawColors[k];
+    if (typeof val === 'string' && val) {
+      customItemTypeColors[k] = val;
+    } else if (val && typeof val === 'object' && val.hex) {
+      customItemTypeColors[k] = String(val.hex);
+    }
+  });
   const computedDwell = stage1 + zoomMotion + stage3;
 
   return {

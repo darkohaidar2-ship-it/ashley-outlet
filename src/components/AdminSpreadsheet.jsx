@@ -29,7 +29,8 @@ import {
   DEFAULT_STATUS_COLORS, 
   getStatusColor, 
   getStatusBadgeStyle, 
-  getStatusDotStyle 
+  getStatusDotStyle,
+  normalizeHex 
 } from '../utils/statusColors';
 
 export default function AdminSpreadsheet({
@@ -89,9 +90,10 @@ export default function AdminSpreadsheet({
 
   // Update a single status's custom color
   const handleUpdateStatusColor = async (statusName, newColor) => {
+    const cleanColor = normalizeHex(newColor);
     const updatedColors = {
       ...statusColors,
-      [statusName]: newColor
+      [statusName]: cleanColor
     };
     setStatusColors(updatedColors);
     setActiveColorPickerFor(null);
@@ -112,7 +114,7 @@ export default function AdminSpreadsheet({
       alert(`دەستەواژەی "${trimmed}" پێشتر بوونی هەیە!`);
       return trimmed;
     }
-    const color = colorToUse || newStatusColor || '#9333ea';
+    const color = normalizeHex(colorToUse || newStatusColor || '#9333ea');
     const updated = [...customStatuses, trimmed];
     const updatedColors = {
       ...statusColors,
@@ -1063,17 +1065,21 @@ export default function AdminSpreadsheet({
               {/* Color Presets */}
               <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
                 <span className="text-[10px] text-slate-400 font-bold">پێشنیاری ڕەنگ:</span>
-                {STATUS_COLOR_PALETTE.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewStatusColor(c)}
-                    className={`w-4 h-4 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
-                      newStatusColor.toLowerCase() === c.toLowerCase() ? 'scale-125 ring-2 ring-amber-500 ring-offset-1' : 'hover:scale-115'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+                {STATUS_COLOR_PALETTE.map((c) => {
+                  const hexStr = normalizeHex(c);
+                  const isSelected = normalizeHex(newStatusColor).toLowerCase() === hexStr.toLowerCase();
+                  return (
+                    <button
+                      key={hexStr}
+                      type="button"
+                      onClick={() => setNewStatusColor(hexStr)}
+                      className={`w-4 h-4 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
+                        isSelected ? 'scale-125 ring-2 ring-amber-500 ring-offset-1' : 'hover:scale-115'
+                      }`}
+                      style={{ backgroundColor: hexStr }}
+                    />
+                  );
+                })}
               </div>
             </div>
 
@@ -1158,17 +1164,21 @@ export default function AdminSpreadsheet({
                                     </button>
                                   </div>
                                   <div className="grid grid-cols-5 gap-1.5">
-                                    {STATUS_COLOR_PALETTE.map((palColor) => (
-                                      <button
-                                        key={palColor}
-                                        type="button"
-                                        onClick={() => handleUpdateStatusColor(st, palColor)}
-                                        className={`w-6 h-6 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
-                                          currentColor.toLowerCase() === palColor.toLowerCase() ? 'scale-125 ring-2 ring-amber-500' : 'hover:scale-115'
-                                        }`}
-                                        style={{ backgroundColor: palColor }}
-                                      />
-                                    ))}
+                                    {STATUS_COLOR_PALETTE.map((palColor) => {
+                                      const hexStr = normalizeHex(palColor);
+                                      const isSelected = normalizeHex(currentColor).toLowerCase() === hexStr.toLowerCase();
+                                      return (
+                                        <button
+                                          key={hexStr}
+                                          type="button"
+                                          onClick={() => handleUpdateStatusColor(st, hexStr)}
+                                          className={`w-6 h-6 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
+                                            isSelected ? 'scale-125 ring-2 ring-amber-500' : 'hover:scale-115'
+                                          }`}
+                                          style={{ backgroundColor: hexStr }}
+                                        />
+                                      );
+                                    })}
                                   </div>
                                   <label className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700 cursor-pointer border border-slate-200 transition-colors">
                                     <input
