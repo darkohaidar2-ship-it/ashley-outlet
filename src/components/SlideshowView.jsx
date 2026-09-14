@@ -199,7 +199,9 @@ export default function SlideshowView({
   const stage1Time = Math.max(0.5, parseFloat(settings?.stage1Time) || 3.0);
   const zoomMotionTime = Math.max(0.5, parseFloat(settings?.zoomMotionTime) || 5.0);
   const stage3Time = Math.max(0.5, parseFloat(settings?.stage3Time) || 4.0);
-  const zoomScaleRatio = Math.max(1.05, Math.min(2.5, parseFloat(settings?.zoomScaleRatio) || 1.28));
+  const zoomScaleRatio = settings?.zoomScaleRatio !== undefined 
+    ? Math.max(1.0, Math.min(2.5, parseFloat(settings.zoomScaleRatio))) 
+    : 1.0;
   const dwellTime = stage1Time + zoomMotionTime + stage3Time;
   const transitionTime = Math.max(0.1, parseFloat(settings?.slideshowTransitionTime) || 1.0);
   const shimmerTime = Math.max(1, parseFloat(settings?.slideshowShimmerTime) || 7.0);
@@ -921,7 +923,7 @@ export default function SlideshowView({
                               transform: `translate3d(${panOffset.x}px, ${panOffset.y}px, 0) scale(${zoomScale})`,
                               transition: isPinchingRef.current ? 'none' : 'transform 0.15s ease-out'
                             }
-                          : cinemaStage === 2
+                          : cinemaStage === 2 && zoomScaleRatio > 1.01
                           ? {
                               '--stage-zoom-scale': zoomScaleRatio,
                               animation: `cinematicCameraPan ${zoomMotionTime}s cubic-bezier(0.4, 0, 0.2, 1) forwards`
@@ -940,8 +942,8 @@ export default function SlideshowView({
                         isFullscreen || zenMode ? '' : 'drop-shadow-xl'
                       } ${
                         zenMode || isFullscreen
-                          ? 'w-full h-full max-h-screen max-w-full object-contain p-2 sm:p-4'
-                          : 'max-h-[88vh] max-w-full w-auto h-auto object-contain'
+                          ? 'w-full h-full max-h-full max-w-full object-contain p-2 sm:p-4'
+                          : 'max-h-full max-w-full w-auto h-auto object-contain'
                       }`}
                       draggable={false}
                     />

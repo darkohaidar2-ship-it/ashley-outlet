@@ -86,7 +86,7 @@ export default function AdminModal({
   const [stage1Time, setStage1Time] = useState(3.0);
   const [zoomMotionTime, setZoomMotionTime] = useState(5.0);
   const [stage3Time, setStage3Time] = useState(4.0);
-  const [zoomScaleRatio, setZoomScaleRatio] = useState(1.28);
+  const [zoomScaleRatio, setZoomScaleRatio] = useState(1.0);
   const [dwellTime, setDwellTime] = useState(12.0);
   const [transitionTime, setTransitionTime] = useState(1.0);
   const [shimmerTime, setShimmerTime] = useState(7.0);
@@ -648,7 +648,7 @@ export default function AdminModal({
               const s1 = Math.max(0.5, parseFloat(stage1Time) || 3.0);
               const s2 = Math.max(0.5, parseFloat(zoomMotionTime) || 5.0);
               const s3 = Math.max(0.5, parseFloat(stage3Time) || 4.0);
-              const zRatio = Math.max(1.05, Math.min(2.5, parseFloat(zoomScaleRatio) || 1.28));
+              const zRatio = Math.max(1.0, Math.min(2.5, parseFloat(zoomScaleRatio) || 1.0));
               const totalDwell = Number((s1 + s2 + s3).toFixed(1));
 
               const payload = {
@@ -904,6 +904,7 @@ export default function AdminModal({
                   <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                     <span className="text-[10px] text-slate-400 font-medium me-1">خێرا:</span>
                     {[
+                      { label: '١٠٠٪ (تەواو / بێ کەتکردن)', val: 1.0 },
                       { label: '١١٥٪', val: 1.15 },
                       { label: '١٢٥٪', val: 1.25 },
                       { label: '١٢٨٪', val: 1.28 },

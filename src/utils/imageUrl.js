@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Image URL Optimization Utility
  * Serves crisp HD / Full HD optimized versions for display
  * while preserving the raw 100% full-resolution original for downloads.
@@ -14,16 +14,16 @@ export function getOptimizedImageUrl(url, preset = 'card') {
     switch (preset) {
       case 'thumb':
         // ~30-50 KB for spreadsheet rows and drawer miniatures
-        return `${renderBase}?width=240&quality=75`;
+        return `${renderBase}?width=240&quality=75&resize=contain`;
       case 'card':
         // ~200-260 KB crisp Retina HD for product grid
-        return `${renderBase}?width=800&quality=82`;
+        return `${renderBase}?width=800&quality=82&resize=contain`;
       case 'hero':
         // ~500-600 KB crystal clear Full HD for Slideshow & Modal
-        return `${renderBase}?width=1600&quality=85`;
+        return `${renderBase}?width=1600&quality=85&resize=contain`;
       case 'print':
         // High resolution for paper print
-        return `${renderBase}?width=1800&quality=88`;
+        return `${renderBase}?width=1800&quality=88&resize=contain`;
       case 'full':
       default:
         // Untouched original

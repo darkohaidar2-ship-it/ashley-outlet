@@ -31,7 +31,7 @@ function mapSettingsFromDB(s) {
   const stage1 = extra.stage1Time !== undefined ? parseFloat(extra.stage1Time) : 3.0;
   const zoomMotion = extra.zoomMotionTime !== undefined ? parseFloat(extra.zoomMotionTime) : 5.0;
   const stage3 = extra.stage3Time !== undefined ? parseFloat(extra.stage3Time) : 4.0;
-  const zoomRatio = extra.zoomScaleRatio !== undefined ? parseFloat(extra.zoomScaleRatio) : 1.28;
+  const zoomRatio = extra.zoomScaleRatio !== undefined ? parseFloat(extra.zoomScaleRatio) : 1.0;
   const customItemTypes = Array.isArray(extra.customItemTypes) && extra.customItemTypes.length > 0
     ? extra.customItemTypes
     : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
@@ -390,7 +390,7 @@ export const catalogService = {
     const stage1Time = settingsData.stage1Time !== undefined ? parseFloat(settingsData.stage1Time) : 3.0;
     const zoomMotionTime = settingsData.zoomMotionTime !== undefined ? parseFloat(settingsData.zoomMotionTime) : 5.0;
     const stage3Time = settingsData.stage3Time !== undefined ? parseFloat(settingsData.stage3Time) : 4.0;
-    const zoomScaleRatio = settingsData.zoomScaleRatio !== undefined ? parseFloat(settingsData.zoomScaleRatio) : 1.28;
+    const zoomScaleRatio = settingsData.zoomScaleRatio !== undefined ? parseFloat(settingsData.zoomScaleRatio) : 1.0;
     const totalDwellTime = stage1Time + zoomMotionTime + stage3Time;
 
     const customItemTypes = Array.isArray(settingsData.customItemTypes) 
