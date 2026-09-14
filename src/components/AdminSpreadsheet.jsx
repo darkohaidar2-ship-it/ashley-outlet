@@ -17,6 +17,8 @@ import {
   ArrowDownAZ,
   ArrowUpZA,
   Tag,
+  Edit3,
+  RotateCcw,
   X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
@@ -41,6 +43,7 @@ export default function AdminSpreadsheet({
   });
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [newStatusInput, setNewStatusInput] = useState('');
+  const [editingStatus, setEditingStatus] = useState(null); // { oldName: '', newName: '' }
 
   const [tableData, setTableData] = useState(() => {
     const list = (models || []).map(m => ({
@@ -65,10 +68,14 @@ export default function AdminSpreadsheet({
     }
   }, [settings?.customItemTypes]);
 
-  // Manage custom item statuses (Add / Delete)
-  const handleAddStatus = async () => {
-    const trimmed = newStatusInput.trim();
-    if (!trimmed || customStatuses.includes(trimmed)) return;
+  // Manage custom item statuses (Add / Delete / Rename / Restore)
+  const handleAddStatus = async (statusToAdd = null) => {
+    const trimmed = (statusToAdd !== null && typeof statusToAdd === 'string' ? statusToAdd : newStatusInput).trim();
+    if (!trimmed) return null;
+    if (customStatuses.includes(trimmed)) {
+      alert(`دەستەواژەی "${trimmed}" پێشتر بوونی هەیە!`);
+      return trimmed;
+    }
     const updated = [...customStatuses, trimmed];
     setCustomStatuses(updated);
     setNewStatusInput('');
@@ -78,19 +85,52 @@ export default function AdminSpreadsheet({
         customItemTypes: updated
       });
     }
+    return trimmed;
   };
 
   const handleDeleteStatus = async (statusToDelete) => {
-    if (customStatuses.length <= 1) {
-      alert('پێویستە بەلایەنی کەم یەک دەستەواژە هەبێت / At least one status is required');
-      return;
-    }
+    if (!window.confirm(`دڵنیایت لە سڕینەوە و کەمکردنی "${statusToDelete}" لە لیستی دۆخەکان؟`)) return;
     const updated = customStatuses.filter(s => s !== statusToDelete);
     setCustomStatuses(updated);
     if (onSaveSettings) {
       await onSaveSettings({
         ...settings,
         customItemTypes: updated
+      });
+    }
+  };
+
+  const handleRenameStatus = async (oldName, newName) => {
+    const trimmed = (newName || '').trim();
+    if (!trimmed || trimmed === oldName) {
+      setEditingStatus(null);
+      return;
+    }
+    if (customStatuses.includes(trimmed)) {
+      alert(`دەستەواژەی "${trimmed}" پێشتر لە لیستەکەدا هەیە!`);
+      setEditingStatus(null);
+      return;
+    }
+    const updated = customStatuses.map(s => s === oldName ? trimmed : s);
+    setCustomStatuses(updated);
+    setTableData(prev => prev.map(r => r.itemType === oldName ? { ...r, itemType: trimmed } : r));
+    setEditingStatus(null);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypes: updated
+      });
+    }
+  };
+
+  const handleRestoreDefaultStatuses = async () => {
+    const defaults = ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+    const merged = Array.from(new Set([...customStatuses, ...defaults]));
+    setCustomStatuses(merged);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypes: merged
       });
     }
   };
@@ -466,13 +506,16 @@ export default function AdminSpreadsheet({
           <button
             type="button"
             onClick={() => setIsStatusModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            title={t.manageItemStatuses || "دیاریکردن و بەڕێوەبردنی دەستەواژەکانی دۆخی کاڵا"}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="دیاریکردن، زیادکردن و کەمکردنی دۆخی کاڵا (ستۆک، ئاوتلێت، یەدەگ...)"
           >
             <Tag className="w-3.5 h-3.5 text-amber-600" />
             <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
-            <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+            <span className="bg-amber-200 text-amber-950 text-[10px] px-1.5 py-0.5 rounded-full font-black">
               {customStatuses.length}
+            </span>
+            <span className="text-[10px] text-amber-700 font-extrabold bg-amber-100/90 px-1.5 py-0.2 rounded border border-amber-300/80">
+              + زیادکردن / کەمکردن
             </span>
           </button>
 
@@ -538,13 +581,29 @@ export default function AdminSpreadsheet({
               </th>
 
               <th 
-                onClick={() => handleSortColumn('itemType')}
-                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
-                title="کلیک بکە بۆ سۆرت بەپێی دۆخی کاڵا"
+                className="p-2 min-w-[140px] text-start border-e border-slate-200 select-none group hover:bg-slate-200/80 transition-colors"
               >
                 <div className="flex items-center justify-between gap-1">
-                  <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
-                  {renderSortIndicator('itemType')}
+                  <span 
+                    onClick={() => handleSortColumn('itemType')}
+                    className="cursor-pointer flex items-center gap-1 font-bold flex-1"
+                    title="کلیک بکە بۆ سۆرت بەپێی دۆخی کاڵا"
+                  >
+                    <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
+                    {renderSortIndicator('itemType')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsStatusModalOpen(true);
+                    }}
+                    className="px-1.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md text-[10px] font-black border border-amber-300 shadow-2xs cursor-pointer flex items-center gap-0.5"
+                    title="زیادکردن یان کەمکردنی دۆخەکان (ستۆک، ئاوتلێت، یەدەگ...)"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>زیاد/کەم</span>
+                  </button>
                 </div>
               </th>
 
@@ -708,8 +767,25 @@ export default function AdminSpreadsheet({
                   <td className="p-1 border-e border-slate-200">
                     <select
                       value={row.itemType || ''}
-                      onChange={(e) => handleCellChange(idx, 'itemType', e.target.value)}
-                      className={`w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-bold transition-colors ${
+                      onChange={async (e) => {
+                        const val = e.target.value;
+                        if (val === '__ADD_NEW__') {
+                          const newName = window.prompt('ناوی دۆخی نوێ بنووسە بۆ زیادکردن (وەک: ستۆک، ئاوتلێت، یەدەگ، تێکچوو، پێشانگا، هتد):');
+                          if (newName && newName.trim()) {
+                            const added = await handleAddStatus(newName.trim());
+                            if (added) {
+                              handleCellChange(idx, 'itemType', added);
+                            }
+                          }
+                          return;
+                        }
+                        if (val === '__MANAGE__') {
+                          setIsStatusModalOpen(true);
+                          return;
+                        }
+                        handleCellChange(idx, 'itemType', val);
+                      }}
+                      className={`w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-bold transition-colors cursor-pointer ${
                         row.itemType === 'ستۆک'
                           ? 'bg-amber-50 text-amber-800'
                           : row.itemType === 'یەدەگ'
@@ -727,6 +803,13 @@ export default function AdminSpreadsheet({
                           {st}
                         </option>
                       ))}
+                      <option disabled className="text-slate-300 font-bold">──────────</option>
+                      <option value="__ADD_NEW__" className="text-emerald-700 font-black bg-emerald-50">
+                        ➕ زیادکردنی دۆخی نوێ...
+                      </option>
+                      <option value="__MANAGE__" className="text-amber-800 font-bold bg-amber-50">
+                        ⚙️ سڕینەوە و کەمکردن (بەڕێوەبردن)...
+                      </option>
                     </select>
                   </td>
 
@@ -862,16 +945,19 @@ export default function AdminSpreadsheet({
                 </div>
                 <div>
                   <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
-                    {t.manageItemStatuses || 'بەڕێوەبردنی دۆخی کاڵاکان'}
+                    زیادکردن و کەمکردنی دۆخی کاڵا
                   </h3>
                   <p className="text-[11px] text-slate-500">
-                    دیاریکردنی دەستەواژەکان (وەک: ستۆک، یەدەگ، ئاوتلێت...)
+                    بەڕێوەبردنی دەستەواژەکان (ستۆک، ئاوتلێت، یەدەگ...)
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsStatusModalOpen(false)}
+                onClick={() => {
+                  setIsStatusModalOpen(false);
+                  setEditingStatus(null);
+                }}
                 className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -879,63 +965,152 @@ export default function AdminSpreadsheet({
             </div>
 
             {/* Add New Status Input */}
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="text"
-                value={newStatusInput}
-                onChange={(e) => setNewStatusInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddStatus();
-                  }
-                }}
-                placeholder={t.newStatusPlaceholder || "دەستەواژەیەکی نوێ بنووسە..."}
-                className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-              />
-              <button
-                type="button"
-                onClick={handleAddStatus}
-                disabled={!newStatusInput.trim() || customStatuses.includes(newStatusInput.trim())}
-                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
-                <span>{t.addStatus || 'زیادکردن'}</span>
-              </button>
+            <div className="mb-4">
+              <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                ➕ زیادکردنی دۆخی نوێ:
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newStatusInput}
+                  onChange={(e) => setNewStatusInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddStatus();
+                    }
+                  }}
+                  placeholder="بۆ نموونە: ستۆک، ئاوتلێت، یەدەگ، کەمێک عەیبدار..."
+                  className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddStatus()}
+                  disabled={!newStatusInput.trim() || customStatuses.includes(newStatusInput.trim())}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>زیادکردن</span>
+                </button>
+              </div>
             </div>
 
             {/* Current Statuses List */}
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              <p className="text-[11px] font-bold text-slate-400 mb-1">
-                دەستەواژە چالاکەکان:
-              </p>
-              {customStatuses.map((st) => (
-                <div
-                  key={st}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-300 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="text-xs font-bold text-slate-800">{st}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteStatus(st)}
-                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                    title="سڕینەوە"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                <span>لیستی دۆخەکان ({customStatuses.length}):</span>
+                <span className="text-[10px] text-slate-400">دەتوانیت زیادی بکەیت یان بیسڕیتەوە</span>
+              </div>
+
+              {customStatuses.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  هیچ دۆخێک بوونی نییە. دەستەواژەیەک لە سەرەوە زیاد بکە!
                 </div>
-              ))}
+              ) : (
+                customStatuses.map((st) => {
+                  const isEditing = editingStatus?.oldName === st;
+                  const count = tableData.filter(r => r.itemType === st).length;
+
+                  return (
+                    <div
+                      key={st}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-300 transition-colors gap-2"
+                    >
+                      {isEditing ? (
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <input
+                            type="text"
+                            value={editingStatus.newName}
+                            onChange={(e) => setEditingStatus({ ...editingStatus, newName: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleRenameStatus(st, editingStatus.newName);
+                              }
+                            }}
+                            autoFocus
+                            className="flex-1 px-2 py-1 text-xs font-bold border border-amber-400 rounded-lg focus:outline-none bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRenameStatus(st, editingStatus.newName)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors font-bold text-[11px]"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingStatus(null)}
+                            className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors font-bold text-[11px]"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                              st === 'ستۆک'
+                                ? 'bg-amber-500'
+                                : st === 'یەدەگ'
+                                ? 'bg-blue-500'
+                                : st === 'ئاوتلێت'
+                                ? 'bg-red-500'
+                                : 'bg-purple-500'
+                            }`} />
+                            <span className="text-xs font-black text-slate-800 truncate">{st}</span>
+                            {count > 0 && (
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-200/70 px-1.5 py-0.2 rounded-full">
+                                {count} کاڵا
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingStatus({ oldName: st, newName: st })}
+                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                              title="دەستکاری ناوی دۆخ"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteStatus(st)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="سڕینەوە و کەمکردن"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
 
-            {/* Footer */}
-            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+            {/* Quick Restore Defaults / Pre-fill */}
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
               <button
                 type="button"
-                onClick={() => setIsStatusModalOpen(false)}
-                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black rounded-xl transition-colors cursor-pointer"
+                onClick={handleRestoreDefaultStatuses}
+                className="inline-flex items-center gap-1 text-[11px] text-amber-700 hover:text-amber-900 hover:bg-amber-50 px-2 py-1 rounded-lg transition-colors font-bold cursor-pointer"
+                title="گەڕاندنەوەی دەستەواژە سەرەکییەکان ئەگەر سڕابوونەوە"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>گەڕاندنەوەی (ستۆک، ئاوتلێت، یەدەگ)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStatusModalOpen(false);
+                  setEditingStatus(null);
+                }}
+                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black rounded-xl transition-colors cursor-pointer"
               >
                 داخستن
               </button>

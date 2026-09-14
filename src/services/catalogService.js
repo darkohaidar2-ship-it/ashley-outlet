@@ -380,9 +380,20 @@ export const catalogService = {
     const zoomScaleRatio = settingsData.zoomScaleRatio !== undefined ? parseFloat(settingsData.zoomScaleRatio) : 1.28;
     const totalDwellTime = stage1Time + zoomMotionTime + stage3Time;
 
-    const customItemTypes = settingsData.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+    const customItemTypes = Array.isArray(settingsData.customItemTypes) 
+      ? settingsData.customItemTypes 
+      : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
     const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes };
-    const rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
+    
+    let rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
+    if (!rawLogo && isSupabaseConfigured && supabase) {
+      try {
+        const { data: existingSettings } = await supabase.from('settings').select('logo_url').eq('id', 'global_settings').maybeSingle();
+        if (existingSettings?.logo_url) {
+          rawLogo = existingSettings.logo_url.split('#cfg=')[0];
+        }
+      } catch (e) {}
+    }
     const encodedLogo = rawLogo 
       ? `${rawLogo}#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}` 
       : `#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}`;

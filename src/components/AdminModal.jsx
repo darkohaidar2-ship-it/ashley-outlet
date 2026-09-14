@@ -318,7 +318,28 @@ export default function AdminModal({
                 </label>
                 <select
                   value={modelForm.itemType || ''}
-                  onChange={(e) => setModelForm({ ...modelForm, itemType: e.target.value })}
+                  onChange={async (e) => {
+                    const val = e.target.value;
+                    if (val === '__ADD_NEW__') {
+                      const newName = window.prompt('ناوی دۆخی نوێ بنووسە بۆ زیادکردن (وەک: ستۆک، ئاوتلێت، یەدەگ، تێکچوو، هتد):');
+                      if (newName && newName.trim()) {
+                        const trimmed = newName.trim();
+                        const currentList = settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+                        if (!currentList.includes(trimmed)) {
+                          const updated = [...currentList, trimmed];
+                          if (onSaveSettings) {
+                            await onSaveSettings({
+                              ...settings,
+                              customItemTypes: updated
+                            });
+                          }
+                        }
+                        setModelForm({ ...modelForm, itemType: trimmed });
+                      }
+                      return;
+                    }
+                    setModelForm({ ...modelForm, itemType: val });
+                  }}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white"
                 >
                   <option value="">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
@@ -327,6 +348,10 @@ export default function AdminModal({
                       {st}
                     </option>
                   ))}
+                  <option disabled className="text-slate-300">──────────</option>
+                  <option value="__ADD_NEW__" className="text-emerald-700 font-bold bg-emerald-50">
+                    ➕ زیادکردنی دۆخی نوێ...
+                  </option>
                 </select>
               </div>
             </div>
