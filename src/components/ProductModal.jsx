@@ -3,6 +3,7 @@ import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff,
 import { downloadModelImage } from '../services/imageExportService';
 import { getStatusBadgeStyle } from '../utils/statusColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
+import { useCachedImage } from '../utils/imageLocalCache';
 
 export default function ProductModal({
   model,
@@ -19,6 +20,11 @@ export default function ProductModal({
 }) {
   const [copied, setCopied] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  const heroUrl = getOptimizedImageUrl(model?.image, 'hero');
+  const thumbUrl = getOptimizedImageUrl(model?.image, 'thumb');
+  const { src: cachedHeroSrc } = useCachedImage(heroUrl);
+  const { src: cachedThumbSrc } = useCachedImage(thumbUrl);
 
   const currentIndex = models.findIndex(m => m.id === model?.id);
   const hasMultiple = models.length > 1 && currentIndex !== -1 && Boolean(onSelectModel);
@@ -99,11 +105,11 @@ export default function ProductModal({
               {/* Soft luxury ambient background glow */}
               <div 
                 className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-125 pointer-events-none -z-0"
-                style={{ backgroundImage: `url(${getOptimizedImageUrl(model.image, 'thumb')})` }}
+                style={{ backgroundImage: `url(${cachedThumbSrc || thumbUrl})` }}
               />
 
               <img
-                src={getOptimizedImageUrl(model.image, 'hero')}
+                src={cachedHeroSrc || heroUrl}
                 alt={model.name}
                 className="max-h-[50vh] sm:max-h-[60vh] md:max-h-[78vh] max-w-full w-auto h-auto object-contain z-10 transition-transform duration-300 hover:scale-[1.015] cursor-zoom-in drop-shadow-md select-none"
                 decoding="async"
@@ -400,7 +406,7 @@ export default function ProductModal({
             onClick={(e) => e.stopPropagation()}
           >
             <img
-              src={getOptimizedImageUrl(model.image, 'hero')}
+              src={cachedHeroSrc || heroUrl}
               alt={model.name}
               className="max-h-[88vh] max-w-[95vw] w-auto h-auto object-contain drop-shadow-2xl select-none"
               decoding="async"

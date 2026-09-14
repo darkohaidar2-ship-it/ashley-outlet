@@ -20,10 +20,13 @@ import {
   Edit3,
   RotateCcw,
   Palette,
+  Printer,
+  Ticket,
   X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
+import StickerSheet from './StickerSheet';
 import { 
   STATUS_COLOR_PALETTE, 
   DEFAULT_STATUS_COLORS, 
@@ -74,7 +77,31 @@ export default function AdminSpreadsheet({
   const [deleteCandidate, setDeleteCandidate] = useState(null); // 2-Factor deletion state
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
+  const [stickerModal, setStickerModal] = useState({ isOpen: false, items: [] });
   const fileInputRef = useRef(null);
+
+  // Open sticker modal for a single model
+  const handlePrintSingleSticker = (row) => {
+    setStickerModal({ isOpen: true, items: [row] });
+  };
+
+  // Open sticker modal for all items in the current view
+  const handleOpenStickerBulkModal = () => {
+    if (!tableData || tableData.length === 0) {
+      alert('هیچ مۆدێلێک نەدۆزرایەوە بۆ دروستکردنی لەزگە');
+      return;
+    }
+    setStickerModal({ isOpen: true, items: tableData });
+  };
+
+  // Trigger browser print for stickers
+  const handleExecuteStickerPrint = () => {
+    document.body.classList.add('print-stickers');
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove('print-stickers');
+    }, 1200);
+  };
 
   // Sync customStatuses & colors with settings
   useEffect(() => {
@@ -565,6 +592,17 @@ export default function AdminSpreadsheet({
             <span>{isExportingImages ? exportProgress.text : 'خەزنکردنی وێنەکان (ZIP)'}</span>
           </button>
 
+          {/* Print Stickers (ئامادەکردنی لەزگە) */}
+          <button
+            type="button"
+            onClick={handleOpenStickerBulkModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="ئامادەکردن و چاپکردنی لەزگە (Stickers / Labels) بە ڕەنگی دۆخەکە"
+          >
+            <Ticket className="w-3.5 h-3.5 text-rose-600" />
+            <span>ئامادەکردنی لەزگە ({tableData.length})</span>
+          </button>
+
           {/* Manage Item Statuses (دۆخی کاڵا) */}
           <button
             type="button"
@@ -914,15 +952,26 @@ export default function AdminSpreadsheet({
                     />
                   </td>
 
-                  {/* Delete Row */}
+                  {/* Actions (Sticker & Delete) */}
                   <td className="p-1 text-center">
-                    <button
-                      onClick={() => handleDeleteRow(idx)}
-                      className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      title={t.delete}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handlePrintSingleSticker(row)}
+                        className="p-1.5 text-rose-500 hover:text-white hover:bg-rose-600 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        title="ئامادەکردن و چاپکردنی لەزگەی ئەم مۆدێلە (Print Sticker)"
+                      >
+                        <Ticket className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteRow(idx)}
+                        className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title={t.delete}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
 
                 </tr>
@@ -1261,6 +1310,97 @@ export default function AdminSpreadsheet({
             </div>
           </div>
         </div>
+      )}
+
+      {/* 4. STICKER / LABEL PREVIEW & PRINT MODAL */}
+      {stickerModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm animate-fadeIn no-print">
+          <div className="bg-white w-full max-w-4xl max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-2xs">
+                  <Ticket className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base leading-tight">
+                    ئامادەکردن و پێشبینینی لەزگە (Sticker / Label Preview)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {stickerModal.items.length} لەزگە ئامادەیە بۆ چاپکردن بە ڕەنگی دۆخەکە
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExecuteStickerPrint}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4 text-rose-500" />
+                  <span>چاپکردنی لەزگەکان (Print)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStickerModal({ isOpen: false, items: [] })}
+                  className="p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-200/70 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Scrollable Preview of the Stickers */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/70 space-y-6">
+              <div className="max-w-2xl mx-auto space-y-6">
+                {stickerModal.items.map((item, idx) => (
+                  <div key={item.id || idx} className="shadow-lg rounded-2xl overflow-hidden">
+                    <StickerSheet
+                      stickersToPrint={[item]}
+                      categories={categories}
+                      collections={collections}
+                      logoUrl={settings?.logoUrl || ''}
+                      statusColors={statusColors}
+                      t={t}
+                      lang={lang}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 border-t border-slate-200 bg-white flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-semibold">
+                لەزگەی قەبارە ستاندارد بە لۆگۆ، بەروار، ناوی مۆدێل بە گەورەیی، تێبینی و ڕەنگی دۆخەکە
+              </span>
+              <button
+                type="button"
+                onClick={handleExecuteStickerPrint}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>دەستپێکردنی چاپ ({stickerModal.items.length})</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 5. Active Container for Sticker Printing */}
+      {stickerModal.items.length > 0 && (
+        <StickerSheet
+          stickersToPrint={stickerModal.items}
+          categories={categories}
+          collections={collections}
+          logoUrl={settings?.logoUrl || ''}
+          statusColors={statusColors}
+          t={t}
+          lang={lang}
+        />
       )}
 
     </div>

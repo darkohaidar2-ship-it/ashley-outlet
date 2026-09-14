@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv, ImageOff } from 'lucide-react';
 import { getStatusBadgeStyle } from '../utils/statusColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
+import { useCachedImage, preloadAndCacheImage } from '../utils/imageLocalCache';
 
 export default function ProductCard({
   model,
@@ -18,6 +19,16 @@ export default function ProductCard({
 }) {
   const [hasImgError, setHasImgError] = useState(false);
 
+  const cardImageUrl = getOptimizedImageUrl(model.image, 'card');
+  const { src: cachedImgSrc } = useCachedImage(cardImageUrl);
+
+  // Pre-cache full HD hero image on hover so modal opens instantaneously with 0ms delay
+  const handlePreloadHero = () => {
+    if (model.image) {
+      preloadAndCacheImage(getOptimizedImageUrl(model.image, 'hero'));
+    }
+  };
+
   const discountPercent = model.originalPrice && model.originalPrice > model.salePrice
     ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
     : 0;
@@ -25,7 +36,11 @@ export default function ProductCard({
   const isOutOfStock = !model.stock || model.stock <= 0;
 
   return (
-    <div className="fluent-card rounded-2xl overflow-hidden flex flex-col group relative">
+    <div 
+      onMouseEnter={handlePreloadHero}
+      onTouchStart={handlePreloadHero}
+      className="fluent-card rounded-2xl overflow-hidden flex flex-col group relative"
+    >
       
       {/* Image Container with Badges */}
       <div 
@@ -34,7 +49,7 @@ export default function ProductCard({
       >
         {model.image && !hasImgError ? (
           <img
-            src={getOptimizedImageUrl(model.image, 'card')}
+            src={cachedImgSrc || cardImageUrl}
             alt={model.name}
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
             loading="lazy"

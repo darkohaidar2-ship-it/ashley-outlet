@@ -200,15 +200,16 @@
     zoom: var(--ui-scale, 0.80);
   }
 
-  #print-container {
+  #print-container,
+  #sticker-print-container {
     display: none !important;
   }
 }
 
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 10mm;
+    size: auto;
+    margin: 8mm;
   }
 
   /* Hide screen elements */
@@ -229,12 +230,50 @@
     print-color-adjust: exact !important;
   }
 
-  #print-container {
+  /* Mode Switching: Standard A4 vs Sticker Labels */
+  body.print-stickers #print-container {
+    display: none !important;
+  }
+
+  body.print-stickers #sticker-print-container {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+  }
+
+  body:not(.print-stickers) #sticker-print-container {
+    display: none !important;
+  }
+
+  body:not(.print-stickers) #print-container {
     display: block !important;
     visibility: visible !important;
     position: relative !important;
     width: 100% !important;
     background: #ffffff !important;
+  }
+
+  .sticker-label-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    width: 100% !important;
+    max-width: 155mm !important;
+    min-height: 100mm !important;
+    margin: 0 auto 12mm auto !important;
+    padding: 6mm 7mm !important;
+    box-sizing: border-box !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .sticker-label-card:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+    margin-bottom: 0 !important;
   }
 
   .print-page {
