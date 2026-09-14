@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { 
   FileSpreadsheet, 
@@ -94,13 +95,24 @@ export default function AdminSpreadsheet({
     setStickerModal({ isOpen: true, items: tableData });
   };
 
+  // Keep print-stickers mode active on body whenever sticker modal is open
+  useEffect(() => {
+    if (stickerModal.isOpen) {
+      document.body.classList.add('print-stickers');
+    } else {
+      document.body.classList.remove('print-stickers');
+    }
+    return () => {
+      document.body.classList.remove('print-stickers');
+    };
+  }, [stickerModal.isOpen]);
+
   // Trigger browser print for stickers
   const handleExecuteStickerPrint = () => {
     document.body.classList.add('print-stickers');
-    window.print();
     setTimeout(() => {
-      document.body.classList.remove('print-stickers');
-    }, 1200);
+      window.print();
+    }, 150);
   };
 
   // Sync customStatuses & colors with settings
@@ -1394,8 +1406,8 @@ export default function AdminSpreadsheet({
         </div>
       )}
 
-      {/* 5. Active Container for Sticker Printing */}
-      {stickerModal.items.length > 0 && (
+      {/* 5. Active Container for Sticker Printing (Rendered at Body level to escape #screen-root display:none) */}
+      {stickerModal.items.length > 0 && typeof document !== 'undefined' && createPortal(
         <StickerSheet
           id="sticker-print-container"
           stickersToPrint={stickerModal.items}
@@ -1405,7 +1417,8 @@ export default function AdminSpreadsheet({
           statusColors={statusColors}
           t={t}
           lang={lang}
-        />
+        />,
+        document.body
       )}
 
     </div>
