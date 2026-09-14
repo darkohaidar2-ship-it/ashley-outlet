@@ -1,5 +1,6 @@
 import React from 'react';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Tag } from 'lucide-react';
+import { getStatusColor, getStatusBadgeStyle } from '../utils/statusColors';
 
 export default function FilterBar({
   t,
@@ -10,6 +11,11 @@ export default function FilterBar({
   setSelectedCategory,
   selectedCollection,
   setSelectedCollection,
+  selectedStatus = 'all',
+  setSelectedStatus,
+  customStatuses = ['ستۆک', 'یەدەگ', 'ئاوتلێت'],
+  statusColors = {},
+  models = [],
   totalCount,
   filteredCount,
   sortBy = 'name-asc',
@@ -118,6 +124,66 @@ export default function FilterBar({
           </div>
         )}
       </div>
+
+      {/* Status Filters Strip (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...) */}
+      {setSelectedStatus && customStatuses && customStatuses.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 mt-2 border-t border-slate-200/70 scrollbar-none">
+          <span className="text-[11px] font-black text-slate-500 shrink-0 flex items-center gap-1 px-1">
+            <Tag className="w-3.5 h-3.5 text-slate-400" />
+            <span>دۆخی کاڵا:</span>
+          </span>
+
+          {/* All Statuses Button */}
+          <button
+            type="button"
+            onClick={() => setSelectedStatus('all')}
+            className={`shrink-0 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+              selectedStatus === 'all'
+                ? 'bg-slate-800 text-white shadow-xs'
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <span>هەموو</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+              selectedStatus === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+            }`}>
+              {totalCount}
+            </span>
+          </button>
+
+          {/* Each Status Pill */}
+          {customStatuses.map((st) => {
+            const isSelected = selectedStatus === st;
+            const count = models.filter(m => (m.itemType || (m.sku && m.sku !== m.name ? m.sku : '')) === st).length;
+            const color = getStatusColor(st, statusColors);
+
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setSelectedStatus(isSelected ? 'all' : st)}
+                style={isSelected ? getStatusBadgeStyle(st, statusColors) : {}}
+                className={`shrink-0 px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'shadow-xs ring-2 ring-black/10 scale-102'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <span 
+                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
+                  style={{ backgroundColor: color }} 
+                />
+                <span>{st}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                  isSelected ? 'bg-black/10 text-inherit' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

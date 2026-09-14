@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Printer, CheckCircle2, AlertCircle, Tag, Layers, FileText, ImageOff, Share2, Check, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { downloadModelImage } from '../services/imageExportService';
+import { getStatusBadgeStyle } from '../utils/statusColors';
 
 export default function ProductModal({
   model,
@@ -10,6 +11,7 @@ export default function ProductModal({
   categoryName,
   collectionName,
   logoUrl,
+  statusColors = {},
   onClose,
   onPrint,
   onOpenSlideshow
@@ -190,15 +192,10 @@ export default function ProductModal({
               {model.itemType && (
                 <>
                   <span>•</span>
-                  <span className={`px-2 py-0.5 rounded-lg font-bold text-xs ${
-                    model.itemType === 'ستۆک'
-                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                      : model.itemType === 'یەدەگ'
-                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                      : model.itemType === 'ئاوتلێت'
-                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                      : 'bg-purple-100 text-purple-800 border border-purple-200'
-                  }`}>
+                  <span 
+                    className="px-2 py-0.5 rounded-lg font-bold text-xs shadow-2xs"
+                    style={getStatusBadgeStyle(model.itemType, statusColors)}
+                  >
                     {model.itemType}
                   </span>
                 </>

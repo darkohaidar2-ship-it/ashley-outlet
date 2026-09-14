@@ -21,9 +21,11 @@ import {
   Download, 
   FolderArchive, 
   FileText,
-  ArrowUpDown
+  ArrowUpDown,
+  Tag
 } from 'lucide-react';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
+import { getStatusBadgeStyle } from '../utils/statusColors';
 
 export default function SlideshowView({
   models,
@@ -35,6 +37,8 @@ export default function SlideshowView({
   isAdmin,
   logoUrl,
   settings = {},
+  statusColors = {},
+  customStatuses = ['ستۆک', 'یەدەگ', 'ئاوتلێت'],
   sortBy = 'name-asc',
   setSortBy,
   onPrintSingle,
@@ -46,6 +50,7 @@ export default function SlideshowView({
   const [isPlaying, setIsPlaying] = useState(false);
   const [sidebarCategory, setSidebarCategory] = useState('all');
   const [sidebarCollection, setSidebarCollection] = useState('all');
+  const [sidebarStatus, setSidebarStatus] = useState('all');
   const [localSort, setLocalSort] = useState(sortBy || 'name-asc');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -141,6 +146,12 @@ export default function SlideshowView({
       if (sidebarCollection !== 'all' && model.collectionId !== sidebarCollection) {
         return false;
       }
+      if (sidebarStatus !== 'all') {
+        const itemType = model.itemType || (model.sku && model.sku !== model.name ? model.sku : '');
+        if (itemType !== sidebarStatus) {
+          return false;
+        }
+      }
       return true;
     });
 
@@ -172,7 +183,7 @@ export default function SlideshowView({
       // Default: 'name-asc' (A to Z)
       return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [models, sidebarCategory, sidebarCollection, localSort]);
+  }, [models, sidebarCategory, sidebarCollection, sidebarStatus, localSort]);
 
   // Keep index within bounds when filtering
   useEffect(() => {
@@ -500,6 +511,31 @@ export default function SlideshowView({
               </div>
 
               <div>
+                <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                  <Tag className="w-3 h-3 text-slate-400" />
+                  <span>دۆخی کاڵا</span>
+                </label>
+                <select
+                  value={sidebarStatus}
+                  onChange={(e) => {
+                    setSidebarStatus(e.target.value);
+                    setCurrentIndex(0);
+                  }}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                >
+                  <option value="all">هەموو دۆخەکان ({models.length})</option>
+                  {customStatuses.map((st) => {
+                    const count = models.filter(m => (m.itemType || (m.sku && m.sku !== m.name ? m.sku : '')) === st).length;
+                    return (
+                      <option key={st} value={st}>
+                        {st} ({count})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   {t.sortBy || 'ڕیزبەندی / سۆرت'}
                 </label>
@@ -518,11 +554,12 @@ export default function SlideshowView({
                 </select>
               </div>
 
-              {(sidebarCategory !== 'all' || sidebarCollection !== 'all' || localSort !== 'name-asc') && (
+              {(sidebarCategory !== 'all' || sidebarCollection !== 'all' || sidebarStatus !== 'all' || localSort !== 'name-asc') && (
                 <button
                   onClick={() => {
                     setSidebarCategory('all');
                     setSidebarCollection('all');
+                    setSidebarStatus('all');
                     handleSortChange('name-asc');
                   }}
                   className="w-full py-1 text-center text-[10px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
@@ -570,10 +607,18 @@ export default function SlideshowView({
                         <h5 className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-red-700' : 'text-slate-800'}`}>
                           {model.name}
                         </h5>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-1 gap-1 flex-wrap">
                           <span className="text-xs font-black text-red-600">
                             {model.salePrice?.toLocaleString()} {t.currency}
                           </span>
+                          {model.itemType && (
+                            <span 
+                              className="text-[9px] font-black px-1.5 py-0.2 rounded shadow-2xs"
+                              style={getStatusBadgeStyle(model.itemType, statusColors)}
+                            >
+                              {model.itemType}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1003,15 +1048,10 @@ export default function SlideshowView({
                       {activeModel.itemType && (
                         <>
                           <span>•</span>
-                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] ${
-                            activeModel.itemType === 'ستۆک' 
-                              ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40' 
-                              : activeModel.itemType === 'یەدەگ' 
-                              ? 'bg-blue-500/25 text-blue-300 border border-blue-400/40' 
-                              : activeModel.itemType === 'ئاوتلێت' 
-                              ? 'bg-red-500/25 text-red-300 border border-red-400/40' 
-                              : 'bg-purple-500/25 text-purple-300 border border-purple-400/40'
-                          }`}>
+                          <span 
+                            className="px-2 py-0.5 rounded-md font-black text-[10.5px] shadow-xs"
+                            style={getStatusBadgeStyle(activeModel.itemType, statusColors)}
+                          >
                             {activeModel.itemType}
                           </span>
                         </>
@@ -1110,15 +1150,10 @@ export default function SlideshowView({
                     </span>
 
                     {activeModel.itemType && (
-                      <span className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-md flex items-center gap-1 border ${
-                        activeModel.itemType === 'ستۆک'
-                          ? 'bg-amber-50 text-amber-800 border-amber-200'
-                          : activeModel.itemType === 'یەدەگ'
-                          ? 'bg-blue-50 text-blue-800 border-blue-200'
-                          : activeModel.itemType === 'ئاوتلێت'
-                          ? 'bg-rose-50 text-rose-800 border-rose-200'
-                          : 'bg-purple-50 text-purple-800 border-purple-200'
-                      }`}>
+                      <span 
+                        className="text-[10.5px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-xs"
+                        style={getStatusBadgeStyle(activeModel.itemType, statusColors)}
+                      >
                         {activeModel.itemType}
                       </span>
                     )}

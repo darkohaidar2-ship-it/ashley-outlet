@@ -48,6 +48,14 @@ export default function App() {
     return 'all';
   });
 
+  const [selectedStatus, setSelectedStatus] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('status') || 'all';
+    }
+    return 'all';
+  });
+
   const [searchQuery, setSearchQuery] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -359,7 +367,15 @@ export default function App() {
         return false;
       }
 
-      // 3. Search Query
+      // 3. Status Filter (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...)
+      if (selectedStatus !== 'all') {
+        const itemType = model.itemType || (model.sku && model.sku !== model.name ? model.sku : '');
+        if (itemType !== selectedStatus) {
+          return false;
+        }
+      }
+
+      // 4. Search Query
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
         const nameMatch = (model.name || '').toLowerCase().includes(q);
@@ -400,7 +416,7 @@ export default function App() {
       // Default: 'name-asc' (A to Z)
       return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [data.models, selectedCategory, selectedCollection, searchQuery, sortBy]);
+  }, [data.models, selectedCategory, selectedCollection, selectedStatus, searchQuery, sortBy]);
 
   // Robust Print Handlers
   const handlePrintSingle = (model) => {
@@ -570,6 +586,8 @@ export default function App() {
               isAdmin={isAdmin}
               logoUrl={data.settings?.logoUrl || ''}
               settings={data.settings || {}}
+              statusColors={data.settings?.customItemTypeColors || {}}
+              customStatuses={data.settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت']}
               sortBy={sortBy}
               setSortBy={setSortBy}
               onPrintSingle={handlePrintSingle}
@@ -592,6 +610,11 @@ export default function App() {
               setSelectedCategory={setSelectedCategory}
               selectedCollection={selectedCollection}
               setSelectedCollection={setSelectedCollection}
+              selectedStatus={selectedStatus}
+              setSelectedStatus={setSelectedStatus}
+              customStatuses={data.settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت']}
+              statusColors={data.settings?.customItemTypeColors || {}}
+              models={data.models || []}
               totalCount={data.models?.length || 0}
               filteredCount={filteredModels.length}
               sortBy={sortBy}
@@ -618,6 +641,7 @@ export default function App() {
                       categoryName={getCategoryName(model.categoryId)}
                       collectionName={getCollectionName(model.collectionId)}
                       isAdmin={isAdmin}
+                      statusColors={data.settings?.customItemTypeColors || {}}
                       onOpenDetails={(m) => setDetailModel(m)}
                       onOpenSlideshow={() => openSlideshowOnModel(model)}
                       onPrintSingle={handlePrintSingle}
@@ -643,6 +667,7 @@ export default function App() {
           categoryName={detailModel ? getCategoryName(detailModel.categoryId) : ''}
           collectionName={detailModel ? getCollectionName(detailModel.collectionId) : ''}
           logoUrl={data.settings?.logoUrl || ''}
+          statusColors={data.settings?.customItemTypeColors || {}}
           onClose={() => setDetailModel(null)}
           onPrint={handlePrintSingle}
           onOpenSlideshow={() => {
@@ -694,6 +719,7 @@ export default function App() {
         categories={data.categories || []}
         collections={data.collections || []}
         logoUrl={data.settings?.logoUrl || ''}
+        statusColors={data.settings?.customItemTypeColors || {}}
         t={t}
         lang={lang}
       />

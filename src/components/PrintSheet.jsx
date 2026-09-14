@@ -1,10 +1,12 @@
 import React from 'react';
+import { getStatusBadgeStyle } from '../utils/statusColors';
 
 export default function PrintSheet({
   modelsToPrint,
   categories,
   collections,
   logoUrl,
+  statusColors = {},
   t,
   lang
 }) {
@@ -105,13 +107,24 @@ export default function PrintSheet({
             {/* 3. Model Information & Specifications */}
             <div className="space-y-3">
               
-              {/* Category & Collection */}
-              <div className="flex items-center gap-2 text-xs font-bold text-red-600 uppercase tracking-wider">
+              {/* Category & Collection & Item Status */}
+              <div className="flex items-center gap-2 text-xs font-bold text-red-600 uppercase tracking-wider flex-wrap">
                 <span>{catName}</span>
                 {colName && (
                   <>
                     <span className="text-slate-300">•</span>
                     <span className="text-slate-700">{colName}</span>
+                  </>
+                )}
+                {model.itemType && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <span 
+                      className="px-2 py-0.5 rounded-md font-bold text-[11px] tracking-normal"
+                      style={getStatusBadgeStyle(model.itemType, statusColors)}
+                    >
+                      {model.itemType}
+                    </span>
                   </>
                 )}
               </div>

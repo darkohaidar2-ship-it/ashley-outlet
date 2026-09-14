@@ -35,6 +35,9 @@ function mapSettingsFromDB(s) {
   const customItemTypes = Array.isArray(extra.customItemTypes) && extra.customItemTypes.length > 0
     ? extra.customItemTypes
     : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+  const customItemTypeColors = (extra.customItemTypeColors && typeof extra.customItemTypeColors === 'object')
+    ? extra.customItemTypeColors
+    : { 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' };
   const computedDwell = stage1 + zoomMotion + stage3;
 
   return {
@@ -47,7 +50,8 @@ function mapSettingsFromDB(s) {
     zoomMotionTime: zoomMotion,
     stage3Time: stage3,
     zoomScaleRatio: zoomRatio,
-    customItemTypes: customItemTypes
+    customItemTypes: customItemTypes,
+    customItemTypeColors: customItemTypeColors
   };
 }
 
@@ -383,7 +387,10 @@ export const catalogService = {
     const customItemTypes = Array.isArray(settingsData.customItemTypes) 
       ? settingsData.customItemTypes 
       : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
-    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes };
+    const customItemTypeColors = (settingsData.customItemTypeColors && typeof settingsData.customItemTypeColors === 'object')
+      ? settingsData.customItemTypeColors
+      : { 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' };
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes, customItemTypeColors };
     
     let rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
     if (!rawLogo && isSupabaseConfigured && supabase) {

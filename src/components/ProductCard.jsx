@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv, ImageOff } from 'lucide-react';
+import { getStatusBadgeStyle } from '../utils/statusColors';
 
 export default function ProductCard({
   model,
@@ -7,6 +8,7 @@ export default function ProductCard({
   categoryName,
   collectionName,
   isAdmin,
+  statusColors = {},
   onOpenDetails,
   onOpenSlideshow,
   onPrintSingle,
@@ -88,15 +90,10 @@ export default function ProductCard({
             {model.itemType && (
               <>
                 <span>•</span>
-                <span className={`px-1.5 py-0.5 rounded-md font-bold text-[10px] ${
-                  model.itemType === 'ستۆک' 
-                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
-                    : model.itemType === 'یەدەگ' 
-                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                    : model.itemType === 'ئاوتلێت' 
-                    ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                    : 'bg-purple-100 text-purple-800 border border-purple-200'
-                }`}>
+                <span 
+                  className="px-1.5 py-0.5 rounded-md font-bold text-[10px] shadow-2xs"
+                  style={getStatusBadgeStyle(model.itemType, statusColors)}
+                >
                   {model.itemType}
                 </span>
               </>

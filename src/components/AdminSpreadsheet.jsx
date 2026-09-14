@@ -19,10 +19,18 @@ import {
   Tag,
   Edit3,
   RotateCcw,
+  Palette,
   X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
+import { 
+  STATUS_COLOR_PALETTE, 
+  DEFAULT_STATUS_COLORS, 
+  getStatusColor, 
+  getStatusBadgeStyle, 
+  getStatusDotStyle 
+} from '../utils/statusColors';
 
 export default function AdminSpreadsheet({
   models,
@@ -41,6 +49,11 @@ export default function AdminSpreadsheet({
     }
     return ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
   });
+  const [statusColors, setStatusColors] = useState(() => {
+    return settings?.customItemTypeColors || DEFAULT_STATUS_COLORS;
+  });
+  const [newStatusColor, setNewStatusColor] = useState('#9333ea');
+  const [activeColorPickerFor, setActiveColorPickerFor] = useState(null); // status name or '__NEW__'
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [newStatusInput, setNewStatusInput] = useState('');
   const [editingStatus, setEditingStatus] = useState(null); // { oldName: '', newName: '' }
@@ -61,28 +74,58 @@ export default function AdminSpreadsheet({
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const fileInputRef = useRef(null);
 
-  // Sync customStatuses with settings
+  // Sync customStatuses & colors with settings
   useEffect(() => {
     if (settings?.customItemTypes && settings.customItemTypes.length > 0) {
       setCustomStatuses(settings.customItemTypes);
     }
-  }, [settings?.customItemTypes]);
+    if (settings?.customItemTypeColors) {
+      setStatusColors(prev => ({
+        ...prev,
+        ...settings.customItemTypeColors
+      }));
+    }
+  }, [settings?.customItemTypes, settings?.customItemTypeColors]);
+
+  // Update a single status's custom color
+  const handleUpdateStatusColor = async (statusName, newColor) => {
+    const updatedColors = {
+      ...statusColors,
+      [statusName]: newColor
+    };
+    setStatusColors(updatedColors);
+    setActiveColorPickerFor(null);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypes: customStatuses,
+        customItemTypeColors: updatedColors
+      });
+    }
+  };
 
   // Manage custom item statuses (Add / Delete / Rename / Restore)
-  const handleAddStatus = async (statusToAdd = null) => {
+  const handleAddStatus = async (statusToAdd = null, colorToUse = null) => {
     const trimmed = (statusToAdd !== null && typeof statusToAdd === 'string' ? statusToAdd : newStatusInput).trim();
     if (!trimmed) return null;
     if (customStatuses.includes(trimmed)) {
       alert(`دەستەواژەی "${trimmed}" پێشتر بوونی هەیە!`);
       return trimmed;
     }
+    const color = colorToUse || newStatusColor || '#9333ea';
     const updated = [...customStatuses, trimmed];
+    const updatedColors = {
+      ...statusColors,
+      [trimmed]: color
+    };
     setCustomStatuses(updated);
+    setStatusColors(updatedColors);
     setNewStatusInput('');
     if (onSaveSettings) {
       await onSaveSettings({
         ...settings,
-        customItemTypes: updated
+        customItemTypes: updated,
+        customItemTypeColors: updatedColors
       });
     }
     return trimmed;
@@ -91,11 +134,15 @@ export default function AdminSpreadsheet({
   const handleDeleteStatus = async (statusToDelete) => {
     if (!window.confirm(`دڵنیایت لە سڕینەوە و کەمکردنی "${statusToDelete}" لە لیستی دۆخەکان؟`)) return;
     const updated = customStatuses.filter(s => s !== statusToDelete);
+    const updatedColors = { ...statusColors };
+    delete updatedColors[statusToDelete];
     setCustomStatuses(updated);
+    setStatusColors(updatedColors);
     if (onSaveSettings) {
       await onSaveSettings({
         ...settings,
-        customItemTypes: updated
+        customItemTypes: updated,
+        customItemTypeColors: updatedColors
       });
     }
   };
@@ -112,13 +159,20 @@ export default function AdminSpreadsheet({
       return;
     }
     const updated = customStatuses.map(s => s === oldName ? trimmed : s);
+    const updatedColors = { ...statusColors };
+    if (updatedColors[oldName]) {
+      updatedColors[trimmed] = updatedColors[oldName];
+      delete updatedColors[oldName];
+    }
     setCustomStatuses(updated);
+    setStatusColors(updatedColors);
     setTableData(prev => prev.map(r => r.itemType === oldName ? { ...r, itemType: trimmed } : r));
     setEditingStatus(null);
     if (onSaveSettings) {
       await onSaveSettings({
         ...settings,
-        customItemTypes: updated
+        customItemTypes: updated,
+        customItemTypeColors: updatedColors
       });
     }
   };
@@ -126,11 +180,17 @@ export default function AdminSpreadsheet({
   const handleRestoreDefaultStatuses = async () => {
     const defaults = ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
     const merged = Array.from(new Set([...customStatuses, ...defaults]));
+    const updatedColors = {
+      ...statusColors,
+      ...DEFAULT_STATUS_COLORS
+    };
     setCustomStatuses(merged);
+    setStatusColors(updatedColors);
     if (onSaveSettings) {
       await onSaveSettings({
         ...settings,
-        customItemTypes: merged
+        customItemTypes: merged,
+        customItemTypeColors: updatedColors
       });
     }
   };
@@ -785,21 +845,14 @@ export default function AdminSpreadsheet({
                         }
                         handleCellChange(idx, 'itemType', val);
                       }}
-                      className={`w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-bold transition-colors cursor-pointer ${
-                        row.itemType === 'ستۆک'
-                          ? 'bg-amber-50 text-amber-800'
-                          : row.itemType === 'یەدەگ'
-                          ? 'bg-blue-50 text-blue-800'
-                          : row.itemType === 'ئاوتلێت'
-                          ? 'bg-red-50 text-red-700'
-                          : row.itemType
-                          ? 'bg-purple-50 text-purple-800'
-                          : 'bg-transparent text-slate-400'
+                      style={row.itemType ? getStatusBadgeStyle(row.itemType, statusColors) : {}}
+                      className={`w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-black transition-all cursor-pointer ${
+                        !row.itemType ? 'bg-slate-50 text-slate-400 font-normal' : 'shadow-xs'
                       }`}
                     >
-                      <option value="" className="text-slate-400 font-normal">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
+                      <option value="" className="text-slate-400 font-normal bg-white">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
                       {customStatuses.map((st) => (
-                        <option key={st} value={st} className="text-slate-800 font-bold">
+                        <option key={st} value={st} className="text-slate-800 font-bold bg-white">
                           {st}
                         </option>
                       ))}
@@ -965,11 +1018,24 @@ export default function AdminSpreadsheet({
             </div>
 
             {/* Add New Status Input */}
-            <div className="mb-4">
-              <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                ➕ زیادکردنی دۆخی نوێ:
+            <div className="mb-4 bg-slate-50/80 p-3 rounded-2xl border border-slate-200/80">
+              <label className="block text-[11px] font-black text-slate-700 mb-1.5">
+                ➕ زیادکردنی دۆخی نوێ لەگەڵ ڕەنگ:
               </label>
               <div className="flex items-center gap-2">
+                <label
+                  className="relative w-9 h-9 rounded-xl border-2 border-white shadow-md cursor-pointer flex items-center justify-center transition-transform hover:scale-105 shrink-0"
+                  style={{ backgroundColor: newStatusColor }}
+                  title="هەڵبژاردنی ڕەنگ بە دڵی خۆت"
+                >
+                  <Palette className="w-4 h-4 text-white drop-shadow-sm" />
+                  <input
+                    type="color"
+                    value={newStatusColor}
+                    onChange={(e) => setNewStatusColor(e.target.value)}
+                    className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                  />
+                </label>
                 <input
                   type="text"
                   value={newStatusInput}
@@ -977,29 +1043,45 @@ export default function AdminSpreadsheet({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
-                      handleAddStatus();
+                      handleAddStatus(newStatusInput.trim(), newStatusColor);
                     }
                   }}
-                  placeholder="بۆ نموونە: ستۆک، ئاوتلێت، یەدەگ، کەمێک عەیبدار..."
-                  className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  placeholder="بۆ نموونە: ستۆک، ئاوتلێت، یەدەگ..."
+                  className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
                 />
                 <button
                   type="button"
-                  onClick={() => handleAddStatus()}
+                  onClick={() => handleAddStatus(newStatusInput.trim(), newStatusColor)}
                   disabled={!newStatusInput.trim() || customStatuses.includes(newStatusInput.trim())}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1"
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1 shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                   <span>زیادکردن</span>
                 </button>
+              </div>
+
+              {/* Color Presets */}
+              <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-bold">پێشنیاری ڕەنگ:</span>
+                {STATUS_COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setNewStatusColor(c)}
+                    className={`w-4 h-4 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
+                      newStatusColor.toLowerCase() === c.toLowerCase() ? 'scale-125 ring-2 ring-amber-500 ring-offset-1' : 'hover:scale-115'
+                    }`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
               </div>
             </div>
 
             {/* Current Statuses List */}
             <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
-                <span>لیستی دۆخەکان ({customStatuses.length}):</span>
-                <span className="text-[10px] text-slate-400">دەتوانیت زیادی بکەیت یان بیسڕیتەوە</span>
+                <span>لیستی دۆخەکان و ڕەنگەکانیان ({customStatuses.length}):</span>
+                <span className="text-[10px] text-slate-400">کلیک لە ڕەنگ بکە بۆ گۆڕینی</span>
               </div>
 
               {customStatuses.length === 0 ? (
@@ -1010,11 +1092,12 @@ export default function AdminSpreadsheet({
                 customStatuses.map((st) => {
                   const isEditing = editingStatus?.oldName === st;
                   const count = tableData.filter(r => r.itemType === st).length;
+                  const currentColor = getStatusColor(st, statusColors);
 
                   return (
                     <div
                       key={st}
-                      className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-300 transition-colors gap-2"
+                      className="relative flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-300 transition-colors gap-2"
                     >
                       {isEditing ? (
                         <div className="flex items-center gap-1.5 flex-1">
@@ -1049,16 +1132,65 @@ export default function AdminSpreadsheet({
                       ) : (
                         <>
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                              st === 'ستۆک'
-                                ? 'bg-amber-500'
-                                : st === 'یەدەگ'
-                                ? 'bg-blue-500'
-                                : st === 'ئاوتلێت'
-                                ? 'bg-red-500'
-                                : 'bg-purple-500'
-                            }`} />
-                            <span className="text-xs font-black text-slate-800 truncate">{st}</span>
+                            {/* Color Swatch / Trigger */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setActiveColorPickerFor(activeColorPickerFor === st ? null : st)}
+                                className="w-5 h-5 rounded-full shrink-0 border-2 border-white shadow-xs hover:scale-125 transition-transform cursor-pointer flex items-center justify-center"
+                                style={{ backgroundColor: currentColor }}
+                                title="کلیک بکە بۆ گۆڕینی ڕەنگ"
+                              >
+                                <Palette className="w-2.5 h-2.5 text-white/90 drop-shadow-xs" />
+                              </button>
+
+                              {/* Color Picker Popover */}
+                              {activeColorPickerFor === st && (
+                                <div className="absolute top-7 right-0 z-40 bg-white p-2.5 rounded-2xl shadow-2xl border border-slate-200 flex flex-col gap-2 min-w-[200px] animate-fadeIn">
+                                  <div className="flex items-center justify-between text-[11px] font-black text-slate-700 pb-1 border-b border-slate-100">
+                                    <span>ڕەنگی دۆخ: {st}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveColorPickerFor(null)}
+                                      className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  <div className="grid grid-cols-5 gap-1.5">
+                                    {STATUS_COLOR_PALETTE.map((palColor) => (
+                                      <button
+                                        key={palColor}
+                                        type="button"
+                                        onClick={() => handleUpdateStatusColor(st, palColor)}
+                                        className={`w-6 h-6 rounded-full border border-white shadow-xs transition-transform cursor-pointer ${
+                                          currentColor.toLowerCase() === palColor.toLowerCase() ? 'scale-125 ring-2 ring-amber-500' : 'hover:scale-115'
+                                        }`}
+                                        style={{ backgroundColor: palColor }}
+                                      />
+                                    ))}
+                                  </div>
+                                  <label className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-slate-50 hover:bg-slate-100 rounded-xl text-[11px] font-bold text-slate-700 cursor-pointer border border-slate-200 transition-colors">
+                                    <input
+                                      type="color"
+                                      value={currentColor}
+                                      onChange={(e) => handleUpdateStatusColor(st, e.target.value)}
+                                      className="w-4 h-4 rounded cursor-pointer"
+                                    />
+                                    <span>ڕەنگی تر (دەستی)...</span>
+                                  </label>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Status Label with its styled badge preview */}
+                            <span 
+                              className="text-xs font-black px-2 py-0.5 rounded-md truncate shadow-xs"
+                              style={getStatusBadgeStyle(st, statusColors)}
+                            >
+                              {st}
+                            </span>
+
                             {count > 0 && (
                               <span className="text-[10px] font-bold text-slate-400 bg-slate-200/70 px-1.5 py-0.2 rounded-full">
                                 {count} کاڵا
