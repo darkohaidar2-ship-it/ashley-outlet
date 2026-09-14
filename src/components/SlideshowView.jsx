@@ -992,12 +992,28 @@ export default function SlideshowView({
 
                     <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
                     
-                    <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300">
+                    <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300 flex-wrap">
                       <span className="text-red-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
                       {activeModel.stock > 0 && (
                         <>
                           <span>•</span>
                           <span className="text-amber-300 font-bold">عدد: {activeModel.stock}</span>
+                        </>
+                      )}
+                      {activeModel.itemType && (
+                        <>
+                          <span>•</span>
+                          <span className={`px-2 py-0.5 rounded-md font-bold text-[10.5px] ${
+                            activeModel.itemType === 'ستۆک' 
+                              ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40' 
+                              : activeModel.itemType === 'یەدەگ' 
+                              ? 'bg-blue-500/25 text-blue-300 border border-blue-400/40' 
+                              : activeModel.itemType === 'ئاوتلێت' 
+                              ? 'bg-red-500/25 text-red-300 border border-red-400/40' 
+                              : 'bg-purple-500/25 text-purple-300 border border-purple-400/40'
+                          }`}>
+                            {activeModel.itemType}
+                          </span>
                         </>
                       )}
                     </div>
@@ -1092,6 +1108,20 @@ export default function SlideshowView({
                         </>
                       )}
                     </span>
+
+                    {activeModel.itemType && (
+                      <span className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-md flex items-center gap-1 border ${
+                        activeModel.itemType === 'ستۆک'
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : activeModel.itemType === 'یەدەگ'
+                          ? 'bg-blue-50 text-blue-800 border-blue-200'
+                          : activeModel.itemType === 'ئاوتلێت'
+                          ? 'bg-rose-50 text-rose-800 border-rose-200'
+                          : 'bg-purple-50 text-purple-800 border-purple-200'
+                      }`}>
+                        {activeModel.itemType}
+                      </span>
+                    )}
                   </div>
 
                   {/* Notes & Dimensions (Detailed and clear without truncation) */}

@@ -91,7 +91,12 @@ export const translations = {
     sortPriceHigh: 'نرخ: زۆر بۆ کەم',
     sortDiscount: 'بەرزترین داشکاندن',
     sortStock: 'زۆرترین بڕ (عدد)',
-    sortNewest: 'نوێترین زیادکراو'
+    sortNewest: 'نوێترین زیادکراو',
+    itemStatus: 'دۆخی کاڵا',
+    manageItemStatuses: 'بەڕێوەبردنی دەستەواژەکانی دۆخ',
+    newStatusPlaceholder: 'ناوی دەستەواژەی نوێ بنووسە...',
+    addStatus: 'زیادکردن',
+    noStatus: '-- دیارینەکراو --'
   },
   ar: {
     dir: 'rtl',
@@ -185,7 +190,12 @@ export const translations = {
     sortPriceHigh: 'السعر: من الأعلى للأقل',
     sortDiscount: 'أعلى نسبة خصم',
     sortStock: 'أعلى كمية (متوفر)',
-    sortNewest: 'الأحدث أولاً'
+    sortNewest: 'الأحدث أولاً',
+    itemStatus: 'حالة الموديل',
+    manageItemStatuses: 'إدارة حالات الموديل',
+    newStatusPlaceholder: 'اكتب اسم الحالة الجديدة...',
+    addStatus: 'إضافة',
+    noStatus: '-- غير محدد --'
   },
   en: {
     dir: 'ltr',
@@ -279,6 +289,11 @@ export const translations = {
     sortPriceHigh: 'Price: High to Low',
     sortDiscount: 'Highest Discount',
     sortStock: 'Highest Stock',
-    sortNewest: 'Newest Added'
+    sortNewest: 'Newest Added',
+    itemStatus: 'Item Status',
+    manageItemStatuses: 'Manage Item Statuses',
+    newStatusPlaceholder: 'Enter new status label...',
+    addStatus: 'Add',
+    noStatus: '-- Unset --'
   }
 };

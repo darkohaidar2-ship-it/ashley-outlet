@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { 
   FileSpreadsheet, 
@@ -15,7 +15,9 @@ import {
   FolderArchive,
   ArrowUpDown,
   ArrowDownAZ,
-  ArrowUpZA
+  ArrowUpZA,
+  Tag,
+  X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
@@ -24,13 +26,27 @@ export default function AdminSpreadsheet({
   models,
   categories,
   collections,
+  settings,
+  onSaveSettings,
   t,
   lang,
   onSaveBulk,
   onClose
 }) {
+  const [customStatuses, setCustomStatuses] = useState(() => {
+    if (settings?.customItemTypes && settings.customItemTypes.length > 0) {
+      return settings.customItemTypes;
+    }
+    return ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+  });
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [newStatusInput, setNewStatusInput] = useState('');
+
   const [tableData, setTableData] = useState(() => {
-    const list = JSON.parse(JSON.stringify(models || []));
+    const list = (models || []).map(m => ({
+      ...m,
+      itemType: m.itemType || (m.sku && m.sku !== m.name ? m.sku : '')
+    }));
     return list.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
   });
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
@@ -41,6 +57,43 @@ export default function AdminSpreadsheet({
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const fileInputRef = useRef(null);
+
+  // Sync customStatuses with settings
+  useEffect(() => {
+    if (settings?.customItemTypes && settings.customItemTypes.length > 0) {
+      setCustomStatuses(settings.customItemTypes);
+    }
+  }, [settings?.customItemTypes]);
+
+  // Manage custom item statuses (Add / Delete)
+  const handleAddStatus = async () => {
+    const trimmed = newStatusInput.trim();
+    if (!trimmed || customStatuses.includes(trimmed)) return;
+    const updated = [...customStatuses, trimmed];
+    setCustomStatuses(updated);
+    setNewStatusInput('');
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypes: updated
+      });
+    }
+  };
+
+  const handleDeleteStatus = async (statusToDelete) => {
+    if (customStatuses.length <= 1) {
+      alert('پێویستە بەلایەنی کەم یەک دەستەواژە هەبێت / At least one status is required');
+      return;
+    }
+    const updated = customStatuses.filter(s => s !== statusToDelete);
+    setCustomStatuses(updated);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypes: updated
+      });
+    }
+  };
 
   // Download all images in a ZIP named after models
   const handleDownloadAllImages = async () => {
@@ -85,6 +138,9 @@ export default function AdminSpreadsheet({
           const colB = collections.find(c => c.id === b.collectionId);
           valA = colA?.name || '';
           valB = colB?.name || '';
+        } else if (key === 'itemType') {
+          valA = a.itemType || '';
+          valB = b.itemType || '';
         } else if (key === 'stock' || key === 'originalPrice' || key === 'salePrice') {
           const numA = parseFloat(valA) || 0;
           const numB = parseFloat(valB) || 0;
@@ -134,6 +190,7 @@ export default function AdminSpreadsheet({
       id: 'mod-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
       categoryId: categories[0]?.id || '',
       collectionId: '',
+      itemType: '',
       name: '',
       sku: '',
       image: '',
@@ -162,29 +219,29 @@ export default function AdminSpreadsheet({
           handleCellChange(index, 'image', uploadedUrl);
         }
       } catch (err) {
-        console.error('Failed to upload dropped image', err);
+        alert('کێشەیەک ڕوویدا لە بارکردنی وێنە / Error uploading image');
       }
     }
   };
 
-  // Image File Picker for specific row
+  // Direct File Input for row image
   const handleFileInputChange = async (e, index) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (files && files[0]) {
       try {
-        const uploadedUrl = await catalogService.uploadImage(file);
+        const uploadedUrl = await catalogService.uploadImage(files[0]);
         if (uploadedUrl) {
           handleCellChange(index, 'image', uploadedUrl);
         }
       } catch (err) {
-        console.error('Failed to upload image file', err);
+        alert('کێشەیەک ڕوویدا لە بارکردنی وێنە / Error uploading image');
       }
     }
   };
 
-  // Excel / CSV File Import
+  // Import Excel File (.xlsx, .xls, .csv)
   const handleImportExcel = (e) => {
-    const file = e.target.files?.[0];
+    const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
@@ -216,6 +273,10 @@ export default function AdminSpreadsheet({
             'code', 'item code', 'item no', 'item_code', 'item', 'کۆد', 'کۆدی کاڵا', 'کۆدی مۆدێل', 'بارکۆد', 'رمز',
             'name', 'model', 'model name', 'model_name', 'description', 'ناو', 'ناوی مۆدێل', 'اسم', 'الموديل', 'sku'
           ]);
+          const itemStatus = findVal([
+            'status', 'item status', 'item_status', 'condition', 'type', 'item type', 'item_type',
+            'دۆخ', 'دۆخی کاڵا', 'جۆر', 'جۆری کاڵا', 'پۆلێن', 'حالة'
+          ]);
           const stock = findVal(['stock', 'quantity', 'qty', 'count', 'عدد', 'ژمارە', 'العدد', 'الكمية']);
           const salePrice = findVal(['price', 'sale price', 'outlet price', 'نرخ', 'نرخی نوێ', 'السعر']);
           const originalPrice = findVal(['original price', 'old price', 'before discount', 'کۆن', 'نرخی پێشوو', 'السعر الأصلي']);
@@ -240,7 +301,8 @@ export default function AdminSpreadsheet({
           return {
             id: 'mod-' + Date.now() + '-' + idx,
             name: codeOrName || '',
-            sku: codeOrName || '',
+            sku: itemStatus || codeOrName || '',
+            itemType: itemStatus || '',
             categoryId: matchedCat ? matchedCat.id : (categories[0]?.id || ''),
             collectionId: matchedCol ? matchedCol.id : '',
             stock: stock !== '' ? stock : '',
@@ -271,6 +333,7 @@ export default function AdminSpreadsheet({
         'Model (مۆدێل)': row.name,
         'Category (کەتەگۆری)': cat ? (lang === 'ku' ? cat.name_ku : cat.name_en) : '',
         'Collection (سێت)': col ? col.name : '',
+        'Status (دۆخی کاڵا)': row.itemType || '',
         'Stock (عدد)': row.stock,
         'Original Price (د.ع)': row.originalPrice,
         'Outlet Price (د.ع)': row.salePrice,
@@ -399,6 +462,20 @@ export default function AdminSpreadsheet({
             <span>{isExportingImages ? exportProgress.text : 'خەزنکردنی وێنەکان (ZIP)'}</span>
           </button>
 
+          {/* Manage Item Statuses (دۆخی کاڵا) */}
+          <button
+            type="button"
+            onClick={() => setIsStatusModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+            title={t.manageItemStatuses || "دیاریکردن و بەڕێوەبردنی دەستەواژەکانی دۆخی کاڵا"}
+          >
+            <Tag className="w-3.5 h-3.5 text-amber-600" />
+            <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
+            <span className="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+              {customStatuses.length}
+            </span>
+          </button>
+
           {/* Save All */}
           <button
             onClick={handleSaveAll}
@@ -457,6 +534,17 @@ export default function AdminSpreadsheet({
                 <div className="flex items-center justify-between gap-1">
                   <span>{t.collection}</span>
                   {renderSortIndicator('collectionId')}
+                </div>
+              </th>
+
+              <th 
+                onClick={() => handleSortColumn('itemType')}
+                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                title="کلیک بکە بۆ سۆرت بەپێی دۆخی کاڵا"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
+                  {renderSortIndicator('itemType')}
                 </div>
               </th>
 
@@ -616,6 +704,32 @@ export default function AdminSpreadsheet({
                     </select>
                   </td>
 
+                  {/* Item Status (دۆخی کاڵا) */}
+                  <td className="p-1 border-e border-slate-200">
+                    <select
+                      value={row.itemType || ''}
+                      onChange={(e) => handleCellChange(idx, 'itemType', e.target.value)}
+                      className={`w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-bold transition-colors ${
+                        row.itemType === 'ستۆک'
+                          ? 'bg-amber-50 text-amber-800'
+                          : row.itemType === 'یەدەگ'
+                          ? 'bg-blue-50 text-blue-800'
+                          : row.itemType === 'ئاوتلێت'
+                          ? 'bg-red-50 text-red-700'
+                          : row.itemType
+                          ? 'bg-purple-50 text-purple-800'
+                          : 'bg-transparent text-slate-400'
+                      }`}
+                    >
+                      <option value="" className="text-slate-400 font-normal">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
+                      {customStatuses.map((st) => (
+                        <option key={st} value={st} className="text-slate-800 font-bold">
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+
                   {/* Stock */}
                   <td className="p-1 border-e border-slate-200 text-center">
                     <input
@@ -731,6 +845,99 @@ export default function AdminSpreadsheet({
                 className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-500/25 transition-all cursor-pointer active:scale-98"
               >
                 بەڵێ، بسڕەوە
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Item Statuses Management Modal */}
+      {isStatusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 animate-scaleUp">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
+                    {t.manageItemStatuses || 'بەڕێوەبردنی دۆخی کاڵاکان'}
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    دیاریکردنی دەستەواژەکان (وەک: ستۆک، یەدەگ، ئاوتلێت...)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Add New Status Input */}
+            <div className="flex items-center gap-2 mb-4">
+              <input
+                type="text"
+                value={newStatusInput}
+                onChange={(e) => setNewStatusInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddStatus();
+                  }
+                }}
+                placeholder={t.newStatusPlaceholder || "دەستەواژەیەکی نوێ بنووسە..."}
+                className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+              />
+              <button
+                type="button"
+                onClick={handleAddStatus}
+                disabled={!newStatusInput.trim() || customStatuses.includes(newStatusInput.trim())}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black rounded-xl transition-all shadow-sm cursor-pointer active:scale-95 flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{t.addStatus || 'زیادکردن'}</span>
+              </button>
+            </div>
+
+            {/* Current Statuses List */}
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              <p className="text-[11px] font-bold text-slate-400 mb-1">
+                دەستەواژە چالاکەکان:
+              </p>
+              {customStatuses.map((st) => (
+                <div
+                  key={st}
+                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-amber-300 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="text-xs font-bold text-slate-800">{st}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStatus(st)}
+                    className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="سڕینەوە"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsStatusModalOpen(false)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-black rounded-xl transition-colors cursor-pointer"
+              >
+                داخستن
               </button>
             </div>
           </div>

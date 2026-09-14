@@ -56,6 +56,7 @@ export default function AdminModal({
   const [modelForm, setModelForm] = useState({
     name: '',
     sku: '',
+    itemType: '',
     categoryId: categories[0]?.id || '',
     collectionId: collections[0]?.id || '',
     originalPrice: '',
@@ -97,6 +98,7 @@ export default function AdminModal({
       setModelForm({
         name: editingModel.name || '',
         sku: editingModel.sku || '',
+        itemType: editingModel.itemType || (editingModel.sku && editingModel.sku !== editingModel.name ? editingModel.sku : ''),
         categoryId: editingModel.categoryId || (categories[0]?.id || ''),
         collectionId: editingModel.collectionId || '',
         originalPrice: editingModel.originalPrice || '',
@@ -110,6 +112,7 @@ export default function AdminModal({
       setModelForm({
         name: '',
         sku: '',
+        itemType: '',
         categoryId: categories[0]?.id || '',
         collectionId: collections[0]?.id || '',
         originalPrice: '',
@@ -191,7 +194,7 @@ export default function AdminModal({
     // Do not set default/placeholder image; leave empty if no image provided
     await onSaveModel({
       ...modelForm,
-      sku: modelForm.name.trim(),
+      sku: modelForm.itemType || modelForm.name.trim(),
       image: finalImageUrl || ''
     });
 
@@ -294,18 +297,38 @@ export default function AdminModal({
               />
             </div>
 
-            {/* Stock Count */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                {t.stockCount}
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={modelForm.stock}
-                onChange={(e) => setModelForm({ ...modelForm, stock: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium"
-              />
+            {/* Stock Count & Item Status (دۆخی کاڵا) */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  {t.stockCount}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={modelForm.stock}
+                  onChange={(e) => setModelForm({ ...modelForm, stock: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  {t.itemStatus || 'دۆخی کاڵا'}
+                </label>
+                <select
+                  value={modelForm.itemType || ''}
+                  onChange={(e) => setModelForm({ ...modelForm, itemType: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-medium bg-white"
+                >
+                  <option value="">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
+                  {(settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت']).map((st) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Category & Collection */}

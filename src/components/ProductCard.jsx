@@ -77,12 +77,28 @@ export default function ProductCard({
       <div className="p-3 flex-1 flex flex-col justify-between">
         <div>
           {/* Collection / Category Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400 mb-0.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-400 mb-0.5 flex-wrap">
             <span>{categoryName}</span>
             {collectionName && (
               <>
                 <span>•</span>
                 <span className="text-red-600/90">{collectionName}</span>
+              </>
+            )}
+            {model.itemType && (
+              <>
+                <span>•</span>
+                <span className={`px-1.5 py-0.5 rounded-md font-bold text-[10px] ${
+                  model.itemType === 'ستۆک' 
+                    ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                    : model.itemType === 'یەدەگ' 
+                    ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                    : model.itemType === 'ئاوتلێت' 
+                    ? 'bg-rose-100 text-rose-800 border border-rose-200' 
+                    : 'bg-purple-100 text-purple-800 border border-purple-200'
+                }`}>
+                  {model.itemType}
+                </span>
               </>
             )}
           </div>

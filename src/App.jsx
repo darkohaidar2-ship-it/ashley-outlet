@@ -550,6 +550,8 @@ export default function App() {
             models={data.models || []}
             categories={data.categories || []}
             collections={data.collections || []}
+            settings={data.settings || {}}
+            onSaveSettings={handleSaveSettings}
             t={t}
             lang={lang}
             onSaveBulk={handleSaveBulk}

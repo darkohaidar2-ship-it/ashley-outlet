@@ -179,12 +179,28 @@ export default function ProductModal({
             </div>
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2 flex-wrap">
               <span>{categoryName}</span>
               {collectionName && (
                 <>
                   <span>•</span>
                   <span className="text-red-600 font-bold">{collectionName}</span>
+                </>
+              )}
+              {model.itemType && (
+                <>
+                  <span>•</span>
+                  <span className={`px-2 py-0.5 rounded-lg font-bold text-xs ${
+                    model.itemType === 'ستۆک'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : model.itemType === 'یەدەگ'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : model.itemType === 'ئاوتلێت'
+                      ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                      : 'bg-purple-100 text-purple-800 border border-purple-200'
+                  }`}>
+                    {model.itemType}
+                  </span>
                 </>
               )}
             </div>
@@ -212,26 +228,45 @@ export default function ProductModal({
               </div>
             </div>
 
-            {/* Stock Count */}
-            <div className="mt-4 flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium">{t.stock}:</span>
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
-                isOutOfStock
-                  ? 'bg-rose-100 text-rose-700'
-                  : 'bg-emerald-100 text-emerald-800'
-              }`}>
-                {isOutOfStock ? (
-                  <>
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {t.outOfStock}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    {model.stock} {t.piece}
-                  </>
-                )}
-              </span>
+            {/* Stock Count & Item Status */}
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-slate-500 font-medium">{t.stock}:</span>
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                  isOutOfStock
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-emerald-100 text-emerald-800'
+                }`}>
+                  {isOutOfStock ? (
+                    <>
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      {t.outOfStock}
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      {model.stock} {t.piece}
+                    </>
+                  )}
+                </span>
+              </div>
+
+              {model.itemType && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 font-medium">{t.itemStatus || 'دۆخی کاڵا'}:</span>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                    model.itemType === 'ستۆک'
+                      ? 'bg-amber-50 text-amber-800 border-amber-200'
+                      : model.itemType === 'یەدەگ'
+                      ? 'bg-blue-50 text-blue-800 border-blue-200'
+                      : model.itemType === 'ئاوتلێت'
+                      ? 'bg-rose-50 text-rose-800 border-rose-200'
+                      : 'bg-purple-50 text-purple-800 border-purple-200'
+                  }`}>
+                    {model.itemType}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Notes & Dimensions */}

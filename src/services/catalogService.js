@@ -2,12 +2,14 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 // Helper to map DB row to frontend Model object
 function mapModelFromDB(m) {
+  const itemType = (m.sku && m.sku !== m.name) ? m.sku : (m.item_type || '');
   return {
     id: m.id,
     categoryId: m.category_id || '',
     collectionId: m.collection_id || '',
     name: m.name || '',
     sku: m.sku || '',
+    itemType: itemType,
     image: m.image || '',
     stock: m.stock !== undefined ? parseInt(m.stock) : 0,
     originalPrice: m.original_price !== undefined ? parseFloat(m.original_price) : 0,
@@ -30,6 +32,9 @@ function mapSettingsFromDB(s) {
   const zoomMotion = extra.zoomMotionTime !== undefined ? parseFloat(extra.zoomMotionTime) : 5.0;
   const stage3 = extra.stage3Time !== undefined ? parseFloat(extra.stage3Time) : 4.0;
   const zoomRatio = extra.zoomScaleRatio !== undefined ? parseFloat(extra.zoomScaleRatio) : 1.28;
+  const customItemTypes = Array.isArray(extra.customItemTypes) && extra.customItemTypes.length > 0
+    ? extra.customItemTypes
+    : ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
   const computedDwell = stage1 + zoomMotion + stage3;
 
   return {
@@ -41,7 +46,8 @@ function mapSettingsFromDB(s) {
     stage1Time: stage1,
     zoomMotionTime: zoomMotion,
     stage3Time: stage3,
-    zoomScaleRatio: zoomRatio
+    zoomScaleRatio: zoomRatio,
+    customItemTypes: customItemTypes
   };
 }
 
@@ -167,7 +173,7 @@ export const catalogService = {
       category_id: modelData.categoryId || '',
       collection_id: modelData.collectionId || '',
       name: modelData.name || '',
-      sku: modelData.name || modelData.sku || '',
+      sku: (modelData.itemType !== undefined && modelData.itemType !== '') ? modelData.itemType : (modelData.name || modelData.sku || ''),
       image: modelData.image || '',
       stock: parseInt(modelData.stock) || 0,
       original_price: parseFloat(modelData.originalPrice) || 0,
@@ -245,7 +251,7 @@ export const catalogService = {
             category_id: m.categoryId || '',
             collection_id: m.collectionId || '',
             name: m.name || '',
-            sku: m.name || m.sku || '',
+            sku: (m.itemType !== undefined && m.itemType !== '') ? m.itemType : (m.name || m.sku || ''),
             image: m.image || '',
             stock: parseInt(m.stock) || 0,
             original_price: parseFloat(m.originalPrice) || 0,
@@ -374,7 +380,8 @@ export const catalogService = {
     const zoomScaleRatio = settingsData.zoomScaleRatio !== undefined ? parseFloat(settingsData.zoomScaleRatio) : 1.28;
     const totalDwellTime = stage1Time + zoomMotionTime + stage3Time;
 
-    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio };
+    const customItemTypes = settingsData.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes };
     const rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
     const encodedLogo = rawLogo 
       ? `${rawLogo}#cfg=${encodeURIComponent(JSON.stringify(extraCfg))}` 
