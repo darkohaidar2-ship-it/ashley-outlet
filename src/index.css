@@ -312,9 +312,8 @@
     flex-direction: column !important;
     justify-content: space-between !important;
     padding: 8mm !important;
-    box-sizing: border-box !important;
-    border: 3px solid #0f172a !important;
-    border-top: 8px solid #dc2626 !important;
+    border: 3.5px solid var(--cover-accent, #dc2626) !important;
+    border-top: 10px solid var(--cover-accent, #dc2626) !important;
     border-radius: 14px !important;
     background: #ffffff !important;
     margin-bottom: 20px !important;
