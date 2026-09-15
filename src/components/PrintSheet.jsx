@@ -27,21 +27,32 @@ export default function PrintSheet({
     return col ? col.name : '';
   };
 
+  // 1. Total models count
+  const totalModelsCount = modelsToPrint.length;
+
+  // Current formatted date
   const currentDate = new Date().toLocaleDateString(
     lang === 'ku' ? 'ckb' : lang === 'ar' ? 'ar-IQ' : 'en-US',
-    { year: 'numeric', month: 'short', day: 'numeric' }
+    { year: 'numeric', month: '2-digit', day: '2-digit' }
   );
 
-  // Selected models with images to showcase on the book cover
-  const featuredModelsWithImages = (modelsToPrint || []).filter(m => Boolean(m.image));
-  const coverHeroModel = featuredModelsWithImages[0] || modelsToPrint[0];
-  const coverThumbnails = featuredModelsWithImages.slice(1, 4);
+  // 2. Total stock count (کۆی گشتی عدد)
+  const totalStockCount = modelsToPrint.reduce((sum, m) => sum + (parseInt(m.stock) || 0), 0);
 
-  // Determine category name if filtered by category
+  // 3. Status types present in this print list
+  const statusesInAlbum = [...new Set(modelsToPrint.map(m => (m.itemType || (m.sku && m.sku !== m.name ? m.sku : 'ئاوتلێت'))).filter(Boolean))];
+  const primaryStatus = statusesInAlbum.length === 1 ? statusesInAlbum[0] : (statusesInAlbum.join(' • ') || 'ئاوتلێت');
+  const primaryStatusColor = statusesInAlbum.length === 1 ? getStatusColor(statusesInAlbum[0], statusColors) : '#dc2626';
+
+  // 4. Category / Collection name
   const uniqueCategoryIds = [...new Set((modelsToPrint || []).map(m => m.categoryId).filter(Boolean))];
   const albumCategoryTitle = uniqueCategoryIds.length === 1 
     ? getCategoryName(uniqueCategoryIds[0])
     : (lang === 'ku' ? 'تەواوی بەشەکان' : lang === 'ar' ? 'جميع الأقسام' : 'All Collections');
+
+  // Selected models with images to showcase on the book cover
+  const featuredModelsWithImages = (modelsToPrint || []).filter(m => Boolean(m.image));
+  const coverHeroModel = featuredModelsWithImages[0] || modelsToPrint[0];
 
   const shouldShowCover = includeCoverPage && modelsToPrint && modelsToPrint.length > 1;
 
@@ -49,153 +60,140 @@ export default function PrintSheet({
     <div id="print-container">
       {/* 1. BOOK COVER PAGE (First Page of Album, Book-like design) */}
       {shouldShowCover && (
-        <div className="print-cover-page relative overflow-hidden flex flex-col justify-between">
+        <div className="print-cover-page relative overflow-hidden flex flex-col justify-between" style={{ borderColor: primaryStatusColor }}>
           
-          {/* Top Luxury Brand Strip */}
-          <div className="absolute top-0 inset-x-0 h-2.5 bg-gradient-to-r from-red-700 via-red-600 to-red-800" />
+          {/* Top Luxury Accent Strip with Status Color */}
+          <div className="absolute top-0 inset-x-0 h-3" style={{ backgroundColor: primaryStatusColor }} />
 
           {/* Inner Decorative Book Framing */}
-          <div className="flex-1 flex flex-col justify-between border-2 border-slate-900/80 rounded-2xl p-6 bg-slate-50/50 relative">
+          <div className="flex-1 flex flex-col justify-between border-2 border-slate-900/80 rounded-2xl p-6 sm:p-8 bg-slate-50/50 relative mt-1">
             
-            {/* Header: Ashley Logo & Official Monogram */}
-            <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3.5">
-              <div className="flex items-center gap-3">
-                {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    alt="Ashley Outlet"
-                    className="h-12 max-w-[170px] object-contain rounded-lg"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-xl bg-red-600 flex items-center justify-center text-white font-black text-2xl shadow-sm">
-                    A
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-1.5 leading-none">
-                    <span className="font-black text-2xl tracking-tight text-slate-900">
-                      ASHLEY
-                    </span>
-                    <span className="text-white text-xs font-black px-2 py-0.5 rounded-xs bg-red-600 uppercase tracking-wider">
-                      OUTLET
-                    </span>
-                  </div>
-                  <p className="text-[10px] font-bold text-slate-500 tracking-wider mt-1 uppercase">
-                    Official Furniture Catalog & Lookbook
-                  </p>
+            {/* Top: Ashley Official Logo (لەسەرەوە لۆگۆی فەرمی ئاشڵی) */}
+            <div className="flex flex-col items-center justify-center text-center pb-4 border-b-2 border-slate-900/20">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Ashley Logo"
+                  className="h-16 max-w-[240px] object-contain rounded-lg drop-shadow-xs"
+                />
+              ) : (
+                <div 
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-3xl shadow-md"
+                  style={{ backgroundColor: primaryStatusColor }}
+                >
+                  A
                 </div>
-              </div>
-
-              {/* Established Date & Quality Stamp */}
-              <div className="text-end">
-                <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
-                  EST. 1945
-                </div>
-                <div className="bg-slate-900 text-white text-[10px] font-black px-3 py-1 rounded-md uppercase tracking-wider mt-1 inline-flex items-center gap-1.5 shadow-xs">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-xs" />
-                  <span>AUTHENTIC ORIGINAL</span>
-                </div>
+              )}
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs font-black tracking-widest text-slate-500 uppercase">
+                  ESTABLISHED 1945
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="text-xs font-black tracking-widest text-slate-500 uppercase">
+                  HOMESTORE & OUTLET
+                </span>
               </div>
             </div>
 
-            {/* Curated Hero Furniture Showcase Gallery */}
-            <div className="my-2.5 space-y-2 flex-1 flex flex-col justify-center">
-              {coverHeroModel && (
-                <div className="relative rounded-2xl overflow-hidden border-2 border-slate-900 bg-white shadow-sm flex items-center justify-center h-[105mm] max-h-[105mm]">
-                  {coverHeroModel.image ? (
-                    <img
-                      src={getOptimizedImageUrl(coverHeroModel.image, 'print')}
-                      alt={coverHeroModel.name}
-                      className="max-h-full max-w-full object-contain p-3"
-                    />
-                  ) : (
-                    <div className="text-slate-400 font-bold text-lg">ASHLEY FURNITURE HOMESTORE</div>
-                  )}
-
-                  {/* Overlay Tag with Model Name & Category */}
-                  <div className="absolute bottom-2.5 inset-x-2.5 bg-slate-900/90 text-white backdrop-blur-xs rounded-xl px-4 py-2 flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider block">
-                        {getCategoryName(coverHeroModel.categoryId) || 'مۆبێلی تایبەت'}
-                      </span>
-                      <h3 className="text-base font-black font-mono leading-tight">
-                        {coverHeroModel.name}
-                      </h3>
-                    </div>
-                    {coverHeroModel.salePrice > 0 && (
-                      <div className="text-end font-mono font-black text-rose-400 text-sm">
-                        {coverHeroModel.salePrice.toLocaleString()} {t.currency || 'د.ع'}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Secondary Featured Thumbnails (Row of 3 cards) */}
-              {coverThumbnails.length > 0 && (
-                <div className="grid grid-cols-3 gap-2 h-[34mm]">
-                  {coverThumbnails.map((thumbModel, tIdx) => (
-                    <div
-                      key={thumbModel.id || tIdx}
-                      className="relative rounded-xl overflow-hidden border border-slate-300 bg-white flex items-center justify-center p-1"
-                    >
-                      <img
-                        src={getOptimizedImageUrl(thumbModel.image, 'print')}
-                        alt={thumbModel.name}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                      <div className="absolute bottom-1 inset-x-1 bg-black/75 text-white rounded-md text-[9px] font-bold px-1.5 py-0.5 truncate text-center">
-                        {thumbModel.name}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Book Title & Lookbook Heading */}
-            <div className="text-center py-2.5 border-t border-b border-slate-200 my-1 bg-white rounded-xl shadow-2xs">
-              <div className="text-[11px] font-black text-red-600 uppercase tracking-widest mb-0.5">
-                FURNITURE COLLECTION LOOKBOOK • ئەلبوومی فەرمی
+            {/* Center: Huge Typography ASHLEY / ئاشڵی and Item Status (لە ناوەڕاست بە گەورەیی ئاشڵی و لە خوارەوەی دۆخەکە) */}
+            <div className="my-auto py-6 text-center flex flex-col items-center justify-center">
+              
+              <div className="inline-block px-4 py-1 rounded-full text-xs font-black tracking-widest uppercase mb-2 bg-slate-100 border border-slate-300 text-slate-600">
+                OFFICIAL COLLECTION LOOKBOOK • ئەلبوومی فەرمی
               </div>
-              <h1 className="text-3xl font-black text-slate-900 leading-tight">
-                ئەلبوومی مۆبێلی ئاشڵی ئاوتلێت
+
+              {/* Huge Bold Title: ASHLEY / ئاشڵی */}
+              <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-widest text-slate-900 leading-none my-1 font-sans">
+                ASHLEY
               </h1>
-              <p className="text-xs text-slate-600 font-bold mt-0.5">
+              <h2 className="text-4xl sm:text-5xl font-black text-slate-800 tracking-wide mt-1 mb-4 font-sans">
+                ئـاشـڵـی
+              </h2>
+
+              {/* Status Badge: ستۆک / ئاوتلێت / یەدەگ */}
+              <div 
+                className="inline-flex items-center gap-2.5 px-6 py-2 rounded-2xl shadow-md text-white font-black text-xl sm:text-2xl tracking-wider uppercase"
+                style={{ backgroundColor: primaryStatusColor }}
+              >
+                <span className="w-3 h-3 rounded-full bg-white/90 shadow-xs" />
+                <span>{primaryStatus}</span>
+              </div>
+
+              {/* Category / Collection Tag */}
+              <p className="text-sm font-bold text-slate-600 mt-3">
                 کۆلێکشن: <span className="text-slate-900 font-black">{albumCategoryTitle}</span>
               </p>
+
+              {/* Hero Image Preview (if image exists) */}
+              {coverHeroModel && coverHeroModel.image && (
+                <div className="mt-5 w-full max-w-lg h-[65mm] max-h-[65mm] rounded-2xl overflow-hidden border-2 border-slate-300 bg-white shadow-sm flex items-center justify-center p-2 relative">
+                  <img
+                    src={getOptimizedImageUrl(coverHeroModel.image, 'print')}
+                    alt={coverHeroModel.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                  <div className="absolute bottom-2 inset-x-3 bg-slate-900/80 text-white rounded-lg px-3 py-1 text-xs font-bold flex items-center justify-between backdrop-blur-xs">
+                    <span className="truncate">{coverHeroModel.name}</span>
+                    <span className="text-[10px] text-slate-300">{getCategoryName(coverHeroModel.categoryId)}</span>
+                  </div>
+                </div>
+              )}
+
             </div>
 
-            {/* Specification Summary Grid */}
-            <div className="grid grid-cols-4 gap-2 text-center py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs">
-              <div className="border-e border-slate-200">
-                <span className="text-[10px] text-slate-400 block font-bold">ژمارەی مۆدێلەکان</span>
-                <span className="font-black text-slate-900 font-mono text-sm">{modelsToPrint.length} مۆدێل</span>
-              </div>
-              <div className="border-e border-slate-200">
-                <span className="text-[10px] text-slate-400 block font-bold">بەروار / DATE</span>
-                <span className="font-black text-slate-900 font-mono text-sm">{currentDate}</span>
-              </div>
-              <div className="border-e border-slate-200">
-                <span className="text-[10px] text-slate-400 block font-bold">جۆری چاپ</span>
-                <span className="font-black text-red-600 text-sm">A4 ئەلبوومی فەرمی</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 block font-bold">گەڕان و فلتەر</span>
-                <span className="font-black text-slate-900 text-sm">{albumCategoryTitle}</span>
-              </div>
-            </div>
+            {/* Bottom: Required Album Information (کۆی گشتی مۆدێلەکان، کۆی گشتی عدد، بەروار) */}
+            <div className="pt-4 border-t-2 border-slate-900/20 space-y-3">
+              
+              {/* 3-Card Summary Stats Grid */}
+              <div className="grid grid-cols-3 gap-3">
+                
+                {/* 1. Total Models Count (کۆی گشتی مۆدێلەکان) */}
+                <div className="bg-white p-3 rounded-xl border border-slate-300 shadow-2xs text-center">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                    کۆی گشتی مۆدێلەکان
+                  </span>
+                  <div className="text-2xl font-black font-mono text-slate-900 leading-tight">
+                    {totalModelsCount}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">مۆدێلی تۆمارکراو</span>
+                </div>
 
-            {/* Book Footer */}
-            <div className="pt-2 border-t border-slate-300 flex items-center justify-between text-[10px] text-slate-500 font-semibold mt-1">
-              <div className="flex items-center gap-1.5 font-bold text-slate-700">
-                <span className="text-red-600 font-black">ASHLEY HOMESTORE OUTLET</span>
-                <span>•</span>
-                <span>سلێمانی، عێراق</span>
+                {/* 2. Total Stock Count (کۆی گشتی عدد) */}
+                <div className="bg-white p-3 rounded-xl border border-slate-300 shadow-2xs text-center">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                    کۆی گشتی عدد
+                  </span>
+                  <div className="text-2xl font-black font-mono leading-tight" style={{ color: primaryStatusColor }}>
+                    {totalStockCount}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">دانە لە کۆگادا</span>
+                </div>
+
+                {/* 3. Issue Date (بەروار) */}
+                <div className="bg-white p-3 rounded-xl border border-slate-300 shadow-2xs text-center">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase block mb-0.5">
+                    بەرواری چاپ / DATE
+                  </span>
+                  <div className="text-base font-black font-mono text-slate-900 leading-tight pt-1">
+                    {currentDate}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold">چاپکراوی فەرمی</span>
+                </div>
+
               </div>
-              <div className="bg-slate-900 text-white font-mono px-2.5 py-0.5 rounded-sm font-bold text-[9px]">
-                COVER PAGE • بەرگی سەرەکی ئەلبوم
+
+              {/* Bottom Verification Seal & Footer */}
+              <div className="pt-2 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+                <div className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <span style={{ color: primaryStatusColor }}>ASHLEY HOMESTORE OUTLET</span>
+                  <span>•</span>
+                  <span>سلێمانی، عێراق</span>
+                </div>
+                <div className="bg-slate-900 text-white font-mono px-3 py-1 rounded-md font-bold text-[9px]">
+                  COVER PAGE • لاپەڕەی بەرگ
+                </div>
               </div>
+
             </div>
 
           </div>
