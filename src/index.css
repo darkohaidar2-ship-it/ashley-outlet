@@ -228,6 +228,17 @@
     display: none !important;
   }
 
+  /* When printing stickers, completely remove #root so Page 1 is never blank */
+  body.print-stickers #root {
+    display: none !important;
+  }
+
+  /* Reset min-height to prevent empty white pages from 100vh containers */
+  #root, #root > div {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
   html, body {
     zoom: 1 !important;
     background: #ffffff !important;
@@ -287,6 +298,29 @@
     page-break-after: auto !important;
     break-after: auto !important;
     margin-bottom: 0 !important;
+  }
+
+  /* Album Book Cover Page */
+  .print-cover-page {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    height: 265mm !important;
+    max-height: 270mm !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 8mm !important;
+    box-sizing: border-box !important;
+    border: 3px solid #0f172a !important;
+    border-top: 8px solid #dc2626 !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    margin-bottom: 20px !important;
+    position: relative !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-page {
