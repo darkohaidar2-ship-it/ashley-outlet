@@ -50,7 +50,7 @@ export default function ProductCard({
       >
         {model.image ? (
           <ProgressiveImage
-            src={cachedImgSrc || cardImageUrl}
+            src={model.image}
             alt={model.name}
             preset="card"
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"

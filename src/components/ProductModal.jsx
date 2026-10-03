@@ -115,7 +115,7 @@ export default function ProductModal({
                 title="کرتە بکە بۆ گەورەکردنی تەواوی وێنەکە لەسەر هەموو شاشە"
               >
                 <ProgressiveImage
-                  src={cachedHeroSrc || heroUrl}
+                  src={model.image}
                   alt={model.name}
                   preset="hero"
                   objectFit="contain"

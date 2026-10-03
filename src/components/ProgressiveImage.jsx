@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
+import { useCachedImage } from '../utils/imageLocalCache';
 import { ImageOff } from 'lucide-react';
 
 /**
  * ProgressiveImage Component
  * Displays a tiny, lightweight blurred placeholder (~1-2 KB) while the HD/Full HD image
  * loads smoothly in the background, providing an instant visual preview so staff never
- * wait on blank screens.
+ * wait on blank screens. Integrates with Browser Local CacheStorage for 0ms loads.
  */
 export default function ProgressiveImage({
   src,
@@ -22,10 +23,21 @@ export default function ProgressiveImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
+  const placeholderSrc = getOptimizedImageUrl(src, 'placeholder');
+  const { src: cachedTargetSrc, isLoaded: isTargetCached } = useCachedImage(targetSrc);
+  const finalSrc = cachedTargetSrc || targetSrc;
+
   useEffect(() => {
     setIsLoaded(false);
     setHasError(false);
   }, [src, preset]);
+
+  // If already loaded from cache, mark loaded immediately
+  useEffect(() => {
+    if (isTargetCached) {
+      setIsLoaded(true);
+    }
+  }, [isTargetCached]);
 
   if (!src || hasError) {
     return (
@@ -36,8 +48,6 @@ export default function ProgressiveImage({
     );
   }
 
-  const placeholderSrc = getOptimizedImageUrl(src, 'placeholder');
-  const targetSrc = getOptimizedImageUrl(src, preset);
   const fitClass = objectFit === 'contain' ? 'object-contain' : 'object-cover';
 
   return (
@@ -57,7 +67,7 @@ export default function ProgressiveImage({
 
       {/* 2. Target HD Image (Fades in smoothly when loaded) */}
       <img
-        src={targetSrc}
+        src={finalSrc}
         alt={alt}
         loading={loading}
         decoding="async"

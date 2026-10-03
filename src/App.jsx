@@ -427,8 +427,10 @@ export default function App() {
     }, 250);
   };
 
-  const handleBatchPrint = () => {
-    const list = viewMode === 'grid' ? filteredModels : (data.models || []);
+  const handleBatchPrint = (customList = null) => {
+    const list = (customList && Array.isArray(customList) && customList.length > 0)
+      ? customList
+      : (viewMode === 'grid' ? filteredModels : (data.models || []));
     if (!list || list.length === 0) return;
     setModelsToPrint(list);
     setTimeout(() => {

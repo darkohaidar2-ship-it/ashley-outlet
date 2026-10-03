@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import { 
@@ -11,6 +11,7 @@ import {
   Image as ImageIcon, 
   ImageOff,
   Check, 
+  CheckCheck,
   AlertCircle,
   FolderPlus,
   FolderArchive,
@@ -23,6 +24,7 @@ import {
   Palette,
   Printer,
   Ticket,
+  Search,
   X
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
@@ -74,27 +76,94 @@ export default function AdminSpreadsheet({
     return list.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
   });
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
+  const [tableSearch, setTableSearch] = useState('');
+  const searchInputRef = useRef(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
+  const [dragOverRowId, setDragOverRowId] = useState(null);
   const [deleteCandidate, setDeleteCandidate] = useState(null); // 2-Factor deletion state
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const [stickerModal, setStickerModal] = useState({ isOpen: false, items: [] });
   const fileInputRef = useRef(null);
 
+  // In-table real-time filtered dataset
+  const filteredTableData = useMemo(() => {
+    const q = tableSearch.trim().toLowerCase();
+    if (!q) return tableData;
+
+    return tableData.filter((row) => {
+      if ((row.name || '').toLowerCase().includes(q)) return true;
+      if ((row.itemType || '').toLowerCase().includes(q)) return true;
+      if ((row.sku || '').toLowerCase().includes(q)) return true;
+
+      const cat = categories.find(c => c.id === row.categoryId);
+      if (cat) {
+        if ((cat.name_ku || '').toLowerCase().includes(q)) return true;
+        if ((cat.name_en || '').toLowerCase().includes(q)) return true;
+        if ((cat.name_ar || '').toLowerCase().includes(q)) return true;
+      }
+
+      const col = collections.find(c => c.id === row.collectionId);
+      if (col && (col.name || '').toLowerCase().includes(q)) return true;
+
+      if ((row.notes || '').toLowerCase().includes(q)) return true;
+      if (String(row.stock ?? '').toLowerCase().includes(q)) return true;
+      if (String(row.salePrice ?? '').toLowerCase().includes(q)) return true;
+      if (String(row.originalPrice ?? '').toLowerCase().includes(q)) return true;
+
+      return false;
+    });
+  }, [tableData, tableSearch, categories, collections]);
+
+  // Bulk apply status to items (either only those with empty status, or all items)
+  const handleBulkApplyStatus = (statusName, onlyEmpty = true) => {
+    if (!statusName) return;
+    let count = 0;
+    setTableData(prev => {
+      return prev.map(row => {
+        if (onlyEmpty) {
+          if (!row.itemType || !row.itemType.trim()) {
+            count++;
+            return { ...row, itemType: statusName };
+          }
+          return row;
+        } else {
+          count++;
+          return { ...row, itemType: statusName };
+        }
+      });
+    });
+    alert(
+      onlyEmpty 
+        ? `دۆخی "${statusName}" بۆ ${count} مۆدێلی بێ دۆخ دیاری کرا.` 
+        : `دۆخی "${statusName}" بۆ هەموو ${count} مۆدێل دیاری کرا.`
+    );
+  };
+
   // Open sticker modal for a single model
   const handlePrintSingleSticker = (row) => {
     setStickerModal({ isOpen: true, items: [row] });
   };
 
-  // Open sticker modal for all items in the current view
+  // Open sticker modal for all items in the current view (filtered or all)
   const handleOpenStickerBulkModal = () => {
-    if (!tableData || tableData.length === 0) {
+    const targetItems = filteredTableData.length > 0 ? filteredTableData : tableData;
+    if (!targetItems || targetItems.length === 0) {
       alert('هیچ مۆدێلێک نەدۆزرایەوە بۆ دروستکردنی لەزگە');
       return;
     }
-    setStickerModal({ isOpen: true, items: tableData });
+    setStickerModal({ isOpen: true, items: targetItems });
+  };
+
+  // Trigger batch print for all items in current view (filtered or all)
+  const handleTriggerBatchPrint = () => {
+    const targetItems = filteredTableData.length > 0 ? filteredTableData : tableData;
+    if (onBatchPrint) {
+      onBatchPrint(targetItems);
+    } else {
+      window.print();
+    }
   };
 
   // Keep print-stickers mode active on body whenever sticker modal is open
@@ -319,13 +388,9 @@ export default function AdminSpreadsheet({
       : <span className="text-red-600 font-black ms-1 text-[12px]">▼</span>;
   };
 
-  // Handle cell text edits
-  const handleCellChange = (index, field, value) => {
-    setTableData(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
+  // Handle cell text edits by unique row ID (immune to filtering & sorting)
+  const handleCellChange = (rowId, field, value) => {
+    setTableData(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
   };
 
   // Add new empty row
@@ -347,20 +412,20 @@ export default function AdminSpreadsheet({
   };
 
   // 2-Factor / 2-Step delete row request
-  const handleDeleteRow = (index) => {
-    setDeleteCandidate({ index, model: tableData[index] });
+  const handleDeleteRow = (row) => {
+    setDeleteCandidate({ model: row });
   };
 
-  // Image Drag & Drop onto specific row
-  const handleDropImage = async (e, index) => {
+  // Image Drag & Drop onto specific row by row ID
+  const handleDropImage = async (e, rowId) => {
     e.preventDefault();
-    setDragOverIndex(null);
+    setDragOverRowId(null);
     const files = e.dataTransfer.files;
     if (files && files[0]) {
       try {
         const uploadedUrl = await catalogService.uploadImage(files[0]);
         if (uploadedUrl) {
-          handleCellChange(index, 'image', uploadedUrl);
+          handleCellChange(rowId, 'image', uploadedUrl);
         }
       } catch (err) {
         alert('کێشەیەک ڕوویدا لە بارکردنی وێنە / Error uploading image');
@@ -368,14 +433,14 @@ export default function AdminSpreadsheet({
     }
   };
 
-  // Direct File Input for row image
-  const handleFileInputChange = async (e, index) => {
+  // Direct File Input for row image by row ID
+  const handleFileInputChange = async (e, rowId) => {
     const files = e.target.files;
     if (files && files[0]) {
       try {
         const uploadedUrl = await catalogService.uploadImage(files[0]);
         if (uploadedUrl) {
-          handleCellChange(index, 'image', uploadedUrl);
+          handleCellChange(rowId, 'image', uploadedUrl);
         }
       } catch (err) {
         alert('کێشەیەک ڕوویدا لە بارکردنی وێنە / Error uploading image');
@@ -468,9 +533,10 @@ export default function AdminSpreadsheet({
     reader.readAsBinaryString(file);
   };
 
-  // Export Table Data to Excel
+  // Export Table Data to Excel (exports filtered subset if active)
   const handleExportExcel = () => {
-    const exportRows = tableData.map(row => {
+    const rowsToExport = filteredTableData.length > 0 ? filteredTableData : tableData;
+    const exportRows = rowsToExport.map(row => {
       const cat = categories.find(c => c.id === row.categoryId);
       const col = collections.find(c => c.id === row.collectionId);
       return {
@@ -506,23 +572,93 @@ export default function AdminSpreadsheet({
     }
   };
 
+  // Keyboard Shortcuts: Ctrl+S (Save), Ctrl+P (Print), Ctrl+F (Search), Esc (Clear Search)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ctrl+S or Cmd+S -> Save all
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        handleSaveAll();
+        return;
+      }
+
+      // Ctrl+P or Cmd+P -> Batch Print
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        handleTriggerBatchPrint();
+        return;
+      }
+
+      // Ctrl+F or Cmd+F -> Focus Search
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      // Escape -> Clear search if has query
+      if (e.key === 'Escape') {
+        if (tableSearch) {
+          e.preventDefault();
+          setTableSearch('');
+          return;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [tableSearch, tableData, filteredTableData, onBatchPrint]);
+
   return (
     <div className="flex-1 flex flex-col bg-slate-100 p-2 sm:p-4 overflow-hidden select-none no-print h-[calc(100vh-68px)]">
       
-      {/* Top Toolbar (Compact, Modern, Icon-Centric) */}
+      {/* Top Toolbar (Compact, Modern, Icon-Centric + In-Table Quick Search) */}
       <div className="bg-white rounded-2xl border border-slate-200 p-2 sm:p-2.5 mb-2 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
         
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-xl">
-            <FileSpreadsheet className="w-5 h-5" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-black text-slate-900 text-sm leading-tight">
+        {/* Title, Row Count Badge & In-Table Quick Search (Ctrl+F) */}
+        <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-lg">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-xl">
+              <FileSpreadsheet className="w-5 h-5" />
+            </div>
+            <h3 className="font-black text-slate-900 text-sm leading-tight hidden sm:block">
               {t.spreadsheetView}
             </h3>
-            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold border border-slate-200 font-mono">
-              {tableData.length}
+            <span 
+              className={`text-xs px-2 py-0.5 rounded-full font-bold border font-mono transition-colors ${
+                filteredTableData.length !== tableData.length
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              title={filteredTableData.length !== tableData.length ? `فلتەرکراو: ${filteredTableData.length} لە کۆی ${tableData.length}` : `کۆی گشتی: ${tableData.length}`}
+            >
+              {filteredTableData.length !== tableData.length ? `${filteredTableData.length} / ${tableData.length}` : tableData.length}
             </span>
+          </div>
+
+          {/* Real-time search box (Ctrl+F) */}
+          <div className="relative flex-1 min-w-[130px]">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="گەڕان... (Ctrl+F)"
+              className="w-full ps-8 pe-7 py-1.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-xs font-bold text-slate-800 placeholder-slate-400 rounded-xl border border-slate-200 focus:border-red-500 focus:outline-none transition-all shadow-2xs"
+            />
+            {tableSearch && (
+              <button
+                type="button"
+                onClick={() => setTableSearch('')}
+                className="absolute end-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer"
+                title="پاککردنەوەی گەڕان (Esc)"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -538,12 +674,12 @@ export default function AdminSpreadsheet({
             <Plus className="w-4 h-4" />
           </button>
 
-          {/* Batch Print A4 Album (PRINT) */}
+          {/* Batch Print A4 Album (PRINT / Ctrl+P) */}
           <button
             type="button"
-            onClick={onBatchPrint || (() => window.print())}
+            onClick={handleTriggerBatchPrint}
             className="p-2 bg-slate-100 hover:bg-slate-200 text-red-600 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
-            title="چاپکردنی ئەلبوم (PRINT)"
+            title={`چاپکردنی ئەلبوم (PRINT / Ctrl+P) - ${filteredTableData.length} مۆدێل`}
           >
             <Printer className="w-4 h-4" />
           </button>
@@ -567,7 +703,7 @@ export default function AdminSpreadsheet({
           <button
             onClick={handleExportExcel}
             className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
-            title="داگرتنی ئێکسڵ (Export Excel)"
+            title={`داگرتنی ئێکسڵ (${filteredTableData.length} مۆدێل)`}
           >
             <Download className="w-4 h-4" />
           </button>
@@ -619,10 +755,10 @@ export default function AdminSpreadsheet({
             type="button"
             onClick={handleOpenStickerBulkModal}
             className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95 flex items-center gap-1"
-            title={`ئامادەکردن و چاپکردنی لەزگە (${tableData.length})`}
+            title={`ئامادەکردن و چاپکردنی لەزگە (${filteredTableData.length})`}
           >
             <Ticket className="w-4 h-4" />
-            <span className="text-[11px] font-bold text-rose-800">{tableData.length}</span>
+            <span className="text-[11px] font-bold text-rose-800">{filteredTableData.length}</span>
           </button>
 
           {/* Manage Item Statuses (دۆخی کاڵا) */}
@@ -638,7 +774,7 @@ export default function AdminSpreadsheet({
             </span>
           </button>
 
-          {/* Save All */}
+          {/* Save All (Ctrl+S) */}
           <button
             onClick={handleSaveAll}
             disabled={isSaving}
@@ -647,7 +783,7 @@ export default function AdminSpreadsheet({
                 ? 'bg-emerald-600 text-white'
                 : 'bg-red-600 hover:bg-red-700 text-white'
             }`}
-            title="سەیڤکردنی هەموو گۆڕانکارییەکان"
+            title="سەیڤکردنی هەموو گۆڕانکارییەکان (Ctrl+S)"
           >
             {saveSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             <span>{isSaving ? '...' : (saveSuccess ? 'سەیڤ کرا!' : 'سەیڤ')}</span>
@@ -778,8 +914,8 @@ export default function AdminSpreadsheet({
 
           {/* Table Body (Inline Editable Rows with Clear Gridlines) */}
           <tbody className="font-medium">
-            {tableData.map((row, idx) => {
-              const isDragOver = dragOverIndex === idx;
+            {filteredTableData.map((row, idx) => {
+              const isDragOver = dragOverRowId === row.id;
 
               return (
                 <tr 
@@ -800,10 +936,10 @@ export default function AdminSpreadsheet({
                   <td 
                     onDragOver={(e) => {
                       e.preventDefault();
-                      setDragOverIndex(idx);
+                      setDragOverRowId(row.id);
                     }}
-                    onDragLeave={() => setDragOverIndex(null)}
-                    onDrop={(e) => handleDropImage(e, idx)}
+                    onDragLeave={() => setDragOverRowId(null)}
+                    onDrop={(e) => handleDropImage(e, row.id)}
                     className="p-1 border border-slate-300 text-center bg-white"
                   >
                     <div className="relative group flex items-center justify-center">
@@ -830,7 +966,7 @@ export default function AdminSpreadsheet({
                           <input
                             type="file"
                             accept="image/*"
-                            onChange={(e) => handleFileInputChange(e, idx)}
+                            onChange={(e) => handleFileInputChange(e, row.id)}
                             className="hidden"
                           />
                         </label>
@@ -857,8 +993,8 @@ export default function AdminSpreadsheet({
                       type="text"
                       value={row.name || ''}
                       onChange={(e) => {
-                        handleCellChange(idx, 'name', e.target.value);
-                        handleCellChange(idx, 'sku', e.target.value);
+                        handleCellChange(row.id, 'name', e.target.value);
+                        handleCellChange(row.id, 'sku', e.target.value);
                       }}
                       placeholder="مۆدێل..."
                       className="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-bold text-slate-900"
@@ -869,7 +1005,7 @@ export default function AdminSpreadsheet({
                   <td className="p-0.5 border border-slate-300">
                     <select
                       value={row.categoryId || ''}
-                      onChange={(e) => handleCellChange(idx, 'categoryId', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'categoryId', e.target.value)}
                       className="w-full px-1.5 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-semibold text-slate-700 cursor-pointer"
                     >
                       <option value="">-- دیاری بکە --</option>
@@ -885,7 +1021,7 @@ export default function AdminSpreadsheet({
                   <td className="p-0.5 border border-slate-300">
                     <select
                       value={row.collectionId || ''}
-                      onChange={(e) => handleCellChange(idx, 'collectionId', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'collectionId', e.target.value)}
                       className="w-full px-1.5 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-medium text-slate-700 cursor-pointer"
                     >
                       <option value="">-- سێت --</option>
@@ -910,7 +1046,7 @@ export default function AdminSpreadsheet({
                           if (newName && newName.trim()) {
                             const added = await handleAddStatus(newName.trim());
                             if (added) {
-                              handleCellChange(idx, 'itemType', added);
+                              handleCellChange(row.id, 'itemType', added);
                             }
                           }
                           return;
@@ -919,7 +1055,7 @@ export default function AdminSpreadsheet({
                           setIsStatusModalOpen(true);
                           return;
                         }
-                        handleCellChange(idx, 'itemType', val);
+                        handleCellChange(row.id, 'itemType', val);
                       }}
                       style={row.itemType ? getStatusBadgeStyle(row.itemType, statusColors) : {}}
                       className={`w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-black transition-all cursor-pointer text-center ${
@@ -947,7 +1083,7 @@ export default function AdminSpreadsheet({
                     <input
                       type="number"
                       value={row.stock !== undefined ? row.stock : ''}
-                      onChange={(e) => handleCellChange(idx, 'stock', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'stock', e.target.value)}
                       placeholder="0"
                       className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-bold text-slate-800 font-mono"
                     />
@@ -958,7 +1094,7 @@ export default function AdminSpreadsheet({
                     <input
                       type="number"
                       value={row.originalPrice !== undefined ? row.originalPrice : ''}
-                      onChange={(e) => handleCellChange(idx, 'originalPrice', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'originalPrice', e.target.value)}
                       placeholder="0"
                       className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs text-slate-400 font-semibold font-mono"
                     />
@@ -969,7 +1105,7 @@ export default function AdminSpreadsheet({
                     <input
                       type="number"
                       value={row.salePrice !== undefined ? row.salePrice : ''}
-                      onChange={(e) => handleCellChange(idx, 'salePrice', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'salePrice', e.target.value)}
                       placeholder="0"
                       className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-red-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-black text-red-600 font-mono"
                     />
@@ -980,7 +1116,7 @@ export default function AdminSpreadsheet({
                     <input
                       type="text"
                       value={row.notes || ''}
-                      onChange={(e) => handleCellChange(idx, 'notes', e.target.value)}
+                      onChange={(e) => handleCellChange(row.id, 'notes', e.target.value)}
                       placeholder="تێبینی، قیاسات..."
                       className="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-[11px] text-slate-600"
                     />
@@ -999,7 +1135,7 @@ export default function AdminSpreadsheet({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteRow(idx)}
+                        onClick={() => handleDeleteRow(row)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         title={t.delete}
                       >
@@ -1011,6 +1147,27 @@ export default function AdminSpreadsheet({
                 </tr>
               );
             })}
+
+            {/* Empty Search State */}
+            {filteredTableData.length === 0 && (
+              <tr>
+                <td colSpan={10} className="p-12 text-center text-slate-400 bg-slate-50/50">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Search className="w-8 h-8 text-slate-300" />
+                    <span className="text-sm font-bold text-slate-700">
+                      هیچ مۆدێلێک نەدۆزرایەوە بە گەڕانی "{tableSearch}"
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setTableSearch('')}
+                      className="mt-1 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 text-xs font-bold text-slate-700 rounded-xl shadow-2xs cursor-pointer"
+                    >
+                      پاککردنەوەی گەڕان
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
           </tbody>
 
         </table>
@@ -1062,7 +1219,7 @@ export default function AdminSpreadsheet({
               <button
                 type="button"
                 onClick={() => {
-                  setTableData(prev => prev.filter((_, i) => i !== deleteCandidate.index));
+                  setTableData(prev => prev.filter(r => r.id !== deleteCandidate.model?.id));
                   setDeleteCandidate(null);
                 }}
                 className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-500/25 transition-all cursor-pointer active:scale-98"
@@ -1175,6 +1332,23 @@ export default function AdminSpreadsheet({
                 <span className="text-[10px] text-slate-400">کلیک لە ڕەنگ بکە بۆ گۆڕینی</span>
               </div>
 
+              {/* Notice for unassigned items if any */}
+              {(() => {
+                const unassignedCount = tableData.filter(r => !r.itemType || !r.itemType.trim()).length;
+                if (unassignedCount === 0) return null;
+                return (
+                  <div className="mb-2 p-2.5 bg-amber-50/90 border border-amber-200/90 rounded-2xl flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>{unassignedCount} مۆدێل دۆخیان دیاری نەکراوە</span>
+                    </div>
+                    <span className="text-[10.5px] text-amber-800 font-medium">
+                      کلیک لە <CheckCheck className="w-3.5 h-3.5 inline text-emerald-700" /> بکە بۆ پڕکردنەوە
+                    </span>
+                  </div>
+                );
+              })()}
+
               {customStatuses.length === 0 ? (
                 <div className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
                   هیچ دۆخێک بوونی نییە. دەستەواژەیەک لە سەرەوە زیاد بکە!
@@ -1183,6 +1357,7 @@ export default function AdminSpreadsheet({
                 customStatuses.map((st) => {
                   const isEditing = editingStatus?.oldName === st;
                   const count = tableData.filter(r => r.itemType === st).length;
+                  const unassignedCount = tableData.filter(r => !r.itemType || !r.itemType.trim()).length;
                   const currentColor = getStatusColor(st, statusColors);
 
                   return (
@@ -1294,6 +1469,15 @@ export default function AdminSpreadsheet({
                           </div>
 
                           <div className="flex items-center gap-1 shrink-0">
+                            {/* Bulk Apply to all Unassigned items */}
+                            <button
+                              type="button"
+                              onClick={() => handleBulkApplyStatus(st, true)}
+                              className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                              title={`دانانی "${st}" بۆ ئەو مۆدێلانەی دۆخیان دیاری نەکراوە (${unassignedCount})`}
+                            >
+                              <CheckCheck className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => setEditingStatus({ oldName: st, newName: st })}
