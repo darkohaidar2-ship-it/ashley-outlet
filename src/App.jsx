@@ -572,6 +572,7 @@ export default function App() {
             lang={lang}
             onSaveBulk={handleSaveBulk}
             onClose={() => setViewMode('grid')}
+            onBatchPrint={handleBatchPrint}
           />
         ) : viewMode === 'slideshow' ? (
           /* SLIDESHOW VIEW: Left Mini-window + Fullscreen Hero Showcase */

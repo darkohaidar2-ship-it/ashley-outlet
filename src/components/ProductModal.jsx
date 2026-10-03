@@ -4,6 +4,7 @@ import { downloadModelImage } from '../services/imageExportService';
 import { getStatusBadgeStyle } from '../utils/statusColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
 import { useCachedImage } from '../utils/imageLocalCache';
+import ProgressiveImage from './ProgressiveImage';
 
 export default function ProductModal({
   model,
@@ -108,14 +109,20 @@ export default function ProductModal({
                 style={{ backgroundImage: `url(${cachedThumbSrc || thumbUrl})` }}
               />
 
-              <img
-                src={cachedHeroSrc || heroUrl}
-                alt={model.name}
-                className="max-h-[50vh] sm:max-h-[60vh] md:max-h-[78vh] max-w-full w-auto h-auto object-contain z-10 transition-transform duration-300 hover:scale-[1.015] cursor-zoom-in drop-shadow-md select-none"
-                decoding="async"
+              <div 
+                className="max-h-[50vh] sm:max-h-[60vh] md:max-h-[78vh] w-full h-full flex items-center justify-center z-10 cursor-zoom-in drop-shadow-md select-none"
                 onClick={() => setIsLightboxOpen(true)}
                 title="کرتە بکە بۆ گەورەکردنی تەواوی وێنەکە لەسەر هەموو شاشە"
-              />
+              >
+                <ProgressiveImage
+                  src={cachedHeroSrc || heroUrl}
+                  alt={model.name}
+                  preset="hero"
+                  objectFit="contain"
+                  className="max-h-[50vh] sm:max-h-[60vh] md:max-h-[78vh] max-w-full w-auto h-auto transition-transform duration-300 hover:scale-[1.015]"
+                  containerClassName="bg-transparent"
+                />
+              </div>
 
               {/* Floating Fullscreen / Maximize button */}
               <button
@@ -321,36 +328,30 @@ export default function ProductModal({
           <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
             <button
               onClick={() => onPrint(model)}
-              className="flex-1 py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98"
+              className="flex-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+              title="چاپکردن (PRINT)"
             >
               <Printer className="w-5 h-5 text-red-500" />
-              <span>{t.print}</span>
+              <span className="text-sm font-black tracking-wide">PRINT</span>
             </button>
             {model.image && (
               <button
                 onClick={() => downloadModelImage(model)}
-                className="py-3.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-98 shadow-xs"
+                className="p-3 bg-slate-100 hover:bg-slate-200 text-purple-600 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer"
                 title="داگرتنی وێنەکە بە ناوی مۆدێل"
               >
-                <Download className="w-4 h-4 text-purple-600" />
-                <span className="text-xs text-slate-700">وێنە</span>
+                <Download className="w-5 h-5" />
               </button>
             )}
             <button
               onClick={handleCopyLink}
-              className="py-3.5 px-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-2xl flex items-center justify-center gap-1.5 transition-all active:scale-98 shadow-xs"
-              title="کۆپیکردنی لینکی مۆدێل"
+              className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer"
+              title="کۆپیکردنی بەستەری مۆدێل"
             >
               {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span className="text-xs text-emerald-700">کۆپی کرا</span>
-                </>
+                <Check className="w-5 h-5 text-emerald-600" />
               ) : (
-                <>
-                  <Share2 className="w-4 h-4 text-slate-600" />
-                  <span className="text-xs text-slate-700">بەستەر</span>
-                </>
+                <Share2 className="w-5 h-5" />
               )}
             </button>
           </div>

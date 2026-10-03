@@ -12,6 +12,10 @@ export function getOptimizedImageUrl(url, preset = 'card') {
     const renderBase = url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
     
     switch (preset) {
+      case 'placeholder':
+      case 'blur':
+        // ~1-2 KB tiny low-quality blurred preview for instant progressive load
+        return `${renderBase}?width=48&quality=20&resize=contain`;
       case 'thumb':
         // ~30-50 KB for spreadsheet rows and drawer miniatures
         return `${renderBase}?width=240&quality=75&resize=contain`;

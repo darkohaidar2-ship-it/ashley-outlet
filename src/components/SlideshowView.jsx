@@ -806,10 +806,10 @@ export default function SlideshowView({
                 {/* Direct Print A4 button */}
                 <button
                   onClick={() => onPrintSingle(activeModel)}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-md text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-md transition-all active:scale-95 cursor-pointer"
+                  title="چاپکردن (PRINT)"
                 >
                   <Printer className="w-3.5 h-3.5 text-red-500" />
-                  <span>{t.print}</span>
                 </button>
 
                 {/* Download Current Model Image */}

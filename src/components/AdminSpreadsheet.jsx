@@ -37,6 +37,7 @@ import {
   normalizeHex 
 } from '../utils/statusColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
+import ProgressiveImage from './ProgressiveImage';
 
 export default function AdminSpreadsheet({
   models,
@@ -47,7 +48,8 @@ export default function AdminSpreadsheet({
   t,
   lang,
   onSaveBulk,
-  onClose
+  onClose,
+  onBatchPrint
 }) {
   const [customStatuses, setCustomStatuses] = useState(() => {
     if (settings?.customItemTypes && settings.customItemTypes.length > 0) {
@@ -507,39 +509,51 @@ export default function AdminSpreadsheet({
   return (
     <div className="flex-1 flex flex-col bg-slate-100 p-2 sm:p-4 overflow-hidden select-none no-print h-[calc(100vh-68px)]">
       
-      {/* Top Toolbar (Google Sheets Style) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-2.5 sm:p-3 mb-2 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+      {/* Top Toolbar (Compact, Modern, Icon-Centric) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-2 sm:p-2.5 mb-2 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
         
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
+          <div className="p-1.5 bg-emerald-50 text-emerald-700 rounded-xl">
             <FileSpreadsheet className="w-5 h-5" />
           </div>
-          <div>
-            <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
-              {t.spreadsheetView} (Excel / Google Sheets)
+          <div className="flex items-center gap-2">
+            <h3 className="font-black text-slate-900 text-sm leading-tight">
+              {t.spreadsheetView}
             </h3>
-            <p className="text-[11px] text-slate-500">
-              سەرجەم مۆدێلەکان: <strong className="text-slate-800">{tableData.length}</strong>
-            </p>
+            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold border border-slate-200 font-mono">
+              {tableData.length}
+            </span>
           </div>
         </div>
 
-        {/* Action Buttons: Add Row, Import, Export, Save */}
+        {/* Action Buttons: Add Row, Print, Import, Export, Sort, Statuses, Save */}
         <div className="flex items-center gap-1.5 flex-wrap">
           
           {/* Add Row */}
           <button
             onClick={handleAddRow}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all shadow-2xs"
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-emerald-700 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="زیادکردنی ڕیز (Add Row)"
           >
-            <Plus className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{t.addRow}</span>
+            <Plus className="w-4 h-4" />
+          </button>
+
+          {/* Batch Print A4 Album (PRINT) */}
+          <button
+            type="button"
+            onClick={onBatchPrint || (() => window.print())}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-red-600 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="چاپکردنی ئەلبوم (PRINT)"
+          >
+            <Printer className="w-4 h-4" />
           </button>
 
           {/* Import Excel */}
-          <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold cursor-pointer transition-all shadow-2xs">
-            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{t.importExcel}</span>
+          <label 
+            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="هاوردەکردنی ئێکسڵ (Import Excel)"
+          >
+            <Upload className="w-4 h-4" />
             <input
               ref={fileInputRef}
               type="file"
@@ -552,40 +566,37 @@ export default function AdminSpreadsheet({
           {/* Export Excel */}
           <button
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all shadow-2xs"
-            title={t.exportExcel}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="داگرتنی ئێکسڵ (Export Excel)"
           >
-            <Download className="w-3.5 h-3.5 text-slate-600" />
-            <span>{t.exportExcel}</span>
+            <Download className="w-4 h-4" />
           </button>
 
           {/* Quick A-Z / Z-A Sorting */}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
             <button
               type="button"
               onClick={() => handleQuickSort('asc')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 sortConfig.key === 'name' && sortConfig.direction === 'asc'
-                  ? 'bg-red-600 text-white shadow-xs'
+                  ? 'bg-red-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
-              title="سۆرتی ئەلفوبێ (A بۆ Z)"
+              title="سۆرتی ئەلفوبێ (A ➔ Z)"
             >
               <ArrowDownAZ className="w-3.5 h-3.5" />
-              <span>A ➔ Z</span>
             </button>
             <button
               type="button"
               onClick={() => handleQuickSort('desc')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
                 sortConfig.key === 'name' && sortConfig.direction === 'desc'
-                  ? 'bg-red-600 text-white shadow-xs'
+                  ? 'bg-red-600 text-white shadow-2xs'
                   : 'text-slate-600 hover:bg-white hover:text-slate-900'
               }`}
-              title="سۆرتی پێچەوانە (Z بۆ A)"
+              title="سۆرتی پێچەوانە (Z ➔ A)"
             >
               <ArrowUpZA className="w-3.5 h-3.5" />
-              <span>Z ➔ A</span>
             </button>
           </div>
 
@@ -593,42 +604,37 @@ export default function AdminSpreadsheet({
           <button
             onClick={handleDownloadAllImages}
             disabled={isExportingImages}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="خەزنکردنی هەموو وێنەکان لە یەک فایلی ZIP بە ناوی مۆدێلەکانەوە"
+            className="p-2 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95"
+            title="خەزنکردنی هەموو وێنەکان (ZIP)"
           >
             {isExportingImages ? (
-              <div className="w-3.5 h-3.5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
             ) : (
-              <FolderArchive className="w-3.5 h-3.5 text-purple-600" />
+              <FolderArchive className="w-4 h-4 text-purple-600" />
             )}
-            <span>{isExportingImages ? exportProgress.text : 'خەزنکردنی وێنەکان (ZIP)'}</span>
           </button>
 
           {/* Print Stickers (ئامادەکردنی لەزگە) */}
           <button
             type="button"
             onClick={handleOpenStickerBulkModal}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="ئامادەکردن و چاپکردنی لەزگە (Stickers / Labels) بە ڕەنگی دۆخەکە"
+            className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95 flex items-center gap-1"
+            title={`ئامادەکردن و چاپکردنی لەزگە (${tableData.length})`}
           >
-            <Ticket className="w-3.5 h-3.5 text-rose-600" />
-            <span>ئامادەکردنی لەزگە ({tableData.length})</span>
+            <Ticket className="w-4 h-4" />
+            <span className="text-[11px] font-bold text-rose-800">{tableData.length}</span>
           </button>
 
           {/* Manage Item Statuses (دۆخی کاڵا) */}
           <button
             type="button"
             onClick={() => setIsStatusModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
-            title="دیاریکردن، زیادکردن و کەمکردنی دۆخی کاڵا (ستۆک، ئاوتلێت، یەدەگ...)"
+            className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl transition-all shadow-2xs cursor-pointer active:scale-95 flex items-center gap-1"
+            title="ڕێکخستنی دۆخی کاڵا (ستۆک، ئاوتلێت، یەدەگ)"
           >
-            <Tag className="w-3.5 h-3.5 text-amber-600" />
-            <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
-            <span className="bg-amber-200 text-amber-950 text-[10px] px-1.5 py-0.5 rounded-full font-black">
+            <Tag className="w-4 h-4 text-amber-600" />
+            <span className="bg-amber-200 text-amber-950 text-[10px] px-1.5 py-0.2 rounded-full font-black">
               {customStatuses.length}
-            </span>
-            <span className="text-[10px] text-amber-700 font-extrabold bg-amber-100/90 px-1.5 py-0.2 rounded border border-amber-300/80">
-              + زیادکردن / کەمکردن
             </span>
           </button>
 
@@ -636,33 +642,46 @@ export default function AdminSpreadsheet({
           <button
             onClick={handleSaveAll}
             disabled={isSaving}
-            className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 ${
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer ${
               saveSuccess
                 ? 'bg-emerald-600 text-white'
                 : 'bg-red-600 hover:bg-red-700 text-white'
             }`}
+            title="سەیڤکردنی هەموو گۆڕانکارییەکان"
           >
             {saveSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            <span>{isSaving ? '...' : (saveSuccess ? 'سەیڤ کرا!' : t.saveAll)}</span>
+            <span>{isSaving ? '...' : (saveSuccess ? 'سەیڤ کرا!' : 'سەیڤ')}</span>
           </button>
+
+          {/* Close Spreadsheet View */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/70 rounded-xl transition-all cursor-pointer"
+              title="داخستنی خشتە و گەڕانەوە بۆ پێشاندانی وێنەیی"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
 
         </div>
 
       </div>
 
-      {/* Spreadsheet Table Container */}
-      <div className="flex-1 bg-white rounded-2xl border border-slate-200 overflow-auto shadow-sm">
-        <table className="w-full text-xs text-slate-700 border-collapse">
+      {/* Spreadsheet Table Container with Clear TABLE BORDER */}
+      <div className="flex-1 bg-white rounded-xl border-2 border-slate-300 overflow-auto shadow-xs">
+        <table className="w-full text-xs text-slate-800 border-collapse border border-slate-300 select-text">
           
           {/* Header Row */}
-          <thead className="sticky top-0 z-10 bg-slate-100 text-slate-700 text-[11px] font-bold border-b border-slate-300">
+          <thead className="sticky top-0 z-10 bg-slate-100 text-slate-800 text-[11px] font-bold border-b-2 border-slate-400 shadow-2xs">
             <tr>
-              <th className="p-2 w-10 text-center border-e border-slate-200">#</th>
-              <th className="p-2 w-28 text-center border-e border-slate-200">{t.uploadImage} (Drag & Drop)</th>
+              <th className="p-2 w-10 text-center border border-slate-300 bg-slate-100 font-bold">#</th>
+              <th className="p-2 w-24 text-center border border-slate-300 bg-slate-100 font-bold">{t.uploadImage}</th>
               
               <th 
                 onClick={() => handleSortColumn('name')}
-                className="p-2 min-w-[200px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت (A بۆ Z / پێچەوانە)"
               >
                 <div className="flex items-center justify-between gap-1">
@@ -673,7 +692,7 @@ export default function AdminSpreadsheet({
 
               <th 
                 onClick={() => handleSortColumn('categoryId')}
-                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 min-w-[120px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت بەپێی کەتەگۆری"
               >
                 <div className="flex items-center justify-between gap-1">
@@ -684,7 +703,7 @@ export default function AdminSpreadsheet({
 
               <th 
                 onClick={() => handleSortColumn('collectionId')}
-                className="p-2 min-w-[120px] text-start border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 min-w-[120px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت بەپێی سێت"
               >
                 <div className="flex items-center justify-between gap-1">
@@ -694,7 +713,7 @@ export default function AdminSpreadsheet({
               </th>
 
               <th 
-                className="p-2 min-w-[140px] text-start border-e border-slate-200 select-none group hover:bg-slate-200/80 transition-colors"
+                className="p-2 min-w-[140px] text-start border border-slate-300 bg-slate-100 select-none group font-bold"
               >
                 <div className="flex items-center justify-between gap-1">
                   <span 
@@ -711,18 +730,17 @@ export default function AdminSpreadsheet({
                       e.stopPropagation();
                       setIsStatusModalOpen(true);
                     }}
-                    className="px-1.5 py-0.5 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md text-[10px] font-black border border-amber-300 shadow-2xs cursor-pointer flex items-center gap-0.5"
-                    title="زیادکردن یان کەمکردنی دۆخەکان (ستۆک، ئاوتلێت، یەدەگ...)"
+                    className="p-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md border border-amber-300 shadow-2xs cursor-pointer"
+                    title="ڕێکخستنی دۆخەکان (ستۆک، ئاوتلێت، یەدەگ...)"
                   >
-                    <Plus className="w-3 h-3" />
-                    <span>زیاد/کەم</span>
+                    <Tag className="w-3 h-3" />
                   </button>
                 </div>
               </th>
 
               <th 
                 onClick={() => handleSortColumn('stock')}
-                className="p-2 w-20 text-center border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 w-20 text-center border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت بەپێی عدد"
               >
                 <div className="flex items-center justify-center gap-1">
@@ -733,7 +751,7 @@ export default function AdminSpreadsheet({
 
               <th 
                 onClick={() => handleSortColumn('originalPrice')}
-                className="p-2 w-24 text-center border-e border-slate-200 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 w-24 text-center border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت بەپێی نرخی پێشوو"
               >
                 <div className="flex items-center justify-center gap-1">
@@ -744,7 +762,7 @@ export default function AdminSpreadsheet({
 
               <th 
                 onClick={() => handleSortColumn('salePrice')}
-                className="p-2 w-28 text-center border-e border-slate-200 text-red-600 cursor-pointer select-none hover:bg-slate-200/80 transition-colors group"
+                className="p-2 w-28 text-center border border-slate-300 bg-slate-100 text-red-600 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
                 title="کلیک بکە بۆ سۆرت بەپێی نرخی ئاوت لێت"
               >
                 <div className="flex items-center justify-center gap-1">
@@ -753,30 +771,32 @@ export default function AdminSpreadsheet({
                 </div>
               </th>
 
-              <th className="p-2 min-w-[200px] text-start border-e border-slate-200">{t.notes}</th>
-              <th className="p-2 w-12 text-center"></th>
+              <th className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 font-bold">{t.notes}</th>
+              <th className="p-2 w-16 text-center border border-slate-300 bg-slate-100"></th>
             </tr>
           </thead>
 
-          {/* Table Body (Inline Editable Rows) */}
-          <tbody className="divide-y divide-slate-200 font-medium">
+          {/* Table Body (Inline Editable Rows with Clear Gridlines) */}
+          <tbody className="font-medium">
             {tableData.map((row, idx) => {
               const isDragOver = dragOverIndex === idx;
 
               return (
                 <tr 
                   key={row.id || idx}
-                  className={`hover:bg-slate-50/80 transition-colors ${
-                    isDragOver ? 'bg-red-50 border-2 border-red-500' : ''
+                  className={`border-b border-slate-300 transition-colors ${
+                    isDragOver 
+                      ? 'bg-red-50 border-2 border-red-500' 
+                      : (idx % 2 === 1 ? 'bg-slate-50/70 hover:bg-amber-50/50' : 'bg-white hover:bg-amber-50/50')
                   }`}
                 >
                   
                   {/* Row Number */}
-                  <td className="p-1.5 text-center text-slate-400 font-mono border-e border-slate-200 text-[10px]">
+                  <td className="p-1.5 text-center text-slate-500 font-mono font-bold border border-slate-300 text-[11px] bg-slate-100/50 select-none">
                     {idx + 1}
                   </td>
 
-                  {/* Image Drag & Drop Cell */}
+                  {/* Image Drag & Drop Cell with Progressive Thumbnail */}
                   <td 
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -784,16 +804,18 @@ export default function AdminSpreadsheet({
                     }}
                     onDragLeave={() => setDragOverIndex(null)}
                     onDrop={(e) => handleDropImage(e, idx)}
-                    className="p-1 border-e border-slate-200 text-center"
+                    className="p-1 border border-slate-300 text-center bg-white"
                   >
                     <div className="relative group flex items-center justify-center">
                       {row.image ? (
-                        <img
-                          src={getOptimizedImageUrl(row.image, 'thumb')}
-                          alt={row.name}
-                          decoding="async"
-                          className="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-2xs"
-                        />
+                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 shadow-2xs">
+                          <ProgressiveImage
+                            src={row.image}
+                            alt={row.name}
+                            preset="thumb"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       ) : (
                         <div className="w-12 h-12 rounded-lg border border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-[8px] text-slate-400">
                           <ImageOff className="w-3.5 h-3.5 mb-0.5 text-slate-400" />
@@ -830,7 +852,7 @@ export default function AdminSpreadsheet({
                   </td>
 
                   {/* Model */}
-                  <td className="p-1 border-e border-slate-200">
+                  <td className="p-0.5 border border-slate-300">
                     <input
                       type="text"
                       value={row.name || ''}
@@ -839,16 +861,16 @@ export default function AdminSpreadsheet({
                         handleCellChange(idx, 'sku', e.target.value);
                       }}
                       placeholder="مۆدێل..."
-                      className="w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs font-bold text-slate-900"
+                      className="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-bold text-slate-900"
                     />
                   </td>
 
                   {/* Category */}
-                  <td className="p-1 border-e border-slate-200">
+                  <td className="p-0.5 border border-slate-300">
                     <select
                       value={row.categoryId || ''}
                       onChange={(e) => handleCellChange(idx, 'categoryId', e.target.value)}
-                      className="w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-semibold text-slate-700"
+                      className="w-full px-1.5 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-semibold text-slate-700 cursor-pointer"
                     >
                       <option value="">-- دیاری بکە --</option>
                       {categories.map((c) => (
@@ -860,11 +882,11 @@ export default function AdminSpreadsheet({
                   </td>
 
                   {/* Collection */}
-                  <td className="p-1 border-e border-slate-200">
+                  <td className="p-0.5 border border-slate-300">
                     <select
                       value={row.collectionId || ''}
                       onChange={(e) => handleCellChange(idx, 'collectionId', e.target.value)}
-                      className="w-full px-1.5 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-medium text-slate-700"
+                      className="w-full px-1.5 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 bg-transparent text-xs font-medium text-slate-700 cursor-pointer"
                     >
                       <option value="">-- سێت --</option>
                       {collections
@@ -878,7 +900,7 @@ export default function AdminSpreadsheet({
                   </td>
 
                   {/* Item Status (دۆخی کاڵا) */}
-                  <td className="p-1 border-e border-slate-200">
+                  <td className="p-1 border border-slate-300 text-center">
                     <select
                       value={row.itemType || ''}
                       onChange={async (e) => {
@@ -900,8 +922,8 @@ export default function AdminSpreadsheet({
                         handleCellChange(idx, 'itemType', val);
                       }}
                       style={row.itemType ? getStatusBadgeStyle(row.itemType, statusColors) : {}}
-                      className={`w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-black transition-all cursor-pointer ${
-                        !row.itemType ? 'bg-slate-50 text-slate-400 font-normal' : 'shadow-xs'
+                      className={`w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 text-xs font-black transition-all cursor-pointer text-center ${
+                        !row.itemType ? 'bg-slate-50 text-slate-400 font-normal' : 'shadow-2xs'
                       }`}
                     >
                       <option value="" className="text-slate-400 font-normal bg-white">-- {t.noStatus || 'دیاری نەکراوە'} --</option>
@@ -921,51 +943,51 @@ export default function AdminSpreadsheet({
                   </td>
 
                   {/* Stock */}
-                  <td className="p-1 border-e border-slate-200 text-center">
+                  <td className="p-0.5 border border-slate-300 text-center">
                     <input
                       type="number"
                       value={row.stock !== undefined ? row.stock : ''}
                       onChange={(e) => handleCellChange(idx, 'stock', e.target.value)}
                       placeholder="0"
-                      className="w-full text-center px-1 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs font-bold text-slate-800"
+                      className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-bold text-slate-800 font-mono"
                     />
                   </td>
 
                   {/* Old Price */}
-                  <td className="p-1 border-e border-slate-200 text-center">
+                  <td className="p-0.5 border border-slate-300 text-center">
                     <input
                       type="number"
                       value={row.originalPrice !== undefined ? row.originalPrice : ''}
                       onChange={(e) => handleCellChange(idx, 'originalPrice', e.target.value)}
                       placeholder="0"
-                      className="w-full text-center px-1 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-xs text-slate-400 font-semibold"
+                      className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-xs text-slate-400 font-semibold font-mono"
                     />
                   </td>
 
                   {/* Outlet Price */}
-                  <td className="p-1 border-e border-slate-200 text-center">
+                  <td className="p-0.5 border border-slate-300 text-center">
                     <input
                       type="number"
                       value={row.salePrice !== undefined ? row.salePrice : ''}
                       onChange={(e) => handleCellChange(idx, 'salePrice', e.target.value)}
                       placeholder="0"
-                      className="w-full text-center px-1 py-1.5 rounded-lg border border-transparent hover:border-red-300 focus:border-red-500 focus:bg-white text-xs font-black text-red-600"
+                      className="w-full text-center px-1 py-1.5 rounded border border-transparent hover:border-red-300 focus:border-red-500 focus:bg-white bg-transparent text-xs font-black text-red-600 font-mono"
                     />
                   </td>
 
                   {/* Notes */}
-                  <td className="p-1 border-e border-slate-200">
+                  <td className="p-0.5 border border-slate-300">
                     <input
                       type="text"
                       value={row.notes || ''}
                       onChange={(e) => handleCellChange(idx, 'notes', e.target.value)}
                       placeholder="تێبینی، قیاسات..."
-                      className="w-full px-2 py-1.5 rounded-lg border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white text-[11px] text-slate-600"
+                      className="w-full px-2 py-1.5 rounded border border-transparent hover:border-slate-300 focus:border-red-500 focus:bg-white bg-transparent text-[11px] text-slate-600"
                     />
                   </td>
 
                   {/* Actions (Sticker & Delete) */}
-                  <td className="p-1 text-center">
+                  <td className="p-1 border border-slate-300 text-center bg-slate-50/50">
                     <div className="flex items-center justify-center gap-1">
                       <button
                         type="button"
@@ -978,7 +1000,7 @@ export default function AdminSpreadsheet({
                       <button
                         type="button"
                         onClick={() => handleDeleteRow(idx)}
-                        className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         title={t.delete}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -1353,7 +1375,7 @@ export default function AdminSpreadsheet({
                   title="چاپکردن یان خەزنکردن وەک فایلی PDF"
                 >
                   <Printer className="w-4 h-4 text-white" />
-                  <span>چاپکردن / Save as PDF</span>
+                  <span className="font-black tracking-wider">PRINT</span>
                 </button>
                 <button
                   type="button"
@@ -1389,16 +1411,17 @@ export default function AdminSpreadsheet({
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs text-slate-600 font-bold">
-                  بۆ خەزنکردن بە PDF: لە پەنجەرەی چاپەکەدا بژاردەی <span className="text-rose-600 font-black">Save as PDF</span> هەڵبژێرە تا نووسینەکان بە تەواوی ڕوون و دروست بن.
+                  بۆ خەزنکردن بە PDF: لە پەنجەرەی چاپەکەدا بژاردەی <span className="text-rose-600 font-black">Save as PDF</span> هەڵبژێرە.
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleExecuteStickerPrint}
                 className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition-all active:scale-95 cursor-pointer"
+                title="دەستپێکردنی چاپ"
               >
                 <Printer className="w-4 h-4" />
-                <span>دەستپێکردنی چاپ / PDF ({stickerModal.items.length})</span>
+                <span className="font-black tracking-wider">PRINT ({stickerModal.items.length})</span>
               </button>
             </div>
 

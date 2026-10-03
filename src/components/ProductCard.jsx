@@ -3,6 +3,7 @@ import { Printer, Edit3, Trash2, Eye, Tag, CheckCircle2, AlertCircle, Tv, ImageO
 import { getStatusBadgeStyle } from '../utils/statusColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
 import { useCachedImage, preloadAndCacheImage } from '../utils/imageLocalCache';
+import ProgressiveImage from './ProgressiveImage';
 
 export default function ProductCard({
   model,
@@ -47,14 +48,13 @@ export default function ProductCard({
         onClick={() => onOpenDetails(model)}
         className="relative aspect-[4/5] w-full bg-slate-100 overflow-hidden cursor-pointer flex items-center justify-center"
       >
-        {model.image && !hasImgError ? (
-          <img
+        {model.image ? (
+          <ProgressiveImage
             src={cachedImgSrc || cardImageUrl}
             alt={model.name}
+            preset="card"
             className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-            decoding="async"
-            onError={() => setHasImgError(true)}
+            fallbackText={t.noImage || 'ئەم مۆدێلە وێنەی نییە'}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-50 text-slate-400 p-4 text-center select-none border-b border-slate-100">
