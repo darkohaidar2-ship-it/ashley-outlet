@@ -61,7 +61,8 @@ function mapSettingsFromDB(s) {
     stage3Time: stage3,
     zoomScaleRatio: zoomRatio,
     customItemTypes: customItemTypes,
-    customItemTypeColors: customItemTypeColors
+    customItemTypeColors: customItemTypeColors,
+    categoryColors: (extra.categoryColors && typeof extra.categoryColors === 'object') ? extra.categoryColors : {}
   };
 }
 
@@ -407,7 +408,10 @@ export const catalogService = {
     const customItemTypeColors = (settingsData.customItemTypeColors && typeof settingsData.customItemTypeColors === 'object')
       ? settingsData.customItemTypeColors
       : { 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' };
-    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes, customItemTypeColors };
+    const categoryColors = (settingsData.categoryColors && typeof settingsData.categoryColors === 'object')
+      ? settingsData.categoryColors
+      : {};
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes, customItemTypeColors, categoryColors };
     
     let rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
     if (!rawLogo && isSupabaseConfigured && supabase) {

@@ -16,9 +16,13 @@ import {
   Trash2,
   Camera,
   Maximize2,
-  Scan
+  Scan,
+  Palette,
+  RotateCcw
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
+import { getCategoryColor, CATEGORY_COLOR_PALETTE } from '../utils/categoryColors';
+import { getStatusColor } from '../utils/statusColors';
 
 export default function AdminModal({
   type, // 'login' | 'model' | 'category' | 'collection' | 'logo' | 'settings'
@@ -91,7 +95,11 @@ export default function AdminModal({
   const [transitionTime, setTransitionTime] = useState(1.0);
   const [shimmerTime, setShimmerTime] = useState(7.0);
   const [uiScale, setUiScale] = useState(1.0);
-  const [settingsTab, setSettingsTab] = useState('slideshow'); // 'slideshow' | 'logo'
+  const [settingsTab, setSettingsTab] = useState('slideshow'); // 'slideshow' | 'logo' | 'colors'
+
+  // Custom Colors State
+  const [customCategoryColors, setCustomCategoryColors] = useState({});
+  const [customStatusColors, setCustomStatusColors] = useState({});
 
   useEffect(() => {
     if (editingModel) {
@@ -137,6 +145,16 @@ export default function AdminModal({
         setLogoUrl(settings.logoUrl);
         setLogoPreview(settings.logoUrl);
       }
+      if (settings.categoryColors && typeof settings.categoryColors === 'object') {
+        setCustomCategoryColors(settings.categoryColors);
+      } else {
+        setCustomCategoryColors({});
+      }
+      if (settings.customItemTypeColors && typeof settings.customItemTypeColors === 'object') {
+        setCustomStatusColors(settings.customItemTypeColors);
+      } else {
+        setCustomStatusColors({ 'ستۆک': '#9333ea', 'ئاوتلێت': '#dc2626', 'یەدەگ': '#2563eb' });
+      }
     } else if (currentLogo) {
       setLogoUrl(currentLogo);
       setLogoPreview(currentLogo);
@@ -148,6 +166,34 @@ export default function AdminModal({
       setSettingsTab('slideshow');
     }
   }, [editingModel, isOpen, categories, collections, settings, currentLogo, type]);
+
+  const handleUpdateCategoryColor = async (catId, newColor) => {
+    const updated = {
+      ...customCategoryColors,
+      [catId]: newColor
+    };
+    setCustomCategoryColors(updated);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        categoryColors: updated
+      });
+    }
+  };
+
+  const handleUpdateStatusColor = async (statusKey, newColor) => {
+    const updated = {
+      ...customStatusColors,
+      [statusKey]: newColor
+    };
+    setCustomStatusColors(updated);
+    if (onSaveSettings) {
+      await onSaveSettings({
+        ...settings,
+        customItemTypeColors: updated
+      });
+    }
+  };
 
 
   // Handle Login Submit
@@ -541,24 +587,73 @@ export default function AdminModal({
               {t.save}
             </button>
 
-            {/* List of existing categories with delete button */}
+            {/* List of existing categories with color picker and delete button */}
             {categories && categories.length > 0 && (
               <div className="mt-5 pt-4 border-t border-slate-200">
-                <h4 className="text-xs font-bold text-slate-700 mb-2">کەتەگۆرییە بەردەستەکان ({categories.length}):</h4>
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {categories.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs">
-                      <span className="font-bold text-slate-800">{c.name_ku || c.name || c.name_en}</span>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteCategory && onDeleteCategory(c.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        title="سڕینەوە"
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>کەتەگۆرییەکان و ڕەنگی ئەلبوم ({categories.length}):</span>
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-medium">کلیک لە ڕەنگ بکە بۆ گۆڕین</span>
+                </div>
+                <div className="space-y-2 max-h-56 overflow-y-auto pe-1">
+                  {categories.map((c) => {
+                    const activeColor = getCategoryColor(c, customCategoryColors);
+                    return (
+                      <div 
+                        key={c.id} 
+                        className="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl text-xs gap-2 border border-slate-200/80 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          {/* Color Swatch with Native Color Picker */}
+                          <label 
+                            className="w-7 h-7 rounded-xl cursor-pointer shrink-0 shadow-xs border-2 border-white ring-1 ring-slate-300 flex items-center justify-center relative overflow-hidden transition-transform hover:scale-110"
+                            style={{ backgroundColor: activeColor }}
+                            title="گۆڕینی ڕەنگی ئەلبوم بۆ ئەم کەتەگۆرییە"
+                          >
+                            <input 
+                              type="color" 
+                              value={activeColor}
+                              onChange={(e) => handleUpdateCategoryColor(c.id, e.target.value)}
+                              className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
+                            />
+                          </label>
+                          <div className="truncate">
+                            <span className="font-bold text-slate-900 block truncate">{c.name_ku || c.name || c.name_en}</span>
+                            {c.name_en && c.name_en !== c.name_ku && (
+                              <span className="text-[10px] text-slate-500 font-medium block truncate font-sans">{c.name_en}</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Quick Palette Circles */}
+                        <div className="flex items-center gap-1.5">
+                          <div className="hidden sm:flex items-center gap-1">
+                            {['#059669', '#1d4ed8', '#d97706', '#b91c1c', '#7c3aed'].map((paletteHex) => (
+                              <button
+                                key={paletteHex}
+                                type="button"
+                                onClick={() => handleUpdateCategoryColor(c.id, paletteHex)}
+                                className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-125 ${activeColor.toLowerCase() === paletteHex.toLowerCase() ? 'ring-2 ring-slate-900 scale-110' : 'opacity-70 hover:opacity-100'}`}
+                                style={{ backgroundColor: paletteHex }}
+                                title={paletteHex}
+                              />
+                            ))}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => onDeleteCategory && onDeleteCategory(c.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            title="سڕینەوە"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -660,7 +755,10 @@ export default function AdminModal({
                 zoomScaleRatio: zRatio,
                 slideshowTransitionTime: Math.max(0.1, parseFloat(transitionTime) || 1.0),
                 slideshowShimmerTime: Math.max(1, parseFloat(shimmerTime) || 7.0),
-                uiScale: Math.max(0.65, Math.min(1.2, parseFloat(uiScale) || 0.80))
+                uiScale: Math.max(0.65, Math.min(1.2, parseFloat(uiScale) || 0.80)),
+                customItemTypes: settings?.customItemTypes || ['یەدەگ', 'ستۆک', 'ئاوتلێت'],
+                customItemTypeColors: customStatusColors,
+                categoryColors: customCategoryColors
               };
 
               if (onSaveSettings) {
@@ -672,8 +770,8 @@ export default function AdminModal({
             }} 
             className="mt-4 space-y-4"
           >
-            {/* Tabs for Slideshow Timing vs Logo */}
-            <div className="flex rounded-2xl bg-slate-100 p-1 text-xs font-bold">
+            {/* Tabs for Slideshow Timing vs Logo vs Colors */}
+            <div className="flex rounded-2xl bg-slate-100 p-1 text-xs font-bold gap-1">
               <button
                 type="button"
                 onClick={() => setSettingsTab('slideshow')}
@@ -685,6 +783,18 @@ export default function AdminModal({
               >
                 <Sliders className="w-3.5 h-3.5" />
                 <span>{t.slideshowSettings}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSettingsTab('colors')}
+                className={`flex-1 py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+                  settingsTab === 'colors'
+                    ? 'bg-white text-red-600 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" />
+                <span>ڕەنگەکانی چاپ</span>
               </button>
               <button
                 type="button"
@@ -1109,6 +1219,117 @@ export default function AdminModal({
                   </div>
                 </div>
 
+              </div>
+            )}
+
+            {settingsTab === 'colors' && (
+              <div className="space-y-4">
+                {/* Description Box */}
+                <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/90 rounded-2xl text-xs text-amber-900 leading-relaxed shadow-2xs">
+                  <div className="font-bold flex items-center gap-1.5 mb-1 text-amber-950">
+                    <Palette className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>ڕەنگەکانی چاپی ئەلبوم (بەپێی کەتەگۆری و جۆری کاڵا)</span>
+                  </div>
+                  <p className="text-[11px] text-amber-800">
+                    هەر کەتەگۆرییەک کە دیاری دەکرێت، بەرگی چاپ و چوارچێوەی لاپەڕەکانی بەم ڕەنگە چاپ دەبێت تاکو ئەلبوومی ئاوت لێتی نووستن لە ئاوت لێتی دانیشتن جیا بکرێتەوە.
+                  </p>
+                </div>
+
+                {/* Section 1: Category Colors */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <span>ڕەنگی کەتەگۆرییەکان (Categories)</span>
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomCategoryColors({});
+                      }}
+                      className="text-[10px] text-slate-600 hover:text-slate-900 font-bold flex items-center gap-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs hover:bg-slate-100 transition-colors"
+                      title="گەڕاندنەوە بۆ پێشنیارە بنەڕەتییەکان"
+                    >
+                      <RotateCcw className="w-3 h-3 text-slate-500" />
+                      <span>ڕەنگە بنەڕەتییەکان</span>
+                    </button>
+                  </div>
+
+                  <div className="space-y-2 max-h-60 overflow-y-auto pe-1">
+                    {categories.map((c) => {
+                      const catColor = customCategoryColors[c.id] || getCategoryColor(c, {});
+                      return (
+                        <div key={c.id} className="p-2.5 bg-white border border-slate-200/90 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <label 
+                              className="w-7 h-7 rounded-xl cursor-pointer shrink-0 shadow-xs border-2 border-white ring-1 ring-slate-300 relative overflow-hidden transition-transform hover:scale-110"
+                              style={{ backgroundColor: catColor }}
+                              title="کلیک بکە بۆ هەڵبژاردنی هەر ڕەنگێک"
+                            >
+                              <input
+                                type="color"
+                                value={catColor}
+                                onChange={(e) => setCustomCategoryColors({ ...customCategoryColors, [c.id]: e.target.value })}
+                                className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
+                              />
+                            </label>
+                            <div className="truncate">
+                              <span className="font-bold text-slate-900 text-xs block truncate">{c.name_ku || c.name || c.name_en}</span>
+                              {c.name_en && (
+                                <span className="text-[10px] text-slate-400 font-sans block truncate">{c.name_en}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Palette presets */}
+                          <div className="flex items-center gap-1">
+                            {CATEGORY_COLOR_PALETTE.slice(0, 6).map((hex) => (
+                              <button
+                                key={hex}
+                                type="button"
+                                onClick={() => setCustomCategoryColors({ ...customCategoryColors, [c.id]: hex })}
+                                className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-125 ${catColor.toLowerCase() === hex.toLowerCase() ? 'ring-2 ring-slate-900 scale-110' : 'opacity-70 hover:opacity-100'}`}
+                                style={{ backgroundColor: hex }}
+                                title={hex}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section 2: Status Colors (ئاوتلێت، ستۆک، یەدەگ) */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    <span>ڕەنگی باج و جۆری کاڵاکان (Status Badges)</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {['ئاوتلێت', 'ستۆک', 'یەدەگ'].map((statusKey) => {
+                      const defaultHex = statusKey === 'ئاوتلێت' ? '#dc2626' : statusKey === 'ستۆک' ? '#9333ea' : '#2563eb';
+                      const activeColor = customStatusColors[statusKey] || defaultHex;
+                      return (
+                        <div key={statusKey} className="p-2.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                          <div className="flex items-center gap-2">
+                            <label 
+                              className="w-6 h-6 rounded-lg cursor-pointer shrink-0 shadow-xs border border-white ring-1 ring-slate-300 relative overflow-hidden transition-transform hover:scale-110"
+                              style={{ backgroundColor: activeColor }}
+                            >
+                              <input
+                                type="color"
+                                value={activeColor}
+                                onChange={(e) => setCustomStatusColors({ ...customStatusColors, [statusKey]: e.target.value })}
+                                className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
+                              />
+                            </label>
+                            <span className="font-bold text-xs text-slate-800">{statusKey}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 

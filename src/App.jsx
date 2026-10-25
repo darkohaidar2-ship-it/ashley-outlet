@@ -723,6 +723,7 @@ export default function App() {
         collections={data.collections || []}
         logoUrl={data.settings?.logoUrl || ''}
         statusColors={data.settings?.customItemTypeColors || {}}
+        categoryColors={data.settings?.categoryColors || {}}
         t={t}
         lang={lang}
       />
