@@ -25,7 +25,10 @@ import {
   Printer,
   Ticket,
   Search,
-  X
+  X,
+  Copy,
+  ExternalLink,
+  Share2
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
@@ -38,6 +41,7 @@ import {
   getStatusDotStyle,
   normalizeHex 
 } from '../utils/statusColors';
+import { getCategoryColor } from '../utils/categoryColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
 import ProgressiveImage from './ProgressiveImage';
 
@@ -85,14 +89,36 @@ export default function AdminSpreadsheet({
   const [isExportingImages, setIsExportingImages] = useState(false);
   const [exportProgress, setExportProgress] = useState({ current: 0, total: 0, text: '' });
   const [stickerModal, setStickerModal] = useState({ isOpen: false, items: [] });
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [isGoogleSheetsModalOpen, setIsGoogleSheetsModalOpen] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
   const fileInputRef = useRef(null);
 
-  // In-table real-time filtered dataset
-  const filteredTableData = useMemo(() => {
-    const q = tableSearch.trim().toLowerCase();
-    if (!q) return tableData;
+  // Category counts across entire table
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    for (const m of tableData) {
+      if (m.categoryId) {
+        counts[m.categoryId] = (counts[m.categoryId] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [tableData]);
 
-    return tableData.filter((row) => {
+  // In-table real-time filtered dataset (filters by Selected Category + Search Query)
+  const filteredTableData = useMemo(() => {
+    let list = tableData;
+
+    // 1. Filter by category
+    if (selectedCategory && selectedCategory !== 'all') {
+      list = list.filter(row => row.categoryId === selectedCategory);
+    }
+
+    // 2. Filter by search query
+    const q = tableSearch.trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter((row) => {
       if ((row.name || '').toLowerCase().includes(q)) return true;
       if ((row.itemType || '').toLowerCase().includes(q)) return true;
       if ((row.sku || '').toLowerCase().includes(q)) return true;
@@ -114,7 +140,7 @@ export default function AdminSpreadsheet({
 
       return false;
     });
-  }, [tableData, tableSearch, categories, collections]);
+  }, [tableData, selectedCategory, tableSearch, categories, collections]);
 
   // Bulk apply status to items (either only those with empty status, or all items)
   const handleBulkApplyStatus = (statusName, onlyEmpty = true) => {
@@ -393,11 +419,15 @@ export default function AdminSpreadsheet({
     setTableData(prev => prev.map(r => r.id === rowId ? { ...r, [field]: value } : r));
   };
 
-  // Add new empty row
+  // Add new empty row (automatically assigns the currently selected category)
   const handleAddRow = () => {
+    const defaultCatId = (selectedCategory && selectedCategory !== 'all')
+      ? selectedCategory
+      : (categories[0]?.id || '');
+
     const newRow = {
       id: 'mod-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-      categoryId: categories[0]?.id || '',
+      categoryId: defaultCatId,
       collectionId: '',
       itemType: '',
       name: '',
@@ -558,6 +588,131 @@ export default function AdminSpreadsheet({
     XLSX.writeFile(wb, `Ashley_Outlet_Models_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
+  // Export to Excel specifically formatted for Google Sheets with =IMAGE() formulas
+  const handleExportGoogleSheetsExcel = () => {
+    const rowsToExport = filteredTableData.length > 0 ? filteredTableData : tableData;
+    const activeCategory = selectedCategory !== 'all' ? categories.find(c => c.id === selectedCategory) : null;
+    const catSuffix = activeCategory ? `_${activeCategory.name_en || activeCategory.name_ku || 'category'}` : '';
+
+    const headers = [
+      'Image (وێنە - Google Sheets)',
+      'Model Name (ناوی مۆدێل)',
+      'Category (کەتەگۆری)',
+      'Collection (سێت)',
+      'Status (دۆخی کاڵا)',
+      'Stock (عدد)',
+      'Original Price (نرخی پێش داشکاندن د.ع)',
+      'Outlet Price (نرخی ئاوتلێت د.ع)',
+      'Notes (تێبینی)',
+      'Direct Image URL (لینکی هەمیشەیی وێنە)'
+    ];
+
+    const aoaData = [headers];
+
+    rowsToExport.forEach(row => {
+      const cat = categories.find(c => c.id === row.categoryId);
+      const col = collections.find(c => c.id === row.collectionId);
+      const catName = cat ? (lang === 'ku' ? (cat.name_ku || cat.name) : (cat.name_en || cat.name)) : '';
+      const colName = col ? col.name : '';
+
+      const imageCell = row.image
+        ? { f: `IMAGE("${row.image}")` }
+        : '';
+
+      aoaData.push([
+        imageCell,
+        row.name || '',
+        catName,
+        colName,
+        row.itemType || '',
+        row.stock ?? '',
+        row.originalPrice ?? '',
+        row.salePrice ?? '',
+        row.notes || '',
+        row.image || ''
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoaData);
+
+    // Format row heights so images are clearly visible in Google Sheets
+    const rowHeights = [{ hpt: 28 }]; // Header height
+    for (let i = 0; i < rowsToExport.length; i++) {
+      rowHeights.push({ hpt: 70 }); // 70pt height per row
+    }
+    ws['!rows'] = rowHeights;
+
+    // Format column widths
+    ws['!cols'] = [
+      { wch: 18 }, // Image
+      { wch: 22 }, // Model
+      { wch: 20 }, // Category
+      { wch: 16 }, // Collection
+      { wch: 14 }, // Status
+      { wch: 10 }, // Stock
+      { wch: 18 }, // Original Price
+      { wch: 18 }, // Outlet Price
+      { wch: 30 }, // Notes
+      { wch: 50 }  // Image URL
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ashley Products');
+    XLSX.writeFile(wb, `Ashley_Google_Sheets${catSuffix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // Copy TSV formatted for 1-click paste into Google Sheets with =IMAGE() formulas
+  const handleCopyForGoogleSheets = async () => {
+    const rowsToExport = filteredTableData.length > 0 ? filteredTableData : tableData;
+
+    const headers = [
+      'وێنە (Image)',
+      'ناوی مۆدێل (Model)',
+      'کەتەگۆری (Category)',
+      'سێت (Collection)',
+      'دۆخی کاڵا (Status)',
+      'عدد (Stock)',
+      'نرخی کۆن (Original Price)',
+      'نرخی ئاوتلێت (Outlet Price)',
+      'تێبینی (Notes)',
+      'لینکی وێنە (Image URL)'
+    ];
+
+    const tsvLines = [headers.join('\t')];
+
+    rowsToExport.forEach(row => {
+      const cat = categories.find(c => c.id === row.categoryId);
+      const col = collections.find(c => c.id === row.collectionId);
+      const catName = cat ? (lang === 'ku' ? (cat.name_ku || cat.name) : (cat.name_en || cat.name)) : '';
+      const colName = col ? col.name : '';
+      const cleanNotes = (row.notes || '').replace(/[\t\n\r]+/g, ' ');
+
+      const imageFormula = row.image ? `=IMAGE("${row.image}")` : '';
+
+      tsvLines.push([
+        imageFormula,
+        row.name || '',
+        catName,
+        colName,
+        row.itemType || '',
+        row.stock ?? '',
+        row.originalPrice ?? '',
+        row.salePrice ?? '',
+        cleanNotes,
+        row.image || ''
+      ].join('\t'));
+    });
+
+    try {
+      await navigator.clipboard.writeText(tsvLines.join('\n'));
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard', err);
+      alert('نەتوانرا لە کلیپبۆرد کۆپی بکرێت / Failed to copy');
+    }
+  };
+
   // Save All Changes to Server
   const handleSaveAll = async () => {
     setIsSaving(true);
@@ -708,6 +863,17 @@ export default function AdminSpreadsheet({
             <Download className="w-4 h-4" />
           </button>
 
+          {/* Google Sheets Export with Images */}
+          <button
+            type="button"
+            onClick={() => setIsGoogleSheetsModalOpen(true)}
+            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+            title={`خەزنکردن لە Google Sheets بە وێنەوە (${filteredTableData.length} مۆدێل)`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span className="text-[11px] font-bold font-sans hidden xl:inline text-emerald-950">Google Sheets</span>
+          </button>
+
           {/* Quick A-Z / Z-A Sorting */}
           <div className="flex items-center gap-0.5 bg-slate-100 p-0.5 rounded-xl border border-slate-200 shadow-2xs">
             <button
@@ -803,6 +969,65 @@ export default function AdminSpreadsheet({
 
         </div>
 
+      </div>
+
+      {/* Category Filter Strip (فلتەری کەتەگۆری لە بەشی شیت) */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-2 mb-2 flex items-center gap-1.5 overflow-x-auto shadow-2xs select-none">
+        <div className="text-xs font-bold text-slate-500 ps-1.5 pe-2.5 border-e border-slate-200 shrink-0 flex items-center gap-1.5">
+          <FolderPlus className="w-3.5 h-3.5 text-slate-600" />
+          <span className="hidden sm:inline">کەتەگۆری:</span>
+        </div>
+
+        {/* All Categories Button */}
+        <button
+          type="button"
+          onClick={() => setSelectedCategory('all')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
+            selectedCategory === 'all'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+          }`}
+        >
+          <span>هەموو بەشەکان</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+            {tableData.length}
+          </span>
+        </button>
+
+        {/* Category Pills */}
+        {categories.map((cat) => {
+          const count = categoryCounts[cat.id] || 0;
+          const isSelected = selectedCategory === cat.id;
+          const catColor = getCategoryColor(cat, settings?.categoryColors);
+          const catName = lang === 'ku' ? (cat.name_ku || cat.name) : lang === 'ar' ? (cat.name_ar || cat.name) : (cat.name_en || cat.name);
+
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-2 border ${
+                isSelected
+                  ? 'shadow-xs text-white'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+              }`}
+              style={isSelected ? { backgroundColor: catColor, borderColor: catColor } : {}}
+            >
+              <span 
+                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
+                style={{ backgroundColor: isSelected ? '#ffffff' : catColor }} 
+              />
+              <span>{catName}</span>
+              <span 
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                  isSelected ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Spreadsheet Table Container with Clear TABLE BORDER */}
@@ -1625,6 +1850,132 @@ export default function AdminSpreadsheet({
           t={t}
           lang={lang}
         />,
+        document.body
+      )}
+
+      {/* 6. Google Sheets Export & Storage Modal */}
+      {isGoogleSheetsModalOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn select-text no-print">
+          <div className="bg-white w-full max-w-xl rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs shrink-0">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-base leading-tight">
+                    خەزنکردن لە Google Sheets (بە تەواوی وێنەکانەوە)
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {selectedCategory !== 'all' 
+                      ? `بەشی هەڵبژێردراو: ${categories.find(c => c.id === selectedCategory)?.name_ku || 'کەتەگۆری'} (${filteredTableData.length} مۆدێل)`
+                      : `کۆی گشتی هەموو مۆدێلەکان (${filteredTableData.length} مۆدێل)`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGoogleSheetsModalOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full cursor-pointer transition-colors"
+                title="داخستن"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="py-4 space-y-4">
+              
+              {/* Permanent Cloud Storage Verification */}
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200/90 rounded-2xl flex items-start gap-2.5 text-xs text-emerald-900 shadow-2xs">
+                <CheckCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <span className="font-bold">هەموو وێنەکان بەستەری هەمیشەیی CDN یان هەیە: </span>
+                  <span>وێنەکان لە سێرڤەری گشتی هەمیشەیی Supabase هەڵگیراون، بە فۆرمولای فەرمی <code className="bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-900 font-mono font-bold text-[11px]">=IMAGE("url")</code> ڕاستەوخۆ لە ناو خانەکانی Google Sheets دادەنیشن و وێنەی گەورە نیشان دەدەن.</span>
+                </div>
+              </div>
+
+              {/* Option 1: 1-Click Copy */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">١</span>
+                    <span>کۆپیکردنی خێرا بۆ چەسپاندن (Ctrl+C ➔ Ctrl+V)</span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                    پێشنیارکراو (زۆر خێرا)
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  کلیک لە دوگمەی کۆپیکردن بکە، پاشان پەڕەیەکی بەتاڵی نوێ لە Google Sheets بکەرەوە و کلیکی <strong>Ctrl + V</strong> بکە. دەستبەجێ هەموو وێنەکان بە قەبارەی ڕێکخراو لەگەڵ ناو، کۆد، کەتەگۆری و نرخەکان لە ناو شیتەکە دەردەکەون.
+                </p>
+
+                <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleCopyForGoogleSheets}
+                    className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      copySuccess 
+                        ? 'bg-emerald-600 text-white' 
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-98'
+                    }`}
+                  >
+                    {copySuccess ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    <span>{copySuccess ? 'کۆپی کرا! ئێستا لە Google Sheets تەنها Ctrl+V بکە' : `کۆپیکردنی (${filteredTableData.length}) مۆدێل بە وێنەوە`}</span>
+                  </button>
+
+                  <a
+                    href="https://sheets.new"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-4 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl font-bold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    title="کردنەوەی پەڕەیەکی بەتاڵی نوێ لە Google Sheets"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>کردنەوەی شیت (sheets.new)</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Option 2: Download .xlsx for Google Sheets */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="font-bold text-xs text-slate-900 flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-slate-900 text-white flex items-center justify-center text-[10px] font-black">٢</span>
+                  <span>داگرتنی فایلی ئێکسڵ بۆ Google Sheets (.xlsx)</span>
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  پەڕگەیەکی ئێکسڵ دابگرە کە کۆڵۆمی فۆرمولای <code className="bg-slate-200 px-1 py-0.5 rounded font-mono font-bold text-[11px]">=IMAGE()</code> ی تێدایە و بەرزی خانەکانی 70pt دانراوە تا وێنەکان بە گەورەیی لە ناو خانەکان دەرکەون. دەتوانیت فایلی داگیراو ڕاستەوخۆ لە Google Drive دابنێیت یان لە Google Sheets هاوردەی (Import) بکەیت.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={handleExportGoogleSheetsExcel}
+                  className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>داگرتنی فایلی ئێکسڵی تایبەت بە Google Sheets ({filteredTableData.length} مۆدێل)</span>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsGoogleSheetsModalOpen(false)}
+                className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs cursor-pointer transition-colors"
+              >
+                {t.close || 'داخستن'}
+              </button>
+            </div>
+
+          </div>
+        </div>,
         document.body
       )}
 
