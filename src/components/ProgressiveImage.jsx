@@ -24,6 +24,7 @@ export default function ProgressiveImage({
   const [hasError, setHasError] = useState(false);
 
   const placeholderSrc = getOptimizedImageUrl(src, 'placeholder');
+  const targetSrc = getOptimizedImageUrl(src, preset);
   const { src: cachedTargetSrc, isLoaded: isTargetCached } = useCachedImage(targetSrc);
   const finalSrc = cachedTargetSrc || targetSrc;
 
