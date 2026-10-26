@@ -313,24 +313,49 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
 
   // 2. If model was explicitly provided in an Excel column
   if (model) {
-    if (desc) {
-      const escModel = model.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-      // Check if description has variant suffix like 76642- Black Set or C6183-IVOR
-      const variantRegex = new RegExp('\\b(' + escModel + '\\s*-\\s*[A-Za-z0-9]+(?:\\s+[A-Za-z0-9]+)?)\\b', 'i');
-      const vMatch = desc.match(variantRegex);
-      if (vMatch) {
-        return {
-          code: code || vMatch[1],
-          model: vMatch[1],
-          rawDesc: desc,
-          price: safePrice,
-          category
-        };
+    const hasTrailingDash = model.endsWith('-');
+    const cleanBaseModel = model.replace(/[-_\s]+$/, '').trim();
+    const isSeriesPrefix = hasTrailingDash || /^[A-Z]\d{2,4}$/i.test(cleanBaseModel) || /^\d{4,7}$/.test(cleanBaseModel);
+
+    // If description contains the exact full variant starting with cleanBaseModel (e.g. 'B719-56W1' when model is 'b719-')
+    if (desc && isSeriesPrefix) {
+      const escBase = cleanBaseModel.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+      // Look for full variant code in desc: e.g. B719-56W1, B719-31, 76642- Black Set
+      const fullVariantRegex = new RegExp('\\b(' + escBase + '-\\d{1,4}[A-Za-z0-9-]*|' + escBase + '\\s*-\\s*[A-Za-z0-9]+(?:\\s+[A-Za-z0-9]+)?)\\b', 'i');
+      const fvMatch = desc.match(fullVariantRegex);
+      if (fvMatch) {
+        const rawMatched = fvMatch[1].trim();
+        const parts = rawMatched.split(/\s*-\s*/);
+        const lastPart = parts.length > 1 ? parts[parts.length - 1].toLowerCase().trim() : '';
+        // Make sure the suffix is not a generic department word like "accessories"
+        if (!DEPARTMENT_KEYWORDS.has(lastPart)) {
+          const fullVariant = rawMatched.toUpperCase();
+          return {
+            code: fullVariant,
+            model: fullVariant,
+            rawDesc: desc,
+            price: safePrice,
+            category
+          };
+        }
       }
     }
+
+    if (detectedCode && isSeriesPrefix && normalizeKey(detectedCode).startsWith(normalizeKey(cleanBaseModel)) && detectedCode.length > cleanBaseModel.length) {
+      return {
+        code: detectedCode,
+        model: detectedCode,
+        rawDesc: desc,
+        price: safePrice,
+        category
+      };
+    }
+
+    // Default when model is already a clean full name (e.g. "Clan", "Porter Dresser")
+    const displayModel = model.endsWith('-') ? cleanBaseModel : model;
     return {
-      code: code || (model.match(/^[A-Z0-9\s-]+$/i) ? model : ''),
-      model: model,
+      code: code || (displayModel.match(/^[A-Z0-9\s-]+$/i) ? displayModel : ''),
+      model: displayModel,
       rawDesc: desc,
       price: safePrice,
       category
@@ -527,19 +552,31 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
       score = 92;
       currentMatchType = 'exact_name';
     }
-    // 3. Partial match
-    else if (normPredictedModel && normModelName && (normModelName.includes(normPredictedModel) || normPredictedModel.includes(normModelName))) {
-      score = 75;
-      currentMatchType = 'partial';
-    } else if (normExtractedCode && normModelName && normModelName.includes(normExtractedCode)) {
-      score = 70;
-      currentMatchType = 'partial';
-    } else if (normRawDesc && normModelName && normRawDesc.includes(normModelName)) {
-      score = 65;
+    // 3. Exact full variant code contained inside model name
+    // (e.g. normExtractedCode is 'b71956w1' and normModelName is 'b71956w1demarloskingbed')
+    // NOTE: Must have at least 4 characters and contain digits to avoid single letter matches
+    else if (normExtractedCode && normExtractedCode.length >= 4 && normModelName.includes(normExtractedCode)) {
+      score = 90;
+      currentMatchType = 'exact_code';
+    } else if (normModelSku && normModelSku.length >= 4 && normRawDesc.includes(normModelSku)) {
+      score = 88;
+      currentMatchType = 'exact_code';
+    }
+    // 4. Clean named furniture match ONLY (e.g. "Clan" or "Darcy Sofa")
+    // STRICT RULE: If normPredictedModel is an alphanumeric SKU series (e.g. "b719", "b697"),
+    // NEVER match partially against "b719-31"! The variant must be exact!
+    else if (
+      normPredictedModel && 
+      normModelName && 
+      !/^[a-z]\d{2,4}/i.test(normPredictedModel) && 
+      !/^\d{4,8}/.test(normPredictedModel) &&
+      (normModelName.includes(normPredictedModel) || normPredictedModel.includes(normModelName))
+    ) {
+      score = 80;
       currentMatchType = 'partial';
     }
 
-    if (score > 0) {
+    if (score >= 80) {
       // Category affinity weighting
       if (isSameCat) {
         score += 40; // Heavy bonus for matching the exact same category!
@@ -554,6 +591,12 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
         isCategoryMatched = isSameCat;
       }
     }
+  }
+
+  // Strict Threshold: If score did not meet high-confidence threshold, leave blank!
+  if (bestScore < 80) {
+    bestMatch = null;
+    matchType = 'none';
   }
 
   const cat = bestMatch ? categories.find(c => c.id === bestMatch.categoryId) : null;
@@ -588,6 +631,7 @@ export const sampleDataRows = [
   ['D8917', 'Accessories - D8917 - Accessories', '11', 'Accessories'],
   ['C5473', 'Accessories - C5473 - Accessories', '16', 'Accessories'],
   ['C6183', 'Accessories - C6183-IVOR - Accessories', '42', 'Accessories'],
+  ['b719-', 'b719-56W1 Demarlos King Bed with Storage', '1250', 'Bedroom'],
   ['1202020', 'Accessories - 1202020 - Accessories Cushion', '45', 'Accessories'],
   ['1202020', '1202020 Bergere Chair Armchair', '780', 'SOFA SET'],
   ['76642- Black Set', 'Accessories - 76642- Black Set - Accessories', '150', 'Accessories'],
