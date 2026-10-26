@@ -112,6 +112,7 @@ export default function PriceMatcherModal({
 
   // Filters for Tab 2 (Staging Explorer)
   const [stagingSearch, setStagingSearch] = useState('');
+  const [stagingSearchCol, setStagingSearchCol] = useState('all');
   const [stagingFilterMode, setStagingFilterMode] = useState('all');
   const [stagingCatFilter, setStagingCatFilter] = useState('all');
   const [visibleStagingLimit, setVisibleStagingLimit] = useState(50);
@@ -120,6 +121,7 @@ export default function PriceMatcherModal({
   const [excelSearchTarget, setExcelSearchTarget] = useState(null); // catalog model item
   const [excelSearchQuery, setExcelSearchQuery] = useState('');
   const [excelSearchCat, setExcelSearchCat] = useState('all');
+  const [excelSearchTargetCol, setExcelSearchTargetCol] = useState('all'); // 'all' | 'desc' | 'model' | 'price'
   const excelSearchInputRef = useRef(null);
 
   const [isApplying, setIsApplying] = useState(false);
@@ -230,6 +232,7 @@ export default function PriceMatcherModal({
         category: extracted.category || rawCat,
         price: cleanPrice,
         rawNote,
+        rawRow: r,
         selected: false
       });
     });
@@ -267,6 +270,26 @@ export default function PriceMatcherModal({
     setSuccessToast(
       `فایلی ئێکسڵ بە سەرکەوتوویی خوێندرایەوە! (${parsedItems.length} کاڵا | ستوونی نرخ: "${chosenPriceHeader}")`
     );
+  };
+
+  /**
+   * Handle user manually selecting a column from dropdown
+   */
+  const handleUpdateColumnMapping = (key, newIndex) => {
+    const idxNum = parseInt(newIndex, 10);
+    const updated = {
+      ...columnMapping,
+      [key]: idxNum
+    };
+    setColumnMapping(updated);
+
+    if (rawExcelRows && rawExcelRows.length > 1) {
+      const reParsed = parseRowsWithMapping(rawExcelRows, updated);
+      setStagingData(reParsed);
+      const chosenHeader = rawHeaders[idxNum] !== undefined ? rawHeaders[idxNum] : 'دیاری نەکراوە';
+      const label = key === 'modelCol' ? 'مۆدێل' : key === 'descCol' ? 'وەسف' : key === 'priceCol' ? 'نرخ' : 'کەتەگۆری';
+      setSuccessToast(`ستوونی ${label} گۆڕدرا بۆ: "${chosenHeader}" - داتاکان نوێکرانەوە!`);
+    }
   };
 
   // Handle Excel file upload (.xlsx, .xls, .csv)
@@ -478,11 +501,13 @@ export default function PriceMatcherModal({
     const initial = catalogItem.model.sku || catalogItem.model.name || '';
     setExcelSearchQuery(initial);
     setExcelSearchCat('all');
+    setExcelSearchTargetCol('all');
   };
 
   const handleCloseExcelSearch = () => {
     setExcelSearchTarget(null);
     setExcelSearchQuery('');
+    setExcelSearchTargetCol('all');
   };
 
   // Assign chosen Excel row to the target catalog model
@@ -522,23 +547,40 @@ export default function PriceMatcherModal({
       }
       if (!q) return true;
 
-      const code = (item.extractedCode || item.rawCode || '').toLowerCase();
-      const rawModel = (item.rawModel || '').toLowerCase();
-      const model = (item.predictedModel || '').toLowerCase();
-      const desc = (item.rawDesc || '').toLowerCase();
+      const desc = String(item.rawDesc || '').toLowerCase();
+      const rawModel = String(item.rawModel || '').toLowerCase();
+      const model = String(item.predictedModel || '').toLowerCase();
+      const code = String(item.extractedCode || item.rawCode || '').toLowerCase();
       const price = String(item.price || '').toLowerCase();
-      const cat = (item.category || '').toLowerCase();
 
+      // Filter specifically by chosen column!
+      if (excelSearchTargetCol === 'desc') {
+        return desc.includes(q);
+      }
+      if (excelSearchTargetCol === 'model') {
+        return rawModel.includes(q) || model.includes(q) || code.includes(q);
+      }
+      if (excelSearchTargetCol === 'price') {
+        return price.includes(q);
+      }
+      // If a specific column index from rawHeaders was selected:
+      if (!isNaN(parseInt(excelSearchTargetCol, 10)) && excelSearchTargetCol !== 'all') {
+        const colIdx = parseInt(excelSearchTargetCol, 10);
+        if (item.rawRow && item.rawRow[colIdx] !== undefined) {
+          return String(item.rawRow[colIdx] || '').toLowerCase().includes(q);
+        }
+      }
+
+      // Default 'all' columns
       return (
-        code.includes(q) ||
+        desc.includes(q) ||
         rawModel.includes(q) ||
         model.includes(q) ||
-        desc.includes(q) ||
-        price.includes(q) ||
-        cat.includes(q)
+        code.includes(q) ||
+        price.includes(q)
       );
     }).slice(0, 80);
-  }, [excelSearchTarget, stagingData, excelSearchQuery, excelSearchCat]);
+  }, [excelSearchTarget, stagingData, excelSearchQuery, excelSearchTargetCol, excelSearchCat]);
 
   /**
    * Apply Price Updates to Catalog
@@ -774,6 +816,78 @@ export default function PriceMatcherModal({
             <span>⚡ نموونەی ئامادەکراو</span>
           </button>
         </div>
+
+        {/* Live Column Selection Bar (دیاریکردنی دەستی ستوونەکانی ئێکسڵ) */}
+        {rawHeaders.length > 0 && (
+          <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+            <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+              <span>دیاریکردنی ستوونەکانی فایلی ئێکسڵ:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Model Col */}
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-2xs">
+                <span className="font-bold text-slate-500 text-[11px]">مۆدێل (MODEL EN):</span>
+                <select
+                  value={columnMapping.modelCol}
+                  onChange={(e) => handleUpdateColumnMapping('modelCol', e.target.value)}
+                  className="font-bold text-blue-700 bg-transparent focus:outline-none cursor-pointer text-xs max-w-[130px] truncate"
+                >
+                  <option value="-1">-- هەڵبژێرە --</option>
+                  {rawHeaders.map((h, idx) => (
+                    <option key={idx} value={idx}>{idx + 1}. {h || `ستوونی ${idx + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Desc Col */}
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-2xs">
+                <span className="font-bold text-slate-500 text-[11px]">وەسف (NAME EN):</span>
+                <select
+                  value={columnMapping.descCol}
+                  onChange={(e) => handleUpdateColumnMapping('descCol', e.target.value)}
+                  className="font-bold text-slate-800 bg-transparent focus:outline-none cursor-pointer text-xs max-w-[140px] truncate"
+                >
+                  <option value="-1">-- هەڵبژێرە --</option>
+                  {rawHeaders.map((h, idx) => (
+                    <option key={idx} value={idx}>{idx + 1}. {h || `ستوونی ${idx + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Price Col */}
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-2xs">
+                <span className="font-bold text-slate-500 text-[11px]">نرخ (price_usa):</span>
+                <select
+                  value={columnMapping.priceCol}
+                  onChange={(e) => handleUpdateColumnMapping('priceCol', e.target.value)}
+                  className="font-bold text-emerald-700 bg-transparent focus:outline-none cursor-pointer text-xs max-w-[130px] truncate"
+                >
+                  <option value="-1">-- هەڵبژێرە --</option>
+                  {rawHeaders.map((h, idx) => (
+                    <option key={idx} value={idx}>{idx + 1}. {h || `ستوونی ${idx + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Cat Col */}
+              <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-2xs">
+                <span className="font-bold text-slate-500 text-[11px]">کەتەگۆری:</span>
+                <select
+                  value={columnMapping.catCol}
+                  onChange={(e) => handleUpdateColumnMapping('catCol', e.target.value)}
+                  className="font-bold text-purple-700 bg-transparent focus:outline-none cursor-pointer text-xs max-w-[130px] truncate"
+                >
+                  <option value="-1">-- بێ کەتەگۆری --</option>
+                  {rawHeaders.map((h, idx) => (
+                    <option key={idx} value={idx}>{idx + 1}. {h || `ستوونی ${idx + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* =========================================================================
             TAB 1: PRIMARY CATALOG MODELS VIEW (ئەو ئایتمانەی کە هەمانە)
@@ -1163,17 +1277,34 @@ export default function PriceMatcherModal({
             ========================================================================= */}
         {activeTab === 'staging' && (
           <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30">
-            {/* Header info */}
+            {/* Header info & column filter */}
             <div className="p-3 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2.5">
-              <div className="relative w-full sm:w-72">
-                <input
-                  type="text"
-                  value={stagingSearch}
-                  onChange={(e) => setStagingSearch(e.target.value)}
-                  placeholder="گەڕان لە فایلی ئێکسڵ..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-emerald-500 font-medium"
-                />
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+                <div className="relative w-full sm:w-72">
+                  <input
+                    type="text"
+                    value={stagingSearch}
+                    onChange={(e) => setStagingSearch(e.target.value)}
+                    placeholder="گەڕان لە فایلی ئێکسڵ..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-emerald-500 font-medium"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                </div>
+
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-[11px] text-slate-400 font-medium">لە ستوونی:</span>
+                  <select
+                    value={stagingSearchCol}
+                    onChange={(e) => setStagingSearchCol(e.target.value)}
+                    className="text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">هەموو ستوونەکان</option>
+                    <option value="desc">وەسف (NAME EN)</option>
+                    <option value="model">مۆدێل (MODEL EN)</option>
+                    <option value="code">کۆد (SKU)</option>
+                    <option value="price">نرخ (price_usa)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="text-xs text-slate-500 font-bold font-mono">
@@ -1204,6 +1335,10 @@ export default function PriceMatcherModal({
                       .filter(i => {
                         if (!stagingSearch) return true;
                         const q = stagingSearch.toLowerCase();
+                        if (stagingSearchCol === 'desc') return (i.rawDesc || '').toLowerCase().includes(q);
+                        if (stagingSearchCol === 'model') return (i.predictedModel || i.rawModel || '').toLowerCase().includes(q);
+                        if (stagingSearchCol === 'code') return (i.extractedCode || i.rawCode || '').toLowerCase().includes(q);
+                        if (stagingSearchCol === 'price') return String(i.price || '').toLowerCase().includes(q);
                         return (
                           (i.extractedCode || '').toLowerCase().includes(q) ||
                           (i.predictedModel || '').toLowerCase().includes(q) ||
@@ -1393,8 +1528,8 @@ export default function PriceMatcherModal({
                 </div>
               </div>
 
-              {/* Search Bar */}
-              <div className="p-4 border-b border-slate-200 bg-white">
+              {/* Search Bar & Column Selection Controls */}
+              <div className="p-4 border-b border-slate-200 bg-white space-y-3">
                 <div className="relative">
                   <input
                     ref={excelSearchInputRef}
@@ -1403,17 +1538,114 @@ export default function PriceMatcherModal({
                     value={excelSearchQuery}
                     onChange={(e) => setExcelSearchQuery(e.target.value)}
                     placeholder="سێرچ لە فایلی ئێکسڵ بە کۆد (وەک B719-56W1)، ناوی مۆدێل، یان وەسف..."
-                    className="w-full pl-9 pr-9 py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl focus:outline-none transition-all shadow-2xs"
+                    className="w-full pl-9 pr-9 py-2.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 focus:border-blue-500 focus:bg-white rounded-xl focus:outline-none transition-all shadow-2xs"
                   />
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                   {excelSearchQuery && (
                     <button
                       type="button"
                       onClick={() => setExcelSearchQuery('')}
-                      className="absolute right-2.5 top-2 p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
+                      className="absolute right-2.5 top-2.5 p-1 text-slate-400 hover:text-slate-700 rounded-md cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
+                  )}
+                </div>
+
+                {/* Column Selection Toolbar for Search */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
+                      <SlidersHorizontal className="w-3 h-3 text-blue-600" />
+                      <span>گەڕان لە ستوونی:</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('all')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        excelSearchTargetCol === 'all'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                      }`}
+                    >
+                      هەموو ستوونەکان
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('desc')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        excelSearchTargetCol === 'desc'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>وەسف (NAME EN)</span>
+                      {columnMapping.descCol >= 0 && rawHeaders[columnMapping.descCol] && (
+                        <span className="text-[9.5px] opacity-75 font-mono">({rawHeaders[columnMapping.descCol]})</span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('model')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        excelSearchTargetCol === 'model'
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>مۆدێل (MODEL EN)</span>
+                      {columnMapping.modelCol >= 0 && rawHeaders[columnMapping.modelCol] && (
+                        <span className="text-[9.5px] opacity-75 font-mono">({rawHeaders[columnMapping.modelCol]})</span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('price')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        excelSearchTargetCol === 'price'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>نرخ (price_usa)</span>
+                    </button>
+                  </div>
+
+                  {/* Direct Dropdown for Any Column */}
+                  {rawHeaders.length > 0 && (
+                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
+                      <span className="text-[10px] text-slate-400 font-medium">یان ستوونی تر:</span>
+                      <select
+                        value={['all', 'desc', 'model', 'price'].includes(excelSearchTargetCol) ? '' : excelSearchTargetCol}
+                        onChange={(e) => {
+                          if (e.target.value) setExcelSearchTargetCol(e.target.value);
+                        }}
+                        className="text-[11px] font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer max-w-[120px] truncate"
+                      >
+                        <option value="">-- هەڵبژاردن --</option>
+                        {rawHeaders.map((h, idx) => (
+                          <option key={idx} value={String(idx)}>
+                            {idx + 1}. {h || `ستوونی ${idx + 1}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Live Result Count Banner */}
+                <div className="text-[11px] text-slate-500 font-medium flex items-center justify-between">
+                  <span>
+                    ئەنجامەکان: <strong className="font-mono text-slate-800">{excelDialogSearchResults.length}</strong> دێڕ دۆزرایەوە
+                  </span>
+                  {excelSearchTargetCol !== 'all' && (
+                    <span className="text-blue-600 font-bold text-[10.5px]">
+                      فلتەرکراو بەپێی ستوونی هەڵبژێردراو
+                    </span>
                   )}
                 </div>
               </div>
