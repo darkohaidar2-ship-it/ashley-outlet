@@ -135,6 +135,21 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
     }
   }
 
+  // 5. Category Column Priority:
+  let detectedCatIdx = -1;
+  const catKeywords = [
+    'category_name_en', 'category_name', 'major_category', 'sub_category',
+    'category', 'cat_name', 'cat', 'department', 'dept', 'section', 'family',
+    'class', 'پۆلێن', 'کەتەگۆری', 'بەش', 'قسم'
+  ];
+  for (const kw of catKeywords) {
+    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    if (idx !== -1) {
+      detectedCatIdx = idx;
+      break;
+    }
+  }
+
   if (detectedModelIdx === -1 && detectedDescIdx >= 0) detectedModelIdx = detectedDescIdx;
   if (detectedModelIdx === -1) detectedModelIdx = 0;
 
@@ -142,25 +157,139 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
     priceCol: detectedPriceIdx,
     modelCol: detectedModelIdx,
     descCol: detectedDescIdx,
-    codeCol: detectedCodeIdx
+    codeCol: detectedCodeIdx,
+    catCol: detectedCatIdx
   };
 }
 
 /**
- * Smart extraction of model name and code from messy Excel descriptions.
- * Handles cases like:
- * - Clan - Wall Unit - TV Stand -> Clan
- * - Accessories - D8917 - Accessories -> D8917
- * - Accessories - C5473 - Accessories -> C5473
- * - Accessories - C6183-IVOR - Accessories -> C6183-IVOR
- * - Accessories - 76642- Black Set - Accessories -> 76642- Black Set
- * - B697-31 Porter Dresser Dark Brown -> Porter Dresser (Code: B697-31)
+ * Infer category name from description or explicit category column.
  */
-export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice = '') {
+export function inferCategoryFromText(text = '', explicitCategory = '') {
+  if (explicitCategory && String(explicitCategory).trim()) {
+    return String(explicitCategory).trim();
+  }
+  const str = String(text).toLowerCase().trim();
+  if (str.startsWith('accessories') || str.includes(' - accessories') || str.includes('accessories -')) {
+    return 'Accessories';
+  }
+  if (str.includes('sofa') || str.includes('living') || str.includes('دانیشتن') || str.includes('جلوس') || str.includes('bergere') || str.includes('بێرجەر') || str.includes('recliner') || str.includes('chair')) {
+    return 'Living Room (Sofa)';
+  }
+  if (str.includes('bedroom') || str.includes('نووستن') || str.includes('bed') || str.includes('dresser') || str.includes('nightstand')) {
+    return 'Bedroom';
+  }
+  if (str.includes('corner') || str.includes('کۆرنەر') || str.includes('sectional')) {
+    return 'Corner';
+  }
+  if (str.includes('dining') || str.includes('نانخواردن') || str.includes('طعام')) {
+    return 'Dining';
+  }
+  if (str.includes('office') || str.includes('ئۆفیس')) {
+    return 'Office';
+  }
+  return '';
+}
+
+/**
+ * Normalizes any category string into a standardized group key.
+ * Used for strict category matching and eliminating conflicts (e.g. Accessories vs Sofa).
+ */
+export function getCategoryGroup(categoryNameOrId = '') {
+  if (!categoryNameOrId) return 'unknown';
+  const str = String(categoryNameOrId).toLowerCase().trim();
+
+  // Accessories
+  if (
+    str.includes('accessori') || 
+    str.includes('accessory') || 
+    str.includes('ئێکسسوار') || 
+    str.includes('إكسسوار') || 
+    str.includes('decor') || 
+    str.includes('lamp') || 
+    str.includes('rug') || 
+    str.includes('art') ||
+    str.includes('lighting') ||
+    str.includes('pillow') ||
+    str.includes('cushion')
+  ) {
+    return 'accessories';
+  }
+
+  // Sofa / Living Room / Chair / Bergere
+  if (
+    str.includes('sofa') || 
+    str.includes('living') || 
+    str.includes('دانیشتن') || 
+    str.includes('جلوس') || 
+    str.includes('chair') || 
+    str.includes('reclin') || 
+    str.includes('بێرجەر') || 
+    str.includes('bergere') ||
+    str.includes('loveseat') ||
+    str.includes('ottoman')
+  ) {
+    return 'sofa';
+  }
+
+  // Bedroom
+  if (
+    str.includes('bed') || 
+    str.includes('sleep') || 
+    str.includes('نووستن') || 
+    str.includes('نوستن') || 
+    str.includes('نوم') || 
+    str.includes('dresser') || 
+    str.includes('nightstand') ||
+    str.includes('mattress')
+  ) {
+    return 'bedroom';
+  }
+
+  // Corner / Sectional
+  if (
+    str.includes('corner') || 
+    str.includes('sectional') || 
+    str.includes('کۆرنەر') || 
+    str.includes('زاویة') || 
+    str.includes('l-shape')
+  ) {
+    return 'corner';
+  }
+
+  // Dining
+  if (
+    str.includes('dining') || 
+    str.includes('طعام') || 
+    str.includes('نانخواردن') || 
+    str.includes('table') || 
+    str.includes('مێز')
+  ) {
+    return 'dining';
+  }
+
+  // Office
+  if (
+    str.includes('office') || 
+    str.includes('ئۆفیس') || 
+    str.includes('مكتب') || 
+    str.includes('desk')
+  ) {
+    return 'office';
+  }
+
+  return 'other';
+}
+
+/**
+ * Smart extraction of model name, code, price, and category from messy Excel descriptions.
+ */
+export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice = '', rawCategory = '') {
   let desc = String(rawDesc || '').trim();
   let model = String(rawModel || '').trim();
   let code = String(rawCode || '').trim();
   const safePrice = cleanNumericPrice(rawPrice) || (rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : '');
+  const category = inferCategoryFromText(desc, rawCategory);
 
   // 1. Identify codes / SKUs from description or inputs
   // Pattern A: Alphanumeric code like C6183-IVOR, B697-31, A4000123
@@ -194,7 +323,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
           code: code || vMatch[1],
           model: vMatch[1],
           rawDesc: desc,
-          price: safePrice
+          price: safePrice,
+          category
         };
       }
     }
@@ -202,7 +332,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || (model.match(/^[A-Z0-9\s-]+$/i) ? model : ''),
       model: model,
       rawDesc: desc,
-      price: safePrice
+      price: safePrice,
+      category
     };
   }
 
@@ -231,7 +362,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment,
       model: chosenSegment,
       rawDesc: desc,
-      price: safePrice
+      price: safePrice,
+      category
     };
   }
 
@@ -241,7 +373,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment.toUpperCase(),
       model: chosenSegment.toUpperCase(),
       rawDesc: desc,
-      price: safePrice
+      price: safePrice,
+      category
     };
   }
 
@@ -252,7 +385,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment,
       model: chosenSegment,
       rawDesc: desc,
-      price: safePrice
+      price: safePrice,
+      category
     };
   }
 
@@ -296,7 +430,8 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
     code: code || '',
     model: candidate || desc.slice(0, 35),
     rawDesc: desc,
-    price: safePrice
+    price: safePrice,
+    category
   };
 }
 
@@ -322,14 +457,15 @@ export function normalizeKey(str) {
  *   isPriceEqual: boolean
  * }
  */
-export function matchStagingItemWithCatalog(stagingItem, catalogModels = []) {
+export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], categories = []) {
   if (!catalogModels || catalogModels.length === 0) {
     return {
       matchedModel: null,
       matchType: 'none',
       confidence: 0,
       priceDifference: null,
-      isPriceEqual: false
+      isPriceEqual: false,
+      isCategoryMatched: false
     };
   }
 
@@ -337,59 +473,91 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = []) {
   const normPredictedModel = normalizeKey(stagingItem.predictedModel);
   const normRawDesc = normalizeKey(stagingItem.rawDesc);
 
+  // Group of the Excel staging item
+  const stagingCatStr = `${stagingItem.category || ''} ${stagingItem.rawDesc || ''}`;
+  const stagingGroup = getCategoryGroup(stagingCatStr);
+
   let bestMatch = null;
   let matchType = 'none';
-  let confidence = 0;
+  let bestScore = -9999;
+  let isCategoryMatched = false;
 
   for (const model of catalogModels) {
     const normModelName = normalizeKey(model.name);
     const normModelSku = normalizeKey(model.sku);
 
-    // 1. Exact SKU / Code match (Highest priority)
+    // Get catalog model's category string and group
+    const cat = categories.find(c => c.id === model.categoryId);
+    const modelCatStr = cat ? `${cat.name_en || ''} ${cat.name_ku || ''} ${cat.name_ar || ''} ${cat.name || ''}` : (model.categoryId || '');
+    const modelGroup = getCategoryGroup(modelCatStr);
+
+    // Category conflict check:
+    // If one is accessories and the other is sofa/bedroom/dining/corner -> CONFLICT!
+    const isConflict = (
+      (stagingGroup === 'accessories' && modelGroup !== 'accessories' && modelGroup !== 'unknown' && modelGroup !== 'other') ||
+      (stagingGroup !== 'accessories' && stagingGroup !== 'unknown' && stagingGroup !== 'other' && modelGroup === 'accessories') ||
+      (stagingGroup === 'sofa' && modelGroup === 'bedroom') ||
+      (stagingGroup === 'bedroom' && modelGroup === 'sofa') ||
+      (stagingGroup === 'dining' && (modelGroup === 'bedroom' || modelGroup === 'sofa'))
+    );
+
+    if (isConflict) {
+      // Disqualify this candidate because categories oppose (e.g. Accessories vs Sofa Set)!
+      continue;
+    }
+
+    const isSameCat = (stagingGroup !== 'unknown' && modelGroup !== 'unknown' && stagingGroup === modelGroup);
+
+    let score = 0;
+    let currentMatchType = 'none';
+
+    // 1. Exact SKU / Code match (Highest base score)
     if (normExtractedCode && normModelSku && normExtractedCode === normModelSku) {
-      bestMatch = model;
-      matchType = 'exact_code';
-      confidence = 100;
-      break;
+      score = 100;
+      currentMatchType = 'exact_code';
+    } else if (normExtractedCode && normModelName && normExtractedCode === normModelName) {
+      score = 98;
+      currentMatchType = 'exact_code';
     }
-    if (normExtractedCode && normModelName && normExtractedCode === normModelName) {
-      bestMatch = model;
-      matchType = 'exact_code';
-      confidence = 100;
-      break;
-    }
-
     // 2. Exact Model Name match
-    if (normPredictedModel && normModelName && normPredictedModel === normModelName) {
-      bestMatch = model;
-      matchType = 'exact_name';
-      confidence = 95;
-      break;
+    else if (normPredictedModel && normModelName && normPredictedModel === normModelName) {
+      score = 95;
+      currentMatchType = 'exact_name';
+    } else if (normPredictedModel && normModelSku && normPredictedModel === normModelSku) {
+      score = 92;
+      currentMatchType = 'exact_name';
     }
-    if (normPredictedModel && normModelSku && normPredictedModel === normModelSku) {
-      bestMatch = model;
-      matchType = 'exact_name';
-      confidence = 95;
-      break;
+    // 3. Partial match
+    else if (normPredictedModel && normModelName && (normModelName.includes(normPredictedModel) || normPredictedModel.includes(normModelName))) {
+      score = 75;
+      currentMatchType = 'partial';
+    } else if (normExtractedCode && normModelName && normModelName.includes(normExtractedCode)) {
+      score = 70;
+      currentMatchType = 'partial';
+    } else if (normRawDesc && normModelName && normRawDesc.includes(normModelName)) {
+      score = 65;
+      currentMatchType = 'partial';
     }
 
-    // 3. One contains the other
-    if (confidence < 80) {
-      if (normPredictedModel && normModelName && (normModelName.includes(normPredictedModel) || normPredictedModel.includes(normModelName))) {
+    if (score > 0) {
+      // Category affinity weighting
+      if (isSameCat) {
+        score += 40; // Heavy bonus for matching the exact same category!
+      } else if (stagingGroup !== 'unknown' && modelGroup !== 'unknown' && stagingGroup !== modelGroup) {
+        score -= 30; // Penalty if both categories are known but different
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
         bestMatch = model;
-        matchType = 'partial';
-        confidence = 80;
-      } else if (normExtractedCode && normModelName && normModelName.includes(normExtractedCode)) {
-        bestMatch = model;
-        matchType = 'partial';
-        confidence = 75;
-      } else if (normRawDesc && normModelName && normRawDesc.includes(normModelName)) {
-        bestMatch = model;
-        matchType = 'partial';
-        confidence = 70;
+        matchType = currentMatchType;
+        isCategoryMatched = isSameCat;
       }
     }
   }
+
+  const cat = bestMatch ? categories.find(c => c.id === bestMatch.categoryId) : null;
+  const catalogCategoryName = cat ? (cat.name_en || cat.name_ku || cat.name || '') : '';
 
   const rawStagingPrice = parsePriceToFloat(stagingItem.price);
   const currentCatalogPrice = bestMatch ? parsePriceToFloat(bestMatch.salePrice || bestMatch.originalPrice) : null;
@@ -400,10 +568,12 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = []) {
   return {
     matchedModel: bestMatch,
     matchType,
-    confidence,
+    confidence: bestMatch ? Math.min(100, Math.max(1, bestScore)) : 0,
     priceDifference,
     isPriceEqual,
-    currentCatalogPrice
+    isCategoryMatched,
+    currentCatalogPrice,
+    catalogCategoryName
   };
 }
 
@@ -411,16 +581,18 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = []) {
  * Built-in Sample Data with Ashley Furniture and Retail Items (Including User Excel Cases)
  */
 export const sampleDataRows = [
-  ['model_name_en', 'name_en', 'price'],
-  ['Clan', 'Clan - Wall Unit - TV Stand', '3140'],
-  ['D8917', 'Accessories - D8917 - Accessories', '11'],
-  ['C5473', 'Accessories - C5473 - Accessories', '16'],
-  ['C6183', 'Accessories - C6183-IVOR - Accessories', '42'],
-  ['76642- Black Set', 'Accessories - 76642- Black Set - Accessories', '150'],
-  ['73642-BLAC Set', 'Accessories - 73642-BLAC Set - Accessories', '120'],
-  ['Porter Dresser', 'B697-31 Porter Dresser Dark Brown - 6 Drawers', '850'],
-  ['Realyn Dresser', '100-24425 B743-31 Realyn Dresser Chipped White Farmhouse', '920'],
-  ['Darcy Sofa', 'A3000245 Darcy Sofa Cobblestone Fabric Living Room', '680'],
-  ['Centiar Dining', 'D372-25 Centiar Dining Room Counter Table', '410'],
-  ['Barchuz Recliner', '6540225 Barchuz Power Lift Recliner Brown', '750']
+  ['model_name_en', 'name_en', 'price_usa', 'category_name_en'],
+  ['Clan', 'Clan - Wall Unit - TV Stand', '3140', 'Living Room'],
+  ['D8917', 'Accessories - D8917 - Accessories', '11', 'Accessories'],
+  ['C5473', 'Accessories - C5473 - Accessories', '16', 'Accessories'],
+  ['C6183', 'Accessories - C6183-IVOR - Accessories', '42', 'Accessories'],
+  ['1202020', 'Accessories - 1202020 - Accessories Cushion', '45', 'Accessories'],
+  ['1202020', '1202020 Bergere Chair Armchair', '780', 'SOFA SET'],
+  ['76642- Black Set', 'Accessories - 76642- Black Set - Accessories', '150', 'Accessories'],
+  ['73642-BLAC Set', 'Accessories - 73642-BLAC Set - Accessories', '120', 'Accessories'],
+  ['Porter Dresser', 'B697-31 Porter Dresser Dark Brown - 6 Drawers', '850', 'Bedroom'],
+  ['Realyn Dresser', '100-24425 B743-31 Realyn Dresser Chipped White Farmhouse', '920', 'Bedroom'],
+  ['Darcy Sofa', 'A3000245 Darcy Sofa Cobblestone Fabric Living Room', '680', 'SOFA SET'],
+  ['Centiar Dining', 'D372-25 Centiar Dining Room Counter Table', '410', 'Dining Room'],
+  ['Barchuz Recliner', '6540225 Barchuz Power Lift Recliner Brown', '750', 'SOFA SET']
 ];
