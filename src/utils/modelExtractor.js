@@ -623,6 +623,105 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
 }
 
 /**
+ * Reverse Direction Matching: Find the matching row in an Excel Master Sheet for a Catalog Model.
+ * This directly supports the user workflow: "ئەو ئایتمانەی کە هەمانە هەموو پارەکەی لەو شیتەوە دەر ئەکەین".
+ */
+export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], categories = []) {
+  if (!catalogModel || !excelItems || excelItems.length === 0) {
+    return {
+      matchedExcelRow: null,
+      excelPrice: null,
+      isCategoryMatched: false,
+      confidence: 0
+    };
+  }
+
+  const cat = categories.find(c => c.id === catalogModel.categoryId);
+  const catalogCatName = cat ? (cat.name_en || cat.name_ku || cat.name || '') : '';
+  const catalogCatGroup = getCategoryGroup(catalogCatName || catalogModel.name);
+
+  // Normalize catalog model keys
+  const normSku = normalizeKey(catalogModel.sku || '');
+  const normName = normalizeKey(catalogModel.name || '');
+
+  // Extract possible code/SKU from catalog model name if sku is generic
+  const nameSkuMatch = String(catalogModel.name || '').match(/([A-Z]\d{2,4}-\d{1,4}[A-Za-z0-9-]*|\d{5,12})/i);
+  const extractedSkuFromName = nameSkuMatch ? normalizeKey(nameSkuMatch[1]) : '';
+  const effectiveSku = normSku || extractedSkuFromName;
+
+  let bestMatch = null;
+  let bestScore = -1;
+  let isCategoryMatched = false;
+
+  for (const item of excelItems) {
+    let score = 0;
+    const itemCodeNorm = normalizeKey(item.extractedCode || item.code || item.rawCode || '');
+    const itemModelNorm = normalizeKey(item.predictedModel || item.model || '');
+    const itemDescNorm = normalizeKey(item.rawDesc || item.desc || '');
+    const itemCatGroup = getCategoryGroup(item.category || itemDescNorm);
+
+    const isSameCat = catalogCatGroup !== 'unknown' && itemCatGroup !== 'unknown' && catalogCatGroup === itemCatGroup;
+    const isConflictingCat = catalogCatGroup !== 'unknown' && itemCatGroup !== 'unknown' && catalogCatGroup !== itemCatGroup;
+
+    // Strict Disqualification: e.g. Catalog item is a Sofa, but Excel item is an Accessory
+    if (isConflictingCat && (catalogCatGroup === 'accessories' || itemCatGroup === 'accessories')) {
+      continue;
+    }
+
+    // 1. Exact Full Variant SKU Match (e.g. effectiveSku is 'b71956w1' and itemCodeNorm is 'b71956w1')
+    if (effectiveSku && (itemCodeNorm === effectiveSku || itemModelNorm === effectiveSku)) {
+      score = 100;
+    }
+    // 2. Exact Full Variant SKU contained in Excel description (e.g. 'b71956w1' in 'b71956w1demarloskingbed')
+    else if (effectiveSku && effectiveSku.length >= 4 && itemDescNorm.includes(effectiveSku)) {
+      score = 95;
+    }
+    // 3. Exact Model Name match (e.g. "Clan" === "Clan")
+    else if (normName && itemModelNorm && normName === itemModelNorm) {
+      score = 90;
+    }
+    // 4. Substring Match for Clean Furniture Names (e.g. "Clan TV Stand" contains "Clan")
+    // Disallow partial matching for alphanumeric series codes (like "b719")
+    else if (
+      normName && itemModelNorm &&
+      !/^[a-z]\d{2,4}/i.test(itemModelNorm) &&
+      !/^\d{4,8}/.test(itemModelNorm) &&
+      (normName.includes(itemModelNorm) || itemModelNorm.includes(normName))
+    ) {
+      score = 80;
+    }
+
+    if (score >= 80) {
+      if (isSameCat) score += 30;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = item;
+        isCategoryMatched = isSameCat;
+      }
+    }
+  }
+
+  // Strict Threshold: If score < 80, leave BLANK (white / spêtî)!
+  if (bestScore < 80 || !bestMatch) {
+    return {
+      matchedExcelRow: null,
+      excelPrice: null,
+      isCategoryMatched: false,
+      confidence: 0
+    };
+  }
+
+  const cleanPrice = parsePriceToFloat(bestMatch.price);
+
+  return {
+    matchedExcelRow: bestMatch,
+    excelPrice: cleanPrice > 0 ? cleanPrice : null,
+    isCategoryMatched,
+    confidence: Math.min(100, bestScore)
+  };
+}
+
+/**
  * Built-in Sample Data with Ashley Furniture and Retail Items (Including User Excel Cases)
  */
 export const sampleDataRows = [
