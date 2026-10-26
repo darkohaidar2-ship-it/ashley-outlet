@@ -10,6 +10,143 @@ export const DEPARTMENT_KEYWORDS = new Set([
 ]);
 
 /**
+ * Clean any price string or number into a strict, clean numeric string (e.g. "$3,140.00" -> "3140" or "3140.50").
+ */
+export function cleanNumericPrice(val) {
+  if (val === undefined || val === null || val === '') return '';
+  if (typeof val === 'number') return isNaN(val) ? '' : String(val);
+  const str = String(val).trim().replace(/,/g, '');
+  const m = str.match(/-?\d+(\.\d+)?/);
+  return m ? m[0] : '';
+}
+
+/**
+ * Returns float number from any price representation safely.
+ */
+export function parsePriceToFloat(val) {
+  const cleaned = cleanNumericPrice(val);
+  const n = parseFloat(cleaned);
+  return isNaN(n) ? 0 : n;
+}
+
+/**
+ * Smart detection of columns in raw Excel rows.
+ * Specifically prioritizes price_usa, price_usd, outlet_price_usa, etc.
+ */
+export function detectExcelColumns(headers = [], sampleRows = []) {
+  const cleanHeaders = headers.map(h => String(h || '').trim().toLowerCase());
+
+  // 1. Price Column Priority:
+  // Priority A: Exact USA / USD / Outlet prices (User's specific case: 'price_usa'!)
+  const usaPriceKeywords = [
+    'price_usa', 'price_usd', 'priceusa', 'priceusd', 
+    'outlet_price_usa', 'outlet_price_usd', 'outlet_price',
+    'sale_price_usa', 'sale_price_usd', 'sale_price', 
+    'usd_price', 'usa_price', 'usd'
+  ];
+
+  let detectedPriceIdx = -1;
+
+  // Check USA / USD keywords first
+  for (const kw of usaPriceKeywords) {
+    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    if (idx !== -1) {
+      detectedPriceIdx = idx;
+      break;
+    }
+  }
+
+  // If not found by USA keywords, check candidates with non-zero numeric values
+  if (detectedPriceIdx === -1) {
+    const priceCandidates = [];
+    cleanHeaders.forEach((h, idx) => {
+      if (
+        h.includes('price') || 
+        h.includes('نرخ') || 
+        h.includes('سعر') || 
+        h.includes('outlet') || 
+        h.includes('sale') || 
+        h.includes('amount') || 
+        h.includes('cost')
+      ) {
+        priceCandidates.push(idx);
+      }
+    });
+
+    if (priceCandidates.length > 0) {
+      // Pick the column that has the most non-zero values
+      let bestIdx = priceCandidates[0];
+      let maxNonZeroCount = -1;
+
+      priceCandidates.forEach(idx => {
+        let nonZero = 0;
+        const limit = Math.min(sampleRows.length, 50);
+        for (let r = 0; r < limit; r++) {
+          const val = sampleRows[r]?.[idx];
+          const num = parsePriceToFloat(val);
+          if (num > 0) nonZero++;
+        }
+        if (cleanHeaders[idx].includes('usa') || cleanHeaders[idx].includes('usd')) {
+          nonZero += 50;
+        }
+        if (nonZero > maxNonZeroCount) {
+          maxNonZeroCount = nonZero;
+          bestIdx = idx;
+        }
+      });
+      detectedPriceIdx = bestIdx;
+    }
+  }
+
+  if (detectedPriceIdx === -1) {
+    detectedPriceIdx = headers.length > 1 ? 1 : 0;
+  }
+
+  // 2. Model Name Column Priority:
+  let detectedModelIdx = -1;
+  const modelKeywords = ['model_name_en', 'model_name', 'model', 'مۆدێل', 'item_name'];
+  for (const kw of modelKeywords) {
+    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    if (idx !== -1) {
+      detectedModelIdx = idx;
+      break;
+    }
+  }
+
+  // 3. Description Column Priority:
+  let detectedDescIdx = -1;
+  const descKeywords = ['name_en', 'description', 'desc', 'وەسف', 'name', 'item_desc'];
+  for (const kw of descKeywords) {
+    const idx = cleanHeaders.findIndex(h => (h === kw || h.includes(kw)) && idx !== detectedModelIdx);
+    if (idx !== -1) {
+      detectedDescIdx = idx;
+      break;
+    }
+  }
+
+  // 4. Code / Barcode Column Priority:
+  let detectedCodeIdx = -1;
+  const codeKeywords = ['barcode', 'code', 'sku', 'کۆد', 'بارکۆد', 'item_code', 'item_no'];
+  for (const kw of codeKeywords) {
+    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    if (idx !== -1) {
+      detectedCodeIdx = idx;
+      break;
+    }
+  }
+
+  if (detectedModelIdx === -1 && detectedDescIdx >= 0) detectedModelIdx = detectedDescIdx;
+  if (detectedModelIdx === -1) detectedModelIdx = 0;
+
+  return {
+    priceCol: detectedPriceIdx,
+    modelCol: detectedModelIdx,
+    descCol: detectedDescIdx,
+    codeCol: detectedCodeIdx
+  };
+}
+
+/**
  * Smart extraction of model name and code from messy Excel descriptions.
  * Handles cases like:
  * - Clan - Wall Unit - TV Stand -> Clan
@@ -23,6 +160,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
   let desc = String(rawDesc || '').trim();
   let model = String(rawModel || '').trim();
   let code = String(rawCode || '').trim();
+  const safePrice = cleanNumericPrice(rawPrice) || (rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : '');
 
   // 1. Identify codes / SKUs from description or inputs
   // Pattern A: Alphanumeric code like C6183-IVOR, B697-31, A4000123
@@ -56,7 +194,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
           code: code || vMatch[1],
           model: vMatch[1],
           rawDesc: desc,
-          price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+          price: safePrice
         };
       }
     }
@@ -64,7 +202,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || (model.match(/^[A-Z0-9\s-]+$/i) ? model : ''),
       model: model,
       rawDesc: desc,
-      price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+      price: safePrice
     };
   }
 
@@ -93,7 +231,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment,
       model: chosenSegment,
       rawDesc: desc,
-      price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+      price: safePrice
     };
   }
 
@@ -103,7 +241,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment.toUpperCase(),
       model: chosenSegment.toUpperCase(),
       rawDesc: desc,
-      price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+      price: safePrice
     };
   }
 
@@ -114,7 +252,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
       code: code || chosenSegment,
       model: chosenSegment,
       rawDesc: desc,
-      price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+      price: safePrice
     };
   }
 
@@ -158,7 +296,7 @@ export function extractSmartModel(rawDesc, rawModel = '', rawCode = '', rawPrice
     code: code || '',
     model: candidate || desc.slice(0, 35),
     rawDesc: desc,
-    price: rawPrice !== undefined && rawPrice !== null ? String(rawPrice).trim() : ''
+    price: safePrice
   };
 }
 
@@ -253,9 +391,9 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = []) {
     }
   }
 
-  const rawStagingPrice = parseFloat(stagingItem.price);
-  const currentCatalogPrice = bestMatch ? parseFloat(bestMatch.salePrice || bestMatch.originalPrice || 0) : null;
-  const hasValidPrices = !isNaN(rawStagingPrice) && currentCatalogPrice !== null && !isNaN(currentCatalogPrice);
+  const rawStagingPrice = parsePriceToFloat(stagingItem.price);
+  const currentCatalogPrice = bestMatch ? parsePriceToFloat(bestMatch.salePrice || bestMatch.originalPrice) : null;
+  const hasValidPrices = rawStagingPrice > 0 && currentCatalogPrice !== null && !isNaN(currentCatalogPrice);
   const priceDifference = hasValidPrices ? (rawStagingPrice - currentCatalogPrice) : null;
   const isPriceEqual = hasValidPrices ? Math.abs(rawStagingPrice - currentCatalogPrice) < 0.001 : false;
 
