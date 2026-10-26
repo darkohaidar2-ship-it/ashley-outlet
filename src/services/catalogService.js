@@ -62,7 +62,9 @@ function mapSettingsFromDB(s) {
     zoomScaleRatio: zoomRatio,
     customItemTypes: customItemTypes,
     customItemTypeColors: customItemTypeColors,
-    categoryColors: (extra.categoryColors && typeof extra.categoryColors === 'object') ? extra.categoryColors : {}
+    categoryColors: (extra.categoryColors && typeof extra.categoryColors === 'object') ? extra.categoryColors : {},
+    currency: extra.currency || 'USD',
+    logoSubtitle: extra.logoSubtitle !== undefined ? extra.logoSubtitle : 'SULAIMANIYAH'
   };
 }
 
@@ -411,7 +413,9 @@ export const catalogService = {
     const categoryColors = (settingsData.categoryColors && typeof settingsData.categoryColors === 'object')
       ? settingsData.categoryColors
       : {};
-    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes, customItemTypeColors, categoryColors };
+    const currency = settingsData.currency || 'USD';
+    const logoSubtitle = settingsData.logoSubtitle !== undefined ? settingsData.logoSubtitle : 'SULAIMANIYAH';
+    const extraCfg = { stage1Time, zoomMotionTime, stage3Time, zoomScaleRatio, customItemTypes, customItemTypeColors, categoryColors, currency, logoSubtitle };
     
     let rawLogo = (settingsData.logoUrl || '').split('#cfg=')[0];
     if (!rawLogo && isSupabaseConfigured && supabase) {

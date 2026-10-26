@@ -30,11 +30,14 @@ import {
   ExternalLink,
   Share2,
   Filter,
-  FilterX
+  FilterX,
+  DollarSign,
+  Sparkles
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 import StickerSheet from './StickerSheet';
+import PriceMatcherModal from './PriceMatcherModal';
 import { 
   STATUS_COLOR_PALETTE, 
   DEFAULT_STATUS_COLORS, 
@@ -94,7 +97,25 @@ export default function AdminSpreadsheet({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isGoogleSheetsModalOpen, setIsGoogleSheetsModalOpen] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isPriceMatcherOpen, setIsPriceMatcherOpen] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Apply price updates from PriceMatcherModal
+  const handleApplyMatchedPrices = async (updatedCatalog) => {
+    setTableData(updatedCatalog);
+    if (onSaveBulk) {
+      await onSaveBulk(updatedCatalog);
+    }
+  };
+
+  // Import new models from PriceMatcherModal
+  const handleImportNewModelsFromMatcher = async (newModels) => {
+    const combined = [...newModels, ...tableData];
+    setTableData(combined);
+    if (onSaveBulk) {
+      await onSaveBulk(combined);
+    }
+  };
 
   // Column header filter states (Google Sheets / Excel style)
   const [columnFilters, setColumnFilters] = useState({});
@@ -164,7 +185,7 @@ export default function AdminSpreadsheet({
         displayVal = `${rawVal} دانە`;
       } else if (colKey === 'originalPrice' || colKey === 'salePrice') {
         rawVal = Number(row[colKey]) || 0;
-        displayVal = rawVal > 0 ? `${rawVal.toLocaleString()} د.ع` : '0';
+        displayVal = rawVal > 0 ? `${rawVal.toLocaleString()} ${t.currency || '$'}` : '0';
       } else {
         displayVal = String(rawVal || '(بەتاڵ)');
         rawVal = rawVal || '__EMPTY__';
@@ -814,8 +835,8 @@ export default function AdminSpreadsheet({
         'Collection (سێت)': col ? col.name : '',
         'Status (دۆخی کاڵا)': row.itemType || '',
         'Stock (عدد)': row.stock,
-        'Original Price (د.ع)': row.originalPrice,
-        'Outlet Price (د.ع)': row.salePrice,
+        'Original Price ($)': row.originalPrice,
+        'Outlet Price ($)': row.salePrice,
         'Notes (تێبینی)': row.notes,
         'Image URL (بەستەری وێنە)': row.image
       };
@@ -840,8 +861,8 @@ export default function AdminSpreadsheet({
       'Collection (سێت)',
       'Status (دۆخی کاڵا)',
       'Stock (عدد)',
-      'Original Price (نرخی پێش داشکاندن د.ع)',
-      'Outlet Price (نرخی ئاوتلێت د.ع)',
+      'Original Price (نرخی پێش داشکاندن $)',
+      'Outlet Price (نرخی ئاوتلێت $)',
       'Notes (تێبینی)',
       'Direct Image URL (لینکی هەمیشەیی وێنە)'
     ];
@@ -1124,6 +1145,17 @@ export default function AdminSpreadsheet({
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span className="text-[11px] font-bold font-sans hidden xl:inline text-emerald-950">Google Sheets</span>
+          </button>
+
+          {/* Smart Price Matcher Modal Trigger (هاوتاکردنی نرخ بە دۆلار) */}
+          <button
+            type="button"
+            onClick={() => setIsPriceMatcherOpen(true)}
+            className="p-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
+            title="هاوتاکردنی نرخ لەگەڵ ئێکسڵ بە دۆلار ($) - Smart Price Matcher"
+          >
+            <DollarSign className="w-4 h-4 text-emerald-100" />
+            <span className="text-[11px] font-black hidden xl:inline">هاوتاکردنی نرخ ($)</span>
           </button>
 
           {/* Quick A-Z / Z-A Sorting */}
@@ -2516,6 +2548,19 @@ export default function AdminSpreadsheet({
         </div>,
         document.body
       )}
+
+      {/* Smart Excel Price Matcher Modal */}
+      <PriceMatcherModal
+        isOpen={isPriceMatcherOpen}
+        onClose={() => setIsPriceMatcherOpen(false)}
+        models={tableData}
+        categories={categories}
+        collections={collections}
+        onApplyPriceUpdates={handleApplyMatchedPrices}
+        onImportNewModels={handleImportNewModelsFromMatcher}
+        t={t}
+        lang={lang}
+      />
 
     </div>
   );

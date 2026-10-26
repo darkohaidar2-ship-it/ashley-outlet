@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import PrintSheet from './components/PrintSheet';
 import AdminModal from './components/AdminModal';
 import InstallModal from './components/InstallModal';
+import PriceMatcherModal from './components/PriceMatcherModal';
 import { translations } from './locales';
 import { PackageOpen } from 'lucide-react';
 import { catalogService } from './services/catalogService';
@@ -82,6 +83,27 @@ export default function App() {
     editingModel: null
   });
 
+  const [isPriceMatcherOpen, setIsPriceMatcherOpen] = useState(false);
+
+  // Apply price updates from PriceMatcherModal at App level
+  const handleApplyMatchedPricesFromApp = async (updatedList) => {
+    setData(prev => ({
+      ...prev,
+      models: updatedList
+    }));
+    await catalogService.saveBulkModels(updatedList);
+  };
+
+  // Import new models from PriceMatcherModal at App level
+  const handleImportNewModelsFromApp = async (newList) => {
+    const combined = [...newList, ...(data.models || [])];
+    setData(prev => ({
+      ...prev,
+      models: combined
+    }));
+    await catalogService.saveBulkModels(combined);
+  };
+
   // PWA App Installation States (iPad / Tablet / Mobile)
   const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -100,7 +122,14 @@ export default function App() {
     return isIOS || isIPadOS;
   }, []);
 
-  const t = translations[lang] || translations.ku;
+  const t = useMemo(() => {
+    const base = translations[lang] || translations.ku;
+    const activeCurrency = data.settings?.currency === 'IQD' ? (lang === 'en' ? 'IQD' : 'د.ع') : '$';
+    return {
+      ...base,
+      currency: activeCurrency
+    };
+  }, [lang, data.settings?.currency]);
 
   // Listen for PWA beforeinstallprompt & appinstalled events
   useEffect(() => {
@@ -552,6 +581,7 @@ export default function App() {
           openNewCollectionModal={() => setAdminModal({ isOpen: true, type: 'collection', editingModel: null })}
           openLogoModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
           openSettingsModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
+          openPriceMatcherModal={() => setIsPriceMatcherOpen(true)}
           openInstallModal={() => setIsInstallModalOpen(true)}
           onBatchPrint={handleBatchPrint}
           filteredCount={filteredModels.length}
@@ -714,6 +744,19 @@ export default function App() {
           logoUrl={data.settings?.logoUrl || '/app-logo.jpg'}
         />
 
+        {/* Smart Price Matcher & Staging Explorer Modal */}
+        <PriceMatcherModal
+          isOpen={isPriceMatcherOpen}
+          onClose={() => setIsPriceMatcherOpen(false)}
+          models={data.models || []}
+          categories={data.categories || []}
+          collections={data.collections || []}
+          onApplyPriceUpdates={handleApplyMatchedPricesFromApp}
+          onImportNewModels={handleImportNewModelsFromApp}
+          t={t}
+          lang={lang}
+        />
+
       </div>
 
       {/* PRINT ENGINE: Rendered as direct child, fully visible exclusively during print */}
@@ -722,6 +765,7 @@ export default function App() {
         categories={data.categories || []}
         collections={data.collections || []}
         logoUrl={data.settings?.logoUrl || ''}
+        logoSubtitle={data.settings?.logoSubtitle || 'SULAIMANIYAH'}
         statusColors={data.settings?.customItemTypeColors || {}}
         categoryColors={data.settings?.categoryColors || {}}
         t={t}

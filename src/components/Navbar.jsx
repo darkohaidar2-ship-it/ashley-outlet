@@ -13,7 +13,8 @@ import {
   Sliders,
   Download,
   Search,
-  X
+  X,
+  DollarSign
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -33,6 +34,7 @@ export default function Navbar({
   openNewCollectionModal,
   openLogoModal,
   openSettingsModal,
+  openPriceMatcherModal,
   openInstallModal,
   onBatchPrint,
   filteredCount
@@ -196,6 +198,15 @@ export default function Navbar({
                   title={t.slideshowSettings}
                 >
                   <Sliders className="w-3.5 h-3.5 text-red-600" />
+                </button>
+
+                {/* Smart Price Matcher Modal Trigger */}
+                <button
+                  onClick={openPriceMatcherModal}
+                  className="p-1.5 text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 rounded-xl border border-emerald-300 transition-all shadow-2xs"
+                  title="هاوتاکردنی نرخ لەگەڵ فایلی ئێکسڵ بە دۆلار ($) - Price Matcher"
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
                 </button>
               </div>
             )}

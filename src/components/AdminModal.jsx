@@ -96,6 +96,8 @@ export default function AdminModal({
   const [shimmerTime, setShimmerTime] = useState(7.0);
   const [uiScale, setUiScale] = useState(1.0);
   const [settingsTab, setSettingsTab] = useState('slideshow'); // 'slideshow' | 'logo' | 'colors'
+  const [logoSubtitle, setLogoSubtitle] = useState(() => settings?.logoSubtitle !== undefined ? settings.logoSubtitle : 'SULAIMANIYAH');
+  const [currencyChoice, setCurrencyChoice] = useState(() => settings?.currency || 'USD');
 
   // Custom Colors State
   const [customCategoryColors, setCustomCategoryColors] = useState({});
@@ -145,6 +147,8 @@ export default function AdminModal({
         setLogoUrl(settings.logoUrl);
         setLogoPreview(settings.logoUrl);
       }
+      if (settings.logoSubtitle !== undefined) setLogoSubtitle(settings.logoSubtitle);
+      if (settings.currency) setCurrencyChoice(settings.currency);
       if (settings.categoryColors && typeof settings.categoryColors === 'object') {
         setCustomCategoryColors(settings.categoryColors);
       } else {
@@ -758,7 +762,9 @@ export default function AdminModal({
                 uiScale: Math.max(0.65, Math.min(1.2, parseFloat(uiScale) || 0.80)),
                 customItemTypes: settings?.customItemTypes || ['یەدەگ', 'ستۆک', 'ئاوتلێت'],
                 customItemTypeColors: customStatusColors,
-                categoryColors: customCategoryColors
+                categoryColors: customCategoryColors,
+                currency: currencyChoice,
+                logoSubtitle: logoSubtitle
               };
 
               if (onSaveSettings) {
@@ -1375,6 +1381,54 @@ export default function AdminModal({
                   placeholder="https://... یان بەتاڵی جێبێڵە بۆ لۆگۆی بنەڕەت"
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono text-slate-600 bg-white"
                 />
+
+                {/* Logo Subtitle (وەک SULAIMANIYAH) */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    نۆت / دەقی ژێر لۆگۆ (وەک SULAIMANIYAH)
+                  </label>
+                  <input
+                    type="text"
+                    value={logoSubtitle}
+                    onChange={(e) => setLogoSubtitle(e.target.value)}
+                    placeholder="SULAIMANIYAH"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold text-slate-700 bg-white"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    ئەم دەقە بە جوانی لە ژێر لۆگۆی ئاشڵی لەسەر پەڕەی پرێنت و ئەلبوم دەردەکەوێت.
+                  </p>
+                </div>
+
+                {/* Currency Choice ($ vs د.ع) */}
+                <div className="pt-2 border-t border-slate-200">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    دراوی سیستەم (Currency)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrencyChoice('USD')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        currencyChoice === 'USD'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>$ دۆلاری ئەمریکی (USD)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrencyChoice('IQD')}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                        currencyChoice === 'IQD'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      <span>د.ع دیناری عێراقی (IQD)</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

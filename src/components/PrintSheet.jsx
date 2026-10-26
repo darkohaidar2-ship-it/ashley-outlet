@@ -8,6 +8,7 @@ export default function PrintSheet({
   categories = [],
   collections = [],
   logoUrl,
+  logoSubtitle = 'SULAIMANIYAH',
   statusColors = {},
   categoryColors = {},
   includeCoverPage = true,
@@ -324,9 +325,15 @@ export default function PrintSheet({
                       OUTLET
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium tracking-wide">
-                    OFFICIAL PRODUCT SPECIFICATION & PRICING
-                  </p>
+                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium tracking-wide">
+                    {logoSubtitle && (
+                      <span className="font-mono font-black text-slate-700 uppercase tracking-widest text-[10.5px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                        {logoSubtitle}
+                      </span>
+                    )}
+                    <span className="text-slate-300">•</span>
+                    <span>OFFICIAL PRODUCT SPECIFICATION & PRICING</span>
+                  </div>
                 </div>
               </div>
 
