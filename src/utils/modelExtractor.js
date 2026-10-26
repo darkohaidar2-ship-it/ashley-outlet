@@ -117,7 +117,7 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
   let detectedDescIdx = -1;
   const descKeywords = ['name_en', 'description', 'desc', 'وەسف', 'name', 'item_desc'];
   for (const kw of descKeywords) {
-    const idx = cleanHeaders.findIndex(h => (h === kw || h.includes(kw)) && idx !== detectedModelIdx);
+    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx);
     if (idx !== -1) {
       detectedDescIdx = idx;
       break;
@@ -128,7 +128,7 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
   let detectedCodeIdx = -1;
   const codeKeywords = ['barcode', 'code', 'sku', 'کۆد', 'بارکۆد', 'item_code', 'item_no'];
   for (const kw of codeKeywords) {
-    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx && colIdx !== detectedDescIdx);
     if (idx !== -1) {
       detectedCodeIdx = idx;
       break;
@@ -143,7 +143,7 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
     'class', 'پۆلێن', 'کەتەگۆری', 'بەش', 'قسم'
   ];
   for (const kw of catKeywords) {
-    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
+    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx && colIdx !== detectedDescIdx && colIdx !== detectedPriceIdx);
     if (idx !== -1) {
       detectedCatIdx = idx;
       break;

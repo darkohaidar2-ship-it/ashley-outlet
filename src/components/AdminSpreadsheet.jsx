@@ -49,6 +49,12 @@ import {
 import { getCategoryColor } from '../utils/categoryColors';
 import { getOptimizedImageUrl } from '../utils/imageUrl';
 import ProgressiveImage from './ProgressiveImage';
+import { 
+  extractSmartModel, 
+  cleanNumericPrice, 
+  inferCategoryFromText, 
+  getCategoryGroup 
+} from '../utils/modelExtractor';
 
 export default function AdminSpreadsheet({
   models,
@@ -746,43 +752,92 @@ export default function AdminSpreadsheet({
     const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        
+        // Find best sheet that contains data
+        let ws = null;
+        for (const name of wb.SheetNames) {
+          const testSheet = wb.Sheets[name];
+          const testData = XLSX.utils.sheet_to_json(testSheet, { defval: '' });
+          if (testData && testData.length > 0) {
+            ws = testSheet;
+            break;
+          }
+        }
+        if (!ws) ws = wb.Sheets[wb.SheetNames[0]];
+
         const rawData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!rawData || rawData.length === 0) {
+          alert('فایلی ئێکسڵ بەتاڵە یان داتای تێدا نییە.');
+          return;
+        }
 
         // Map imported rows tolerance: leave missing fields completely empty
         const importedRows = rawData.map((row, idx) => {
-          // Normalize keys to lowercase
+          // Normalize keys to lowercase and stripped
           const r = {};
           Object.keys(row).forEach(k => {
-            r[k.trim().toLowerCase()] = row[k];
+            const cleanKey = k.trim().toLowerCase();
+            r[cleanKey] = row[k];
+            r[cleanKey.replace(/[_\s-]+/g, '')] = row[k];
           });
 
           // Helper to find value from possible column aliases
           const findVal = (keys) => {
             for (const k of keys) {
-              if (r[k] !== undefined && r[k] !== '') return r[k];
+              const cleanK = k.toLowerCase();
+              if (r[cleanK] !== undefined && r[cleanK] !== '') return r[cleanK];
+              const noSpaceK = cleanK.replace(/[_\s-]+/g, '');
+              if (r[noSpaceK] !== undefined && r[noSpaceK] !== '') return r[noSpaceK];
             }
             return '';
           };
 
-          const codeOrName = findVal([
-            'code', 'item code', 'item no', 'item_code', 'item', 'کۆد', 'کۆدی کاڵا', 'کۆدی مۆدێل', 'بارکۆد', 'رمز',
-            'name', 'model', 'model name', 'model_name', 'description', 'ناو', 'ناوی مۆدێل', 'اسم', 'الموديل', 'sku'
+          const rawModel = findVal([
+            'model_name_en', 'model name en', 'model_name', 'model name', 'model', 'مۆدێل', 'ناوی مۆدێل', 'الموديل', 'item_name'
           ]);
+          const rawDesc = findVal([
+            'name_en', 'name en', 'description', 'desc', 'وەسف', 'name', 'ناو', 'item_desc'
+          ]);
+          const rawCode = findVal([
+            'code', 'item code', 'item no', 'item_code', 'item', 'کۆد', 'کۆدی کاڵا', 'کۆدی مۆدێل', 'بارکۆد', 'رمز', 'sku', 'barcode'
+          ]);
+
+          let finalModelName = rawModel || rawDesc || rawCode || `Model ${idx + 1}`;
+          let finalSku = rawCode || rawModel || '';
+
+          if (rawModel || rawDesc) {
+            const extracted = extractSmartModel(rawDesc, rawModel, rawCode);
+            if (extracted.model) finalModelName = extracted.model;
+            if (extracted.code) finalSku = extracted.code;
+          }
+
           const itemStatus = findVal([
             'status', 'item status', 'item_status', 'condition', 'type', 'item type', 'item_type',
             'دۆخ', 'دۆخی کاڵا', 'جۆر', 'جۆری کاڵا', 'پۆلێن', 'حالة'
+          ]) || 'ئاوتلێت';
+
+          const stock = findVal(['stock', 'quantity', 'qty', 'count', 'عدد', 'ژمارە', 'العدد', 'الكمية']) || 1;
+
+          // Price aliases: prioritize price_usa, price_usd, price, sale_price
+          const rawPriceUsa = findVal([
+            'price_usa', 'price_usd', 'priceusa', 'priceusd', 'usd_price', 'usa_price', 'usd',
+            'original price', 'old price', 'before discount', 'کۆن', 'نرخی پێشوو', 'السعر الأصلي'
           ]);
-          const stock = findVal(['stock', 'quantity', 'qty', 'count', 'عدد', 'ژمارە', 'العدد', 'الكمية']);
-          const salePrice = findVal(['price', 'sale price', 'outlet price', 'نرخ', 'نرخی نوێ', 'السعر']);
-          const originalPrice = findVal(['original price', 'old price', 'before discount', 'کۆن', 'نرخی پێشوو', 'السعر الأصلي']);
-          const notes = findVal(['notes', 'dimensions', 'desc', 'description', 'تێبینی', 'قیاس', 'ملاحظات']);
+          const rawSalePrice = findVal([
+            'sale_price_usa', 'outlet_price_usa', 'sale price', 'outlet price', 'sale_price', 'price', 'نرخ', 'نرخی نوێ', 'السعر'
+          ]);
+
+          const originalPrice = rawPriceUsa !== '' ? cleanNumericPrice(rawPriceUsa) : (rawSalePrice !== '' ? cleanNumericPrice(rawSalePrice) : '');
+          const salePrice = (rawSalePrice !== '' && rawPriceUsa !== '') ? cleanNumericPrice(rawSalePrice) : 0;
+
+          const notes = findVal(['notes', 'dimensions', 'desc', 'description', 'تێبینی', 'قیاس', 'ملاحظات']) || (rawDesc !== finalModelName ? rawDesc : '');
           const image = findVal(['image', 'photo', 'img', 'وێنە', 'صورة']);
-          const catName = findVal(['category', 'cat', 'کەتەگۆری', 'بەش', 'قسم']);
-          const colName = findVal(['collection', 'group', 'سێت', 'مجموعة']);
+          const catName = findVal([
+            'category_name_en', 'category_name', 'major_category', 'sub_category',
+            'category', 'cat', 'کەتەگۆری', 'بەش', 'قسم', 'department', 'dept'
+          ]) || inferCategoryFromText(rawDesc || finalModelName);
 
           // Find category ID matching name or leave empty
           const matchedCat = categories.find(c => 
@@ -790,7 +845,11 @@ export default function AdminSpreadsheet({
             (c.name_en && c.name_en.toLowerCase() === catName.toString().toLowerCase()) ||
             (c.name_ar && c.name_ar.toLowerCase() === catName.toString().toLowerCase()) ||
             (c.id === catName)
-          );
+          ) || categories.find(c => {
+            const g1 = getCategoryGroup(c.name_ku || c.name_en || c.name);
+            const g2 = getCategoryGroup(catName);
+            return g1 !== 'unknown' && g1 === g2;
+          });
 
           // Find collection ID
           const matchedCol = collections.find(col => 
@@ -799,28 +858,30 @@ export default function AdminSpreadsheet({
 
           return {
             id: 'mod-' + Date.now() + '-' + idx,
-            name: codeOrName || '',
-            sku: itemStatus || codeOrName || '',
-            itemType: itemStatus || '',
+            name: finalModelName,
+            sku: finalSku || itemStatus,
+            itemType: itemStatus,
             categoryId: matchedCat ? matchedCat.id : (categories[0]?.id || ''),
             collectionId: matchedCol ? matchedCol.id : '',
-            stock: stock !== '' ? stock : '',
+            stock: stock !== '' ? stock : 1,
             originalPrice: originalPrice !== '' ? originalPrice : '',
-            salePrice: salePrice !== '' ? salePrice : '',
+            salePrice: salePrice !== '' ? salePrice : 0,
             notes: notes || '',
             image: image || ''
           };
         });
 
-        // Prepend or replace table data
+        // Prepend table data & reset category filter to 'all' so new items are visible
         setTableData(prev => [...importedRows, ...prev]);
+        setSelectedCategory('all');
         if (fileInputRef.current) fileInputRef.current.value = '';
+        alert(`✅ ${importedRows.length} کاڵا بە سەرکەوتوویی لە فایلی ئێکسڵەوە هاوردەکران!`);
       } catch (error) {
         console.error('Failed to parse Excel file', error);
-        alert('کێشەیەک ڕوویدا لە خوێندنەوەی ئێکسڵ / Error reading Excel file');
+        alert('کێشەیەک ڕوویدا لە خوێندنەوەی ئێکسڵ: ' + error.message);
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // Export Table Data to Excel (exports filtered subset if active)

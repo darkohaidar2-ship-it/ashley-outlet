@@ -299,7 +299,7 @@ export default function PriceMatcherModal({
     }
   };
 
-  // Handle Excel file upload
+  // Handle Excel file upload (.xlsx, .xls, .csv)
   const handleFileUpload = (file) => {
     if (!file) return;
     const reader = new FileReader();
@@ -307,14 +307,47 @@ export default function PriceMatcherModal({
       try {
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: 'array' });
-        const firstSheetName = workbook.SheetNames[0];
-        const json = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], { header: 1 });
-        if (json && json.length > 1) {
-          processRawData(json);
-        } else {
-          alert('فایلەکە بەتاڵە یان داتای پێویستی تێدا نییە.');
+        
+        // Find sheet that has the most rows
+        let bestRows = [];
+        for (const sheetName of workbook.SheetNames) {
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+          if (rows && rows.length > bestRows.length) {
+            bestRows = rows;
+          }
         }
+
+        // Filter out completely blank lines
+        const nonEmptyRows = bestRows.filter(r => Array.isArray(r) && r.some(cell => String(cell || '').trim() !== ''));
+
+        if (nonEmptyRows.length < 2) {
+          alert('فایلەکە بەتاڵە یان داتای پێویستی تێدا نییە.');
+          return;
+        }
+
+        // Auto-detect header row index if there is a banner or title row at the top
+        let headerIdx = 0;
+        for (let i = 0; i < Math.min(nonEmptyRows.length, 5); i++) {
+          const rStr = nonEmptyRows[i].map(c => String(c || '').toLowerCase()).join(' ');
+          if (
+            rStr.includes('model') || 
+            rStr.includes('price') || 
+            rStr.includes('name') || 
+            rStr.includes('code') || 
+            rStr.includes('sku') || 
+            rStr.includes('نرخ') || 
+            rStr.includes('مۆدێل') ||
+            rStr.includes('desc')
+          ) {
+            headerIdx = i;
+            break;
+          }
+        }
+
+        const cleanData = nonEmptyRows.slice(headerIdx);
+        processRawData(cleanData);
       } catch (err) {
+        console.error('Excel parse error:', err);
         alert('هەڵە لە خوێندنەوەی ئێکسڵ: ' + err.message);
       }
     };
