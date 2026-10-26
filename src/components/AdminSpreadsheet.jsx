@@ -28,7 +28,9 @@ import {
   X,
   Copy,
   ExternalLink,
-  Share2
+  Share2,
+  Filter,
+  FilterX
 } from 'lucide-react';
 import { catalogService } from '../services/catalogService';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
@@ -94,6 +96,207 @@ export default function AdminSpreadsheet({
   const [copySuccess, setCopySuccess] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Column header filter states (Google Sheets / Excel style)
+  const [columnFilters, setColumnFilters] = useState({});
+  const [activeFilterColumn, setActiveFilterColumn] = useState(null);
+  const [filterPopoverPos, setFilterPopoverPos] = useState({ top: 0, left: 0 });
+  const [filterSearchQuery, setFilterSearchQuery] = useState('');
+  const [tempFilterSelection, setTempFilterSelection] = useState(new Set());
+  const filterPopoverRef = useRef(null);
+
+  const getColumnTitle = (colKey) => {
+    switch (colKey) {
+      case 'name': return t.modelName || 'ناوی مۆدێل';
+      case 'categoryId': return t.category || 'کەتەگۆری';
+      case 'collectionId': return t.collection || 'سێت';
+      case 'itemType': return t.itemStatus || 'دۆخی کاڵا';
+      case 'stock': return t.stockCount || 'عدد';
+      case 'originalPrice': return t.oldPriceLabel || 'نرخی پێشوو';
+      case 'salePrice': return t.newPriceLabel || 'نرخی ئاوت لێت';
+      case 'notes': return t.notes || 'تێبینی';
+      default: return colKey;
+    }
+  };
+
+  const isColumnFiltered = (colKey) => {
+    const f = columnFilters[colKey];
+    return Array.isArray(f) ? f.length > 0 : Boolean(f);
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    for (const k of Object.keys(columnFilters)) {
+      if (isColumnFiltered(k)) count++;
+    }
+    if (selectedCategory && selectedCategory !== 'all') count++;
+    return count;
+  }, [columnFilters, selectedCategory]);
+
+  const handleClearAllFilters = () => {
+    setColumnFilters({});
+    setSelectedCategory('all');
+    setTableSearch('');
+  };
+
+  const getDistinctColumnValues = (colKey) => {
+    const map = new Map();
+
+    tableData.forEach(row => {
+      let rawVal = row[colKey];
+      let displayVal = '';
+      let color = null;
+
+      if (colKey === 'categoryId') {
+        const cat = categories.find(c => c.id === rawVal);
+        displayVal = cat ? (lang === 'ku' ? (cat.name_ku || cat.name) : (cat.name_en || cat.name)) : '(بێ کەتەگۆری)';
+        color = cat ? getCategoryColor(cat, settings?.categoryColors) : null;
+        rawVal = rawVal || '__EMPTY__';
+      } else if (colKey === 'collectionId') {
+        const col = collections.find(c => c.id === rawVal);
+        displayVal = col ? col.name : '(بێ سێت)';
+        rawVal = rawVal || '__EMPTY__';
+      } else if (colKey === 'itemType') {
+        displayVal = rawVal || '(بێ دۆخ)';
+        color = rawVal ? getStatusColor(rawVal, statusColors) : null;
+        rawVal = rawVal || '__EMPTY__';
+      } else if (colKey === 'stock') {
+        rawVal = row.stock !== undefined && row.stock !== '' ? Number(row.stock) : 0;
+        displayVal = `${rawVal} دانە`;
+      } else if (colKey === 'originalPrice' || colKey === 'salePrice') {
+        rawVal = Number(row[colKey]) || 0;
+        displayVal = rawVal > 0 ? `${rawVal.toLocaleString()} د.ع` : '0';
+      } else {
+        displayVal = String(rawVal || '(بەتاڵ)');
+        rawVal = rawVal || '__EMPTY__';
+      }
+
+      if (!map.has(rawVal)) {
+        map.set(rawVal, {
+          key: rawVal,
+          label: displayVal,
+          count: 1,
+          color
+        });
+      } else {
+        map.get(rawVal).count += 1;
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { numeric: true }));
+  };
+
+  // Popover open handler
+  const handleOpenFilterPopover = (e, colKey) => {
+    e.stopPropagation();
+    if (activeFilterColumn === colKey) {
+      setActiveFilterColumn(null);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const popoverWidth = 270;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+
+    let left = rect.left;
+    if (left + popoverWidth > windowWidth - 12) {
+      left = Math.max(12, windowWidth - popoverWidth - 12);
+    }
+
+    let top = rect.bottom + 4;
+    if (top + 340 > windowHeight) {
+      top = Math.max(12, rect.top - 340);
+    }
+
+    setFilterPopoverPos({ top, left });
+    setActiveFilterColumn(colKey);
+    setFilterSearchQuery('');
+
+    const distinct = getDistinctColumnValues(colKey);
+    const current = columnFilters[colKey];
+    if (Array.isArray(current) && current.length > 0) {
+      setTempFilterSelection(new Set(current));
+    } else {
+      setTempFilterSelection(new Set(distinct.map(d => d.key)));
+    }
+  };
+
+  // Click outside / Escape effect
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (activeFilterColumn && filterPopoverRef.current && !filterPopoverRef.current.contains(e.target)) {
+        if (!e.target.closest(`[data-filter-trigger="${activeFilterColumn}"]`)) {
+          setActiveFilterColumn(null);
+        }
+      }
+    };
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && activeFilterColumn) {
+        setActiveFilterColumn(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [activeFilterColumn]);
+
+  const handleToggleValue = (key) => {
+    const next = new Set(tempFilterSelection);
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+    setTempFilterSelection(next);
+  };
+
+  const handleSelectAllValues = () => {
+    const distinct = getDistinctColumnValues(activeFilterColumn);
+    setTempFilterSelection(new Set(distinct.map(d => d.key)));
+  };
+
+  const handleClearAllValues = () => {
+    setTempFilterSelection(new Set());
+  };
+
+  const handleApplyColumnFilter = () => {
+    const distinct = getDistinctColumnValues(activeFilterColumn);
+    if (tempFilterSelection.size >= distinct.length) {
+      const next = { ...columnFilters };
+      delete next[activeFilterColumn];
+      setColumnFilters(next);
+    } else {
+      setColumnFilters({
+        ...columnFilters,
+        [activeFilterColumn]: Array.from(tempFilterSelection)
+      });
+    }
+    setActiveFilterColumn(null);
+  };
+
+  const handleResetColumnFilter = () => {
+    const next = { ...columnFilters };
+    delete next[activeFilterColumn];
+    setColumnFilters(next);
+    setActiveFilterColumn(null);
+  };
+
+  const distinctValuesForActiveColumn = useMemo(() => {
+    if (!activeFilterColumn) return [];
+    return getDistinctColumnValues(activeFilterColumn);
+  }, [activeFilterColumn, tableData, categories, collections, statusColors]);
+
+  const searchedValuesForActiveColumn = useMemo(() => {
+    const q = filterSearchQuery.trim().toLowerCase();
+    if (!q) return distinctValuesForActiveColumn;
+    return distinctValuesForActiveColumn.filter(v => 
+      (v.label || '').toLowerCase().includes(q) || String(v.key || '').toLowerCase().includes(q)
+    );
+  }, [distinctValuesForActiveColumn, filterSearchQuery]);
+
   // Category counts across entire table
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -105,16 +308,52 @@ export default function AdminSpreadsheet({
     return counts;
   }, [tableData]);
 
-  // In-table real-time filtered dataset (filters by Selected Category + Search Query)
+  // In-table real-time filtered dataset (filters by Selected Category + Column Filters + Search Query)
   const filteredTableData = useMemo(() => {
     let list = tableData;
 
-    // 1. Filter by category
+    // 1. Filter by category strip
     if (selectedCategory && selectedCategory !== 'all') {
       list = list.filter(row => row.categoryId === selectedCategory);
     }
 
-    // 2. Filter by search query
+    // 2. Filter by Column-level filters (Google Sheets / Excel style)
+    const activeFilterKeys = Object.keys(columnFilters).filter(k => {
+      const f = columnFilters[k];
+      return Array.isArray(f) ? f.length > 0 : Boolean(f);
+    });
+
+    if (activeFilterKeys.length > 0) {
+      list = list.filter(row => {
+        for (const colKey of activeFilterKeys) {
+          const filterVal = columnFilters[colKey];
+          if (!filterVal) continue;
+
+          if (Array.isArray(filterVal)) {
+            let rowVal = row[colKey];
+            if (colKey === 'categoryId' || colKey === 'collectionId' || colKey === 'itemType') {
+              rowVal = rowVal || '__EMPTY__';
+            } else if (colKey === 'stock' || colKey === 'salePrice' || colKey === 'originalPrice') {
+              rowVal = Number(rowVal) || 0;
+            } else {
+              rowVal = rowVal || '__EMPTY__';
+            }
+            if (!filterVal.includes(rowVal)) {
+              return false;
+            }
+          } else if (typeof filterVal === 'string') {
+            const q = filterVal.toLowerCase();
+            const rowVal = String(row[colKey] || '').toLowerCase();
+            if (!rowVal.includes(q)) {
+              return false;
+            }
+          }
+        }
+        return true;
+      });
+    }
+
+    // 3. Filter by search query (Ctrl+F)
     const q = tableSearch.trim().toLowerCase();
     if (!q) return list;
 
@@ -140,7 +379,7 @@ export default function AdminSpreadsheet({
 
       return false;
     });
-  }, [tableData, selectedCategory, tableSearch, categories, collections]);
+  }, [tableData, selectedCategory, columnFilters, tableSearch, categories, collections]);
 
   // Bulk apply status to items (either only those with empty status, or all items)
   const handleBulkApplyStatus = (statusName, onlyEmpty = true) => {
@@ -355,9 +594,9 @@ export default function AdminSpreadsheet({
   };
 
   // Interactive Column Sorting
-  const handleSortColumn = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+  const handleSortColumn = (key, explicitDirection) => {
+    let direction = explicitDirection || 'asc';
+    if (!explicitDirection && sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
@@ -791,6 +1030,19 @@ export default function AdminSpreadsheet({
             >
               {filteredTableData.length !== tableData.length ? `${filteredTableData.length} / ${tableData.length}` : tableData.length}
             </span>
+
+            {/* Quick Clear All Active Filters Button */}
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllFilters}
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 flex items-center gap-1 transition-all cursor-pointer shadow-2xs active:scale-95"
+                title="لابردنی هەموو فلتەرەکانی کۆڵۆمەکان و کەتەگۆری"
+              >
+                <FilterX className="w-3 h-3 text-amber-700" />
+                <span>لابردنی فلتەرەکان ({activeFilterCount})</span>
+              </button>
+            )}
           </div>
 
           {/* Real-time search box (Ctrl+F) */}
@@ -1034,105 +1286,241 @@ export default function AdminSpreadsheet({
       <div className="flex-1 bg-white rounded-xl border-2 border-slate-300 overflow-auto shadow-xs">
         <table className="w-full text-xs text-slate-800 border-collapse border border-slate-300 select-text">
           
-          {/* Header Row */}
+          {/* Header Row (Google Sheets Style with Sort & Filter on Each Column) */}
           <thead className="sticky top-0 z-10 bg-slate-100 text-slate-800 text-[11px] font-bold border-b-2 border-slate-400 shadow-2xs">
             <tr>
               <th className="p-2 w-10 text-center border border-slate-300 bg-slate-100 font-bold">#</th>
               <th className="p-2 w-24 text-center border border-slate-300 bg-slate-100 font-bold">{t.uploadImage}</th>
               
-              <th 
-                onClick={() => handleSortColumn('name')}
-                className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت (A بۆ Z / پێچەوانە)"
-              >
+              {/* Model Name */}
+              <th className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 select-none group font-bold">
                 <div className="flex items-center justify-between gap-1">
-                  <span>{t.modelName} *</span>
-                  {renderSortIndicator('name')}
+                  <span 
+                    onClick={() => handleSortColumn('name')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1 flex-1 truncate"
+                    title="کلیک بکە بۆ سۆرت (A بۆ Z / پێچەوانە)"
+                  >
+                    <span>{t.modelName} *</span>
+                    {renderSortIndicator('name')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="name"
+                    onClick={(e) => handleOpenFilterPopover(e, 'name')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('name')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی مۆدێلەکان"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th 
-                onClick={() => handleSortColumn('categoryId')}
-                className="p-2 min-w-[120px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت بەپێی کەتەگۆری"
-              >
+              {/* Category */}
+              <th className="p-2 min-w-[130px] text-start border border-slate-300 bg-slate-100 select-none group font-bold">
                 <div className="flex items-center justify-between gap-1">
-                  <span>{t.category}</span>
-                  {renderSortIndicator('categoryId')}
+                  <span 
+                    onClick={() => handleSortColumn('categoryId')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1 flex-1 truncate"
+                    title="کلیک بکە بۆ سۆرت بەپێی کەتەگۆری"
+                  >
+                    <span>{t.category}</span>
+                    {renderSortIndicator('categoryId')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="categoryId"
+                    onClick={(e) => handleOpenFilterPopover(e, 'categoryId')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('categoryId')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی کەتەگۆرییەکان"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th 
-                onClick={() => handleSortColumn('collectionId')}
-                className="p-2 min-w-[120px] text-start border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت بەپێی سێت"
-              >
+              {/* Collection */}
+              <th className="p-2 min-w-[130px] text-start border border-slate-300 bg-slate-100 select-none group font-bold">
                 <div className="flex items-center justify-between gap-1">
-                  <span>{t.collection}</span>
-                  {renderSortIndicator('collectionId')}
+                  <span 
+                    onClick={() => handleSortColumn('collectionId')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1 flex-1 truncate"
+                    title="کلیک بکە بۆ سۆرت بەپێی سێت"
+                  >
+                    <span>{t.collection}</span>
+                    {renderSortIndicator('collectionId')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="collectionId"
+                    onClick={(e) => handleOpenFilterPopover(e, 'collectionId')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('collectionId')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی سێتەکان"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th 
-                className="p-2 min-w-[140px] text-start border border-slate-300 bg-slate-100 select-none group font-bold"
-              >
+              {/* Item Status */}
+              <th className="p-2 min-w-[150px] text-start border border-slate-300 bg-slate-100 select-none group font-bold">
                 <div className="flex items-center justify-between gap-1">
                   <span 
                     onClick={() => handleSortColumn('itemType')}
-                    className="cursor-pointer flex items-center gap-1 font-bold flex-1"
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1 flex-1 truncate"
                     title="کلیک بکە بۆ سۆرت بەپێی دۆخی کاڵا"
                   >
                     <span>{t.itemStatus || 'دۆخی کاڵا'}</span>
                     {renderSortIndicator('itemType')}
                   </span>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      data-filter-trigger="itemType"
+                      onClick={(e) => handleOpenFilterPopover(e, 'itemType')}
+                      className={`p-1 rounded-md transition-all cursor-pointer ${
+                        isColumnFiltered('itemType')
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                      }`}
+                      title="فلتەرکردنی دۆخی کاڵا"
+                    >
+                      <Filter className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsStatusModalOpen(true);
+                      }}
+                      className="p-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md border border-amber-300 shadow-2xs cursor-pointer"
+                      title="ڕێکخستنی دۆخەکان (ستۆک، ئاوتلێت، یەدەگ...)"
+                    >
+                      <Tag className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </th>
+
+              {/* Stock */}
+              <th className="p-2 w-24 text-center border border-slate-300 bg-slate-100 select-none group font-bold">
+                <div className="flex items-center justify-center gap-1">
+                  <span 
+                    onClick={() => handleSortColumn('stock')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1"
+                    title="کلیک بکە بۆ سۆرت بەپێی عدد"
+                  >
+                    <span>{t.stockCount}</span>
+                    {renderSortIndicator('stock')}
+                  </span>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsStatusModalOpen(true);
-                    }}
-                    className="p-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-md border border-amber-300 shadow-2xs cursor-pointer"
-                    title="ڕێکخستنی دۆخەکان (ستۆک، ئاوتلێت، یەدەگ...)"
+                    data-filter-trigger="stock"
+                    onClick={(e) => handleOpenFilterPopover(e, 'stock')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('stock')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی عدد"
                   >
-                    <Tag className="w-3 h-3" />
+                    <Filter className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </th>
 
-              <th 
-                onClick={() => handleSortColumn('stock')}
-                className="p-2 w-20 text-center border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت بەپێی عدد"
-              >
+              {/* Original Price */}
+              <th className="p-2 w-28 text-center border border-slate-300 bg-slate-100 select-none group font-bold">
                 <div className="flex items-center justify-center gap-1">
-                  <span>{t.stockCount}</span>
-                  {renderSortIndicator('stock')}
+                  <span 
+                    onClick={() => handleSortColumn('originalPrice')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1"
+                    title="کلیک بکە بۆ سۆرت بەپێی نرخی پێشوو"
+                  >
+                    <span>{t.oldPriceLabel}</span>
+                    {renderSortIndicator('originalPrice')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="originalPrice"
+                    onClick={(e) => handleOpenFilterPopover(e, 'originalPrice')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('originalPrice')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی نرخی پێشوو"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th 
-                onClick={() => handleSortColumn('originalPrice')}
-                className="p-2 w-24 text-center border border-slate-300 bg-slate-100 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت بەپێی نرخی پێشوو"
-              >
+              {/* Sale Price (Outlet Price) */}
+              <th className="p-2 w-32 text-center border border-slate-300 bg-slate-100 text-red-600 select-none group font-bold">
                 <div className="flex items-center justify-center gap-1">
-                  <span>{t.oldPriceLabel}</span>
-                  {renderSortIndicator('originalPrice')}
+                  <span 
+                    onClick={() => handleSortColumn('salePrice')}
+                    className="cursor-pointer hover:text-red-700 transition-colors flex items-center gap-1"
+                    title="کلیک بکە بۆ سۆرت بەپێی نرخی ئاوت لێت"
+                  >
+                    <span>{t.newPriceLabel} *</span>
+                    {renderSortIndicator('salePrice')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="salePrice"
+                    onClick={(e) => handleOpenFilterPopover(e, 'salePrice')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('salePrice')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی نرخی ئاوت لێت"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th 
-                onClick={() => handleSortColumn('salePrice')}
-                className="p-2 w-28 text-center border border-slate-300 bg-slate-100 text-red-600 cursor-pointer select-none hover:bg-slate-200 transition-colors group font-bold"
-                title="کلیک بکە بۆ سۆرت بەپێی نرخی ئاوت لێت"
-              >
-                <div className="flex items-center justify-center gap-1">
-                  <span>{t.newPriceLabel} *</span>
-                  {renderSortIndicator('salePrice')}
+              {/* Notes */}
+              <th className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 select-none group font-bold">
+                <div className="flex items-center justify-between gap-1">
+                  <span 
+                    onClick={() => handleSortColumn('notes')}
+                    className="cursor-pointer hover:text-red-600 transition-colors flex items-center gap-1 flex-1 truncate"
+                    title="کلیک بکە بۆ سۆرت بەپێی تێبینی"
+                  >
+                    <span>{t.notes}</span>
+                    {renderSortIndicator('notes')}
+                  </span>
+                  <button
+                    type="button"
+                    data-filter-trigger="notes"
+                    onClick={(e) => handleOpenFilterPopover(e, 'notes')}
+                    className={`p-1 rounded-md transition-all cursor-pointer ${
+                      isColumnFiltered('notes')
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'text-slate-400 hover:text-slate-800 hover:bg-slate-200 opacity-60 hover:opacity-100'
+                    }`}
+                    title="فلتەرکردنی تێبینییەکان"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </th>
 
-              <th className="p-2 min-w-[200px] text-start border border-slate-300 bg-slate-100 font-bold">{t.notes}</th>
               <th className="p-2 w-16 text-center border border-slate-300 bg-slate-100"></th>
             </tr>
           </thead>
@@ -1974,6 +2362,156 @@ export default function AdminSpreadsheet({
               </button>
             </div>
 
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 7. Column Filter Popover (Google Sheets / Excel Style Checklist & Sort) */}
+      {activeFilterColumn && typeof document !== 'undefined' && createPortal(
+        <div 
+          ref={filterPopoverRef}
+          className="fixed z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 w-68 overflow-hidden animate-fadeIn select-text text-xs font-sans no-print"
+          style={{
+            top: `${filterPopoverPos.top}px`,
+            left: `${filterPopoverPos.left}px`,
+            maxHeight: '400px'
+          }}
+        >
+          {/* Header */}
+          <div className="p-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div className="flex items-center gap-1.5 font-bold text-slate-800">
+              <Filter className="w-3.5 h-3.5 text-emerald-600" />
+              <span>فلتەری {getColumnTitle(activeFilterColumn)}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveFilterColumn(null)}
+              className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
+              title="داخستن"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Quick Sort Options */}
+          <div className="p-1.5 border-b border-slate-100 space-y-0.5 bg-white">
+            <button
+              type="button"
+              onClick={() => {
+                handleSortColumn(activeFilterColumn, 'asc');
+                setActiveFilterColumn(null);
+              }}
+              className="w-full text-start px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-between transition-colors cursor-pointer text-xs"
+            >
+              <span className="flex items-center gap-1.5">
+                <ArrowDownAZ className="w-3.5 h-3.5 text-slate-500" />
+                <span>سۆرت: A ➔ Z (کەم بۆ زۆر)</span>
+              </span>
+              {sortConfig.key === activeFilterColumn && sortConfig.direction === 'asc' && (
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                handleSortColumn(activeFilterColumn, 'desc');
+                setActiveFilterColumn(null);
+              }}
+              className="w-full text-start px-2 py-1.5 rounded-lg hover:bg-slate-100 text-slate-700 font-bold flex items-center justify-between transition-colors cursor-pointer text-xs"
+            >
+              <span className="flex items-center gap-1.5">
+                <ArrowUpZA className="w-3.5 h-3.5 text-slate-500" />
+                <span>سۆرت: Z ➔ A (زۆر بۆ کەم)</span>
+              </span>
+              {sortConfig.key === activeFilterColumn && sortConfig.direction === 'desc' && (
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+              )}
+            </button>
+          </div>
+
+          {/* Value Search & Quick Select */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/60">
+            <div className="relative">
+              <Search className="w-3 h-3 text-slate-400 absolute start-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={filterSearchQuery}
+                onChange={(e) => setFilterSearchQuery(e.target.value)}
+                placeholder="گەڕان لە بەهاکان..."
+                className="w-full ps-7 pe-2 py-1 bg-white rounded-lg border border-slate-200 text-xs font-medium focus:outline-none focus:border-emerald-500 shadow-2xs"
+              />
+            </div>
+
+            {/* Select All / Clear All */}
+            <div className="flex items-center justify-between pt-1.5 px-0.5 text-[11px] font-bold">
+              <button
+                type="button"
+                onClick={handleSelectAllValues}
+                className="text-emerald-700 hover:underline cursor-pointer"
+              >
+                دیاریکردنی هەمووی
+              </button>
+              <button
+                type="button"
+                onClick={handleClearAllValues}
+                className="text-slate-500 hover:underline cursor-pointer"
+              >
+                لابردنی هەمووی
+              </button>
+            </div>
+          </div>
+
+          {/* Value Checklist */}
+          <div className="max-h-44 overflow-y-auto p-2 space-y-1 bg-white">
+            {searchedValuesForActiveColumn.map((valObj) => {
+              const isChecked = tempFilterSelection.has(valObj.key);
+              return (
+                <label
+                  key={String(valObj.key)}
+                  className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-xs select-none"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleToggleValue(valObj.key)}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                    />
+                    {valObj.color && (
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style={{ backgroundColor: valObj.color }} />
+                    )}
+                    <span className="truncate font-medium text-slate-800">{valObj.label}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono ms-2 shrink-0">({valObj.count})</span>
+                </label>
+              );
+            })}
+            {searchedValuesForActiveColumn.length === 0 && (
+              <div className="py-3 text-center text-slate-400 text-xs font-medium">
+                هیچ بەهایەک نەدۆزرایەوە
+              </div>
+            )}
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-1.5">
+            <button
+              type="button"
+              onClick={handleResetColumnFilter}
+              className="px-2.5 py-1 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg font-bold text-xs transition-colors cursor-pointer"
+            >
+              لابردنی فلتەر
+            </button>
+
+            <button
+              type="button"
+              onClick={handleApplyColumnFilter}
+              className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+            >
+              جێبەجێکردن (OK)
+            </button>
           </div>
         </div>,
         document.body
