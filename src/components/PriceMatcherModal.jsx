@@ -224,6 +224,7 @@ export default function PriceMatcherModal({
         id: 'stg_' + idx + '_' + Math.random().toString(36).substring(2, 7),
         rawCode,
         extractedCode: extracted.code,
+        rawModel: rawModel || extracted.model,
         rawDesc: rawDesc || rawModel,
         predictedModel: extracted.model,
         category: extracted.category || rawCat,
@@ -522,12 +523,21 @@ export default function PriceMatcherModal({
       if (!q) return true;
 
       const code = (item.extractedCode || item.rawCode || '').toLowerCase();
+      const rawModel = (item.rawModel || '').toLowerCase();
       const model = (item.predictedModel || '').toLowerCase();
       const desc = (item.rawDesc || '').toLowerCase();
       const price = String(item.price || '').toLowerCase();
+      const cat = (item.category || '').toLowerCase();
 
-      return code.includes(q) || model.includes(q) || desc.includes(q) || price.includes(q);
-    }).slice(0, 70);
+      return (
+        code.includes(q) ||
+        rawModel.includes(q) ||
+        model.includes(q) ||
+        desc.includes(q) ||
+        price.includes(q) ||
+        cat.includes(q)
+      );
+    }).slice(0, 80);
   }, [excelSearchTarget, stagingData, excelSearchQuery, excelSearchCat]);
 
   /**
@@ -1038,9 +1048,23 @@ export default function PriceMatcherModal({
 
                                 {/* Matched Excel Row details */}
                                 {item.matchedExcelRow && (
-                                  <div className="text-[10px] text-slate-500 font-mono truncate max-w-[280px]" title={item.matchedExcelRow.rawDesc} dir="ltr">
-                                    {item.matchedExcelRow.extractedCode ? `[${item.matchedExcelRow.extractedCode}] ` : ''}
-                                    {item.matchedExcelRow.rawDesc || item.matchedExcelRow.predictedModel}
+                                  <div className="text-[10px] space-y-0.5 text-slate-600 font-mono mt-1" dir="ltr">
+                                    <div className="flex items-center gap-1.5 truncate max-w-[290px]">
+                                      <span className="font-black text-slate-400 text-[9px] uppercase tracking-wider bg-slate-100 px-1 py-0.2 rounded border border-slate-200">
+                                        MODEL EN:
+                                      </span>
+                                      <span className="font-bold text-blue-700">
+                                        {item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 truncate max-w-[290px]" title={item.matchedExcelRow.rawDesc}>
+                                      <span className="font-black text-slate-400 text-[9px] uppercase tracking-wider bg-slate-100 px-1 py-0.2 rounded border border-slate-200 shrink-0">
+                                        NAME EN:
+                                      </span>
+                                      <span className="font-semibold text-slate-800 truncate">
+                                        {item.matchedExcelRow.rawDesc || item.matchedExcelRow.predictedModel}
+                                      </span>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1409,50 +1433,61 @@ export default function PriceMatcherModal({
                     {excelDialogSearchResults.map((row) => (
                       <div
                         key={row.id}
-                        className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 hover:border-blue-400 hover:shadow-xs transition-all"
+                        className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 hover:shadow-md transition-all group"
                       >
-                        <div className="min-w-0" dir="ltr">
-                          <div className="flex items-center gap-2">
-                            {row.extractedCode && (
-                              <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
-                                {row.extractedCode}
+                        <div className="min-w-0 flex-1 space-y-1.5" dir="ltr">
+                          
+                          {/* Row 1: MODEL EN and Badges */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                              MODEL EN:
+                            </span>
+                            <span className="font-mono text-xs font-black text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                              {row.rawModel || row.predictedModel || '-'}
+                            </span>
+
+                            {row.extractedCode && row.extractedCode !== (row.rawModel || row.predictedModel) && (
+                              <span className="font-mono text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                SKU: {row.extractedCode}
                               </span>
                             )}
-                            <span className="font-bold text-slate-800 text-xs truncate max-w-[280px]">
-                              {row.predictedModel}
+
+                            {row.category && (
+                              <span className="text-[10px] font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200">
+                                {row.category}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Row 2: NAME EN (Full description from Excel) */}
+                          <div className="flex items-start gap-1.5 text-xs text-slate-800">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0 mt-0.5">
+                              NAME EN:
+                            </span>
+                            <span className="font-bold text-slate-800 leading-snug break-words">
+                              {row.rawDesc || row.predictedModel}
                             </span>
                           </div>
 
-                          <div className="text-[11px] text-slate-600 truncate max-w-[320px] mt-0.5" title={row.rawDesc}>
-                            {row.rawDesc}
-                          </div>
-
-                          {row.category && (
-                            <div className="mt-1">
-                              <span className="text-[9.5px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.2 rounded border border-purple-200">
-                                {row.category}
-                              </span>
-                            </div>
-                          )}
                         </div>
 
                         {/* Price & Pick Button */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="text-end">
-                            <div className="font-mono font-black text-emerald-700 text-base">
-                              ${row.price || 0}
-                            </div>
-                            <div className="text-[9.5px] text-slate-400 font-bold">
+                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                          <div className="text-start sm:text-end">
+                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                               price_usa
+                            </div>
+                            <div className="font-mono font-black text-emerald-700 text-lg leading-none mt-0.5">
+                              ${row.price || 0}
                             </div>
                           </div>
 
                           <button
                             type="button"
                             onClick={() => handleAssignExcelRowToModel(excelSearchTarget.model.id, row)}
-                            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1"
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
                           >
-                            <Check className="w-3.5 h-3.5" />
+                            <Check className="w-4 h-4" />
                             <span>وەرگرتنی ئەم نرخە</span>
                           </button>
                         </div>
