@@ -1066,20 +1066,22 @@ export default function SlideshowView({
                   </div>
 
                   <div className="text-start border-s border-white/20 ps-3.5 ms-1 shrink-0">
-                    {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="text-xs text-slate-400 line-through font-medium">
-                          {activeModel.originalPrice.toLocaleString()} {t.currency}
+                    {/* 1. Original Price: Small on top */}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] text-white/70 font-medium">پێش داشکاندن:</span>
+                      <span className="text-xs text-white font-mono font-bold">
+                        {activeModel.originalPrice && Number(activeModel.originalPrice) > 0 ? `${Number(activeModel.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
+                      </span>
+                      {discountPercent > 0 && (
+                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-rose-600 text-white text-[10px] font-black shadow-xs">
+                          %{discountPercent}
                         </span>
-                        {discountPercent > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-rose-600 text-white text-[11px] font-black shadow-xs">
-                            %{discountPercent}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
+
+                    {/* 2. Discount Price: Larger, 0 if not set */}
                     <div className="text-lg sm:text-2xl font-black text-red-500 leading-none">
-                      {activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
+                      {activeModel.salePrice && Number(activeModel.salePrice) > 0 ? Number(activeModel.salePrice).toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
                     </div>
                   </div>
                 </div>
@@ -1192,22 +1194,22 @@ export default function SlideshowView({
                 }`}>
                   
                   <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-1">
-                    {activeModel.originalPrice > 0 && activeModel.originalPrice > activeModel.salePrice && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs sm:text-sm text-slate-400 line-through font-semibold">
-                          {activeModel.originalPrice.toLocaleString()} {t.currency}
+                    {/* 1. Original Price: Small on top */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-slate-500 font-medium">پێش داشکاندن:</span>
+                      <span className="text-xs sm:text-sm text-slate-900 font-bold font-mono">
+                        {activeModel.originalPrice && Number(activeModel.originalPrice) > 0 ? `${Number(activeModel.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
+                      </span>
+                      {discountPercent > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-md bg-rose-600 text-white text-[11px] font-black shadow-xs">
+                          %{discountPercent}
                         </span>
-                        {discountPercent > 0 && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-red-400/25">
-                            <span>{discountPercent}%</span>
-                            <span className="text-[10px] sm:text-[11px] font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
-                          </span>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
 
+                    {/* 2. Discount Price: Larger */}
                     <div className="text-2xl sm:text-3xl font-black text-red-600 leading-none flex items-baseline gap-1">
-                      <span>{activeModel.salePrice ? activeModel.salePrice.toLocaleString() : '0'}</span>
+                      <span>{activeModel.salePrice && Number(activeModel.salePrice) > 0 ? Number(activeModel.salePrice).toLocaleString() : '0'}</span>
                       <span className="text-xs font-bold text-red-600/80">{t.currency}</span>
                     </div>
                   </div>

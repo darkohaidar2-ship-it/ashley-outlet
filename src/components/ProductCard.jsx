@@ -136,18 +136,22 @@ export default function ProductCard({
         {/* Price & Action Area */}
         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
           <div>
-            {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[11px] text-slate-400 line-through font-semibold leading-none">
-                  {model.originalPrice.toLocaleString()} {t.currency}
-                </span>
-                <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded-md leading-none">
+            {/* 1. Original Price: Small on top in BLACK */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="text-[10px] text-slate-500 font-medium">پێش داشکاندن:</span>
+              <span className="text-xs font-bold text-slate-900 font-mono">
+                {model.originalPrice && Number(model.originalPrice) > 0 ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
+              </span>
+              {discountPercent > 0 && (
+                <span className="text-[9.5px] font-extrabold text-red-600 bg-red-50 border border-red-100 px-1 py-0.2 rounded-md leading-none">
                   {discountPercent}%-
                 </span>
-              </div>
-            )}
-            <div className="text-sm sm:text-base font-black text-red-600 leading-none flex items-baseline gap-1 tracking-tight">
-              <span>{model.salePrice ? model.salePrice.toLocaleString() : '0'}</span>
+              )}
+            </div>
+
+            {/* 2. Discounted / Sale Price: Larger */}
+            <div className="text-base sm:text-lg font-black text-red-600 leading-none flex items-baseline gap-1 tracking-tight">
+              <span>{model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}</span>
               <span className="text-[10px] font-bold text-red-600/80">{t.currency}</span>
             </div>
           </div>

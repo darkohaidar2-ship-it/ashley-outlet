@@ -447,7 +447,7 @@ export default function PrintSheet({
 
             {/* 4. Pricing Box - Luxuriously Themed with Status Color */}
             <div 
-              className="my-2 p-4 rounded-2xl flex items-center justify-between transition-colors"
+              className="my-2 p-3 sm:p-4 rounded-2xl flex items-center justify-between transition-colors"
               style={{
                 backgroundColor: hexToRgba(statusColor, 0.05),
                 border: `2.5px solid ${statusColor}`
@@ -457,34 +457,44 @@ export default function PrintSheet({
               {/* Stock info */}
               <div>
                 <div className="text-[11px] font-bold text-slate-500 uppercase">
-                  {t.stock}
+                  {t.stock || 'بڕی بەردەست'}
                 </div>
-                <div className="text-base font-extrabold text-slate-900">
+                <div className="text-base sm:text-lg font-black text-slate-900">
                   {model.stock && model.stock > 0 ? `${model.stock} ${t.piece}` : t.outOfStock}
                 </div>
               </div>
 
-              {/* Original Price */}
-              {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-                <div className="text-center px-4 border-s border-e border-slate-200">
-                  <div className="text-[11px] font-bold text-slate-400 uppercase line-through">
-                    {t.originalPrice}
-                  </div>
-                  <div className="text-base font-bold text-slate-400 line-through">
-                    {model.originalPrice.toLocaleString()} {t.currency}
-                  </div>
+              {/* Pricing Block: Original Price Small on Top (Solid Black), Discount Price Larger (Color) */}
+              <div className="text-end flex flex-col items-end justify-center">
+                
+                {/* 1. Original Price (نەخی ئێستا / نرخی پێش داشکاندن) - Written small on top in BLACK */}
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900 mb-0.5">
+                  <span className="text-[10.5px] sm:text-xs font-bold text-slate-600">
+                    {t.originalPrice || 'نرخی پێش داشکاندن'}:
+                  </span>
+                  <span className="font-mono font-black text-slate-900 text-sm sm:text-base">
+                    {model.originalPrice && Number(model.originalPrice) > 0
+                      ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}`
+                      : `0 ${t.currency}`}
+                  </span>
+                  {discountPercent > 0 && (
+                    <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-1.5 py-0.2 rounded-md">
+                      %{discountPercent}-
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {/* Outlet Final Price */}
-              <div className="text-end">
-                <div className="text-xs font-black uppercase tracking-wider" style={{ color: statusColor }}>
-                  {itemStatus ? `${t.outletPrice || 'نرخی کۆتایی'} (${itemStatus})` : t.outletPrice}
+                {/* 2. Discounted / Outlet Price (نرخی داشکاندن) - MUCH LARGER, 0 if not set */}
+                <div className="flex items-baseline justify-end gap-1.5" style={{ color: statusColor }}>
+                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider opacity-90 me-1">
+                    {itemStatus ? `${t.outletPrice || 'نرخی داشکاندن'} (${itemStatus})` : (t.outletPrice || 'نرخی داشکاندن')}:
+                  </span>
+                  <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono">
+                    {model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}
+                  </span>
+                  <span className="text-sm sm:text-base font-bold opacity-85">{t.currency}</span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-black flex items-baseline justify-end gap-1" style={{ color: statusColor }}>
-                  <span>{model.salePrice ? model.salePrice.toLocaleString() : '0'}</span>
-                  <span className="text-xs font-bold opacity-85">{t.currency}</span>
-                </div>
+
               </div>
 
             </div>

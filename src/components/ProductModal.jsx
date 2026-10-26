@@ -253,19 +253,28 @@ export default function ProductModal({
 
             {/* Price Box */}
             <div className="mt-5 p-4 rounded-2xl bg-red-50/60 border border-red-100">
-              <div className="text-xs text-red-600/80 font-bold uppercase tracking-wider mb-1">
-                {t.outletPrice}
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-red-600">
-                  {model.salePrice ? model.salePrice.toLocaleString() : '0'}
+              {/* 1. Original Price: Small on top in BLACK */}
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 mb-1">
+                <span className="text-[11px] text-slate-600 font-medium">{t.originalPrice || 'نرخی پێش داشکاندن'}:</span>
+                <span className="font-mono font-black text-slate-900">
+                  {model.originalPrice && Number(model.originalPrice) > 0 ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
                 </span>
-                <span className="text-sm font-bold text-red-600/80">{t.currency}</span>
-                {model.originalPrice > 0 && model.originalPrice > model.salePrice && (
-                  <span className="text-sm text-slate-400 line-through font-medium ms-2">
-                    {model.originalPrice.toLocaleString()} {t.currency}
+                {discountPercent > 0 && (
+                  <span className="text-[10px] font-extrabold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.2 rounded-md">
+                    %{discountPercent}-
                   </span>
                 )}
+              </div>
+
+              {/* 2. Discounted / Sale Price: Larger, 0 if not set */}
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs text-red-600/80 font-bold uppercase tracking-wider">
+                  {t.outletPrice || 'نرخی داشکاندن'}:
+                </span>
+                <span className="text-2xl sm:text-3xl font-black text-red-600 font-mono">
+                  {model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}
+                </span>
+                <span className="text-sm font-bold text-red-600/80">{t.currency}</span>
               </div>
             </div>
 

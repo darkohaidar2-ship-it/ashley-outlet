@@ -560,7 +560,8 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
   const catalogCategoryName = cat ? (cat.name_en || cat.name_ku || cat.name || '') : '';
 
   const rawStagingPrice = parsePriceToFloat(stagingItem.price);
-  const currentCatalogPrice = bestMatch ? parsePriceToFloat(bestMatch.salePrice || bestMatch.originalPrice) : null;
+  const currentCatalogPrice = bestMatch ? parsePriceToFloat(bestMatch.originalPrice || bestMatch.salePrice) : null;
+  const currentSalePrice = bestMatch ? parsePriceToFloat(bestMatch.salePrice) : 0;
   const hasValidPrices = rawStagingPrice > 0 && currentCatalogPrice !== null && !isNaN(currentCatalogPrice);
   const priceDifference = hasValidPrices ? (rawStagingPrice - currentCatalogPrice) : null;
   const isPriceEqual = hasValidPrices ? Math.abs(rawStagingPrice - currentCatalogPrice) < 0.001 : false;
@@ -573,6 +574,7 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
     isPriceEqual,
     isCategoryMatched,
     currentCatalogPrice,
+    currentSalePrice,
     catalogCategoryName
   };
 }

@@ -14,7 +14,7 @@ export const translations = {
     stock: 'بڕی بەردەست',
     piece: 'دانە',
     outOfStock: 'نەماوە',
-    originalPrice: 'نرخی پێشوو',
+    originalPrice: 'نرخی پێش داشکاندن',
     outletPrice: 'نرخی داشکاندن',
     saveDiscount: 'داشکاندن',
     print: 'پرێنت (A4)',

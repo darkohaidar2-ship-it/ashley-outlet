@@ -430,14 +430,15 @@ export default function PriceMatcherModal({
       if (m.id === item.matchedModel.id) {
         return {
           ...m,
-          salePrice: cleanPrice
+          originalPrice: cleanPrice,
+          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
         };
       }
       return m;
     });
 
     onApplyPriceUpdates(updated);
-    setSuccessToast(`نرخی مۆدێلی "${item.matchedModel.name}" نوێکرایەوە بۆ $${cleanPrice}!`);
+    setSuccessToast(`نرخی پێش داشکاندنی مۆدێلی "${item.matchedModel.name}" نوێکرایەوە بۆ $${cleanPrice}!`);
   };
 
   // Batch sync ALL matched prices to catalog
@@ -489,7 +490,8 @@ export default function PriceMatcherModal({
       if (priceMap.has(m.id)) {
         return {
           ...m,
-          salePrice: priceMap.get(m.id)
+          originalPrice: priceMap.get(m.id),
+          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
         };
       }
       return m;
@@ -497,7 +499,7 @@ export default function PriceMatcherModal({
 
     try {
       await onApplyPriceUpdates(updatedCatalog);
-      setSuccessToast(`⚡ ${priceMap.size} مۆدێل بە نرخی نوێی دۆلار ($) نوێکرانەوە بەپێی کەتەگۆری گونجاو!`);
+      setSuccessToast(`⚡ ${priceMap.size} مۆدێل بە نرخی نوێی پێش داشکاندن ($) نوێکرانەوە بەپێی کەتەگۆری گونجاو!`);
     } catch (err) {
       alert('هەڵە لە نوێکردنەوەی نرخەکان: ' + err.message);
     } finally {
@@ -548,7 +550,8 @@ export default function PriceMatcherModal({
       if (priceMap.has(m.id)) {
         return {
           ...m,
-          salePrice: priceMap.get(m.id)
+          originalPrice: priceMap.get(m.id),
+          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
         };
       }
       return m;
@@ -556,7 +559,7 @@ export default function PriceMatcherModal({
 
     try {
       await onApplyPriceUpdates(updatedCatalog);
-      setSuccessToast(`✅ ${priceMap.size} مۆدێلی دیاریکراو بە نرخی گونجاوی کەتەگۆری نوێکرانەوە!`);
+      setSuccessToast(`✅ ${priceMap.size} مۆدێلی دیاریکراو بە نرخی پێش داشکاندن ($) نوێکرانەوە!`);
     } catch (err) {
       alert('هەڵە: ' + err.message);
     } finally {
@@ -582,7 +585,7 @@ export default function PriceMatcherModal({
       collectionId: '',
       stock: 1,
       originalPrice: parsePriceToFloat(item.price) || 0,
-      salePrice: parsePriceToFloat(item.price) || 0,
+      salePrice: 0,
       notes: item.rawDesc !== item.predictedModel ? item.rawDesc : '',
       image: ''
     }));
@@ -1205,7 +1208,7 @@ export default function PriceMatcherModal({
                         کەتەگۆری ئێکسڵ
                       </th>
                       <th className="p-2 w-28 text-center border-e border-slate-200 bg-emerald-50/70 text-emerald-950">
-                        نرخی ئێکسڵ ($)
+                        نرخی ئێکسڵ (پێش داشکاندن $)
                       </th>
                       <th className="p-2 min-w-[170px] text-start border-e border-slate-200">هاوتا لەگەڵ کەتەلۆگ</th>
                       <th className="p-2 w-28 text-center">کردار</th>
@@ -1309,19 +1312,9 @@ export default function PriceMatcherModal({
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-slate-500">
-                                  <span>ئێستا: ${item.currentCatalogPrice || 0}</span>
-                                  {hasPriceDiff && (
-                                    <span className={`px-1 py-0.2 rounded font-bold text-[9.5px] ${
-                                      item.priceDifference > 0
-                                        ? 'bg-rose-100 text-rose-700'
-                                        : 'bg-emerald-100 text-emerald-800'
-                                    }`}>
-                                      {item.priceDifference > 0 ? `+${item.priceDifference}` : item.priceDifference}
-                                    </span>
-                                  )}
-                                  {item.isPriceEqual && (
-                                    <span className="text-slate-400 text-[9.5px]">هاوشێوە</span>
-                                  )}
+                                  <span>پێش داشکاندن: ${item.currentCatalogPrice || 0}</span>
+                                  <span className="text-slate-300">|</span>
+                                  <span>داشکاندن: ${item.currentSalePrice || 0}</span>
                                 </div>
                                 {item.isCategoryMatched ? (
                                   <div className="flex items-center gap-1 text-[9.5px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
@@ -1446,7 +1439,7 @@ export default function PriceMatcherModal({
                   ) : (
                     <Zap className="w-4 h-4" />
                   )}
-                  <span>⚡ نوێکردنەوەی هەموو نرخە هاوتاکراوەکان ({stats.matchedCount} مۆدێل بە $)</span>
+                  <span>⚡ نوێکردنەوەی هەموو نرخەکانی پێش داشکاندن ({stats.matchedCount} مۆدێل بە $)</span>
                 </button>
               </div>
 
