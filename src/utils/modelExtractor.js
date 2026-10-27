@@ -824,6 +824,129 @@ export function suggestModelFromRow(category = '', modelName = '', nameEn = '') 
 }
 
 /**
+ * Ranks Excel rows and returns the closest / most relevant matches (defaults to top 15).
+ * "با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
+ */
+export function rankExcelRows(rows = [], query = '', targetCol = 'all', targetCat = 'all', limit = 15) {
+  if (!rows || rows.length === 0) return [];
+  const q = String(query || '').trim().toLowerCase();
+
+  // If no search query, return the first `limit` rows (optionally filtered by category)
+  if (!q) {
+    if (targetCat !== 'all') {
+      return rows.filter(item => getCategoryGroup(item.category || item.rawDesc) === targetCat).slice(0, limit);
+    }
+    return rows.slice(0, limit);
+  }
+
+  const cleanQ = cleanModelNumber(q).toLowerCase() || q;
+  const qWords = q.split(/\s+/).filter(Boolean);
+
+  const scored = [];
+
+  for (const item of rows) {
+    if (targetCat !== 'all') {
+      const itemCatGroup = getCategoryGroup(item.category || item.rawDesc);
+      if (itemCatGroup !== targetCat) continue;
+    }
+
+    const category = String(item.category || '').toLowerCase();
+    const rawModel = cleanModelNumber(item.rawModel || item.predictedModel || item.model || '').toLowerCase();
+    const desc = String(item.rawDesc || item.desc || '').toLowerCase();
+    const price = String(item.price || '').toLowerCase();
+    const suggested = cleanModelNumber(item.suggestedModel || '').toLowerCase();
+    const code = String(item.extractedCode || item.rawCode || '').toLowerCase();
+
+    let score = 0;
+
+    // Filter by specific column if selected by user
+    if (targetCol === 'cat') {
+      if (!category.includes(q)) continue;
+      score = category === q ? 500 : 200;
+    } else if (targetCol === 'model') {
+      const isMatch = rawModel.includes(q) || rawModel.includes(cleanQ) || code.includes(q);
+      if (!isMatch) continue;
+      score = (rawModel === q || rawModel === cleanQ) ? 500 : 250;
+    } else if (targetCol === 'desc') {
+      if (!desc.includes(q)) continue;
+      score = desc.startsWith(q) ? 400 : 200;
+    } else if (targetCol === 'price') {
+      if (!price.includes(q)) continue;
+      score = price === q ? 500 : 200;
+    } else if (targetCol === 'suggested') {
+      if (!suggested.includes(q) && !suggested.includes(cleanQ)) continue;
+      score = (suggested === q || suggested === cleanQ) ? 500 : 250;
+    } else {
+      // Default: SEARCH ACROSS ALL 5 COLUMNS with closeness weighting
+
+      // 1. Suggested Model Match (Highest Priority)
+      if (suggested) {
+        if (suggested === q || suggested === cleanQ) {
+          score += 1000;
+        } else if (suggested.startsWith(q) || suggested.startsWith(cleanQ)) {
+          score += 600;
+        } else if (suggested.includes(q) || suggested.includes(cleanQ)) {
+          score += 400;
+        }
+      }
+
+      // 2. Model Name Match
+      if (rawModel) {
+        if (rawModel === q || rawModel === cleanQ) {
+          score += 900;
+        } else if (rawModel.startsWith(q) || rawModel.startsWith(cleanQ)) {
+          score += 500;
+        } else if (rawModel.includes(q) || rawModel.includes(cleanQ)) {
+          score += 350;
+        }
+      }
+
+      // 3. Code match
+      if (code && (code === q || code === cleanQ)) {
+        score += 800;
+      } else if (code && (code.includes(q) || code.includes(cleanQ))) {
+        score += 300;
+      }
+
+      // 4. Description (name_en) match
+      if (desc.includes(q)) {
+        if (desc.startsWith(q)) {
+          score += 300;
+        } else {
+          score += 200;
+        }
+      }
+
+      // 5. Multi-word matching
+      let matchedWords = 0;
+      for (const w of qWords) {
+        if (w.length < 2) continue;
+        if (suggested.includes(w) || rawModel.includes(w) || desc.includes(w) || category.includes(w)) {
+          matchedWords++;
+          score += 70;
+        }
+      }
+
+      // Fallback price/cat match
+      if (score === 0 && matchedWords === 0) {
+        if (category.includes(q)) score += 50;
+        if (price === q) score += 50;
+      }
+    }
+
+    if (score > 0) {
+      scored.push({ item, score });
+    }
+  }
+
+  // Sort descending: closest matches at top!
+  scored.sort((a, b) => b.score - a.score);
+
+  // Return the closest `limit` items (default: 15)
+  return scored.slice(0, limit).map(s => s.item);
+}
+
+/**
  * Built-in Sample Data with Ashley Furniture and Retail Items (Exact match with user Excel sheet)
  */
 export const sampleDataRows = [
