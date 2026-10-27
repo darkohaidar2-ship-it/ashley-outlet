@@ -772,6 +772,16 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
 
     // 0. Exact FULL model number (series + variant, read from name_en) - strongest evidence of all
     const rowKeys = getRowKeys(item);
+
+    // Variant guard: catalog "B771-36" must NEVER take the price of "B771-31" just because the series (B771) is equal.
+    // Only the dash may differ ("B771-36" == "B77136"); different numbers after it = different model -> skip the row.
+    if (rowKeys.codeN && itemModelNorm) {
+      const catalogIds = [effectiveSku, normSku, normName].filter(Boolean);
+      const variantOk = catalogIds.some(id => id === rowKeys.codeN || (rowKeys.codeN.length >= 4 && id.includes(rowKeys.codeN)));
+      const catalogHasVariant = catalogIds.some(id => /\d/.test(id) && id.length > itemModelNorm.length && id.startsWith(itemModelNorm));
+      if (!variantOk && catalogHasVariant) continue;
+    }
+
     if (rowKeys.codeN && rowKeys.codeN.length >= 3 &&
         (rowKeys.codeN === effectiveSku || rowKeys.codeN === normSku || rowKeys.codeN === normName)) {
       score = 110;
