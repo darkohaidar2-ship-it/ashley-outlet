@@ -1,0 +1,197 @@
+diff --git a/public/sw.js b/public/sw.js
+index 2643245..7a7aeb4 100644
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -1,4 +1,4 @@
+-const CACHE_NAME = 'ashley-outlet-v3';
++const CACHE_NAME = 'ashley-outlet-v4';
+ const ASSETS_TO_CACHE = [
+   '/',
+   '/index.html',
+@@ -51,7 +51,32 @@ self.addEventListener('fetch', (event) => {
+     return;
+   }
+ 
+-  // 2. For static assets (images, icons, etc.), Cache-First with Network fallback
++  // 2a. App code (JS / CSS / Vite dev modules): ALWAYS Network-First, otherwise an old cached copy of the code
++  //     keeps being served after an update and the new fixes never appear.
++  const isAppCode =
++    event.request.destination === 'script' ||
++    event.request.destination === 'style' ||
++    event.request.destination === 'worker' ||
++    url.pathname.startsWith('/src/') ||
++    url.pathname.startsWith('/@') ||
++    url.pathname.startsWith('/node_modules/') ||
++    /\.(js|jsx|mjs|css)$/.test(url.pathname);
++  if (isAppCode) {
++    event.respondWith(
++      fetch(event.request)
++        .then((networkResponse) => {
++          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic' && !url.pathname.startsWith('/src/') && !url.pathname.startsWith('/@') && !url.pathname.startsWith('/node_modules/')) {
++            const copy = networkResponse.clone();
++            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
++          }
++          return networkResponse;
++        })
++        .catch(() => caches.match(event.request))
++    );
++    return;
++  }
++
++  // 2b. For static assets (images, icons, etc.), Cache-First with Network fallback
+   event.respondWith(
+     caches.match(event.request).then((cachedResponse) => {
+       if (cachedResponse) return cachedResponse;
+diff --git a/src/components/PriceMatcherModal.jsx b/src/components/PriceMatcherModal.jsx
+index d5ac4c4..9c4166d 100644
+--- a/src/components/PriceMatcherModal.jsx
++++ b/src/components/PriceMatcherModal.jsx
+@@ -44,6 +44,7 @@ import {
+   suggestModelFromRow,
+   rankExcelRows,
+   rankExcelRowsDetailed,
++  getCatalogSearchSeed,
+   normalizeKey,
+   cleanModelNumber
+ } from '../utils/modelExtractor';
+@@ -585,7 +586,7 @@ export default function PriceMatcherModal({
+   const handleOpenExcelSearch = (catalogItem) => {
+     setExcelSearchTarget(catalogItem);
+     // Pre-fill with SKU or extracted variant code or name
+-    const initial = catalogItem.model.sku || catalogItem.model.name || '';
++    const initial = getCatalogSearchSeed(catalogItem.model);
+     setExcelSearchQuery(initial);
+     setExcelSearchCat('all');
+     setExcelSearchTargetCol('all');
+@@ -636,10 +637,17 @@ export default function PriceMatcherModal({
+   const handleSelectActiveManualModel = (item) => {
+     if (!item) return;
+     setActiveManualModelId(item.model.id);
+-    const searchCandidate = cleanModelNumber(item.model.sku || item.model.name);
+-    setExcel5ColSearch(searchCandidate || item.model.sku || item.model.name || '');
++    setExcel5ColSearch(getCatalogSearchSeed(item.model));
+   };
+ 
++  // Whenever the model being matched changes (tab opened, next model, click in the list)
++  // the search box is filled with that model's number automatically.
++  useEffect(() => {
++    if (activeTab !== 'manual' || !activeManualItem) return;
++    setExcel5ColSearch(getCatalogSearchSeed(activeManualItem.model));
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [activeTab, activeManualItem?.model?.id]);
++
+   const handleAssignRowIn5ColTable = (row) => {
+     if (!activeManualItem) return;
+     const priceNum = parsePriceToFloat(row.price);
+@@ -685,10 +693,12 @@ export default function PriceMatcherModal({
+ 
+   // Filtered rows for 5-Column Excel tab (Always closest 15 rows)
+   // User requested: "داتاکان زۆرە . با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
+-  const filteredExcel5ColRows = useMemo(() => {
++  const filteredExcel5Ranked = useMemo(() => {
+     if (!stagingData || stagingData.length === 0) return [];
+-    return rankExcelRows(stagingData, excel5ColSearch, excelSearchTargetCol, 'all', 15);
++    return rankExcelRowsDetailed(stagingData, excel5ColSearch, excelSearchTargetCol, 'all', 15);
+   }, [stagingData, excel5ColSearch, excelSearchTargetCol]);
++  const filteredExcel5ColRows = useMemo(() => filteredExcel5Ranked.map(r => r.item), [filteredExcel5Ranked]);
++  const topExcel5Reason = filteredExcel5Ranked[0]?.reason || '';
+ 
+   const handleExport5ColExcel = () => {
+     if (stagingData.length === 0) return;
+@@ -1604,6 +1614,12 @@ export default function PriceMatcherModal({
+                           type="text"
+                           value={excel5ColSearch}
+                           onChange={(e) => setExcel5ColSearch(e.target.value)}
++                          onKeyDown={(e) => {
++                            if (e.key === 'Enter' && topExcel5Reason === 'code-exact' && filteredExcel5ColRows[0]) {
++                              e.preventDefault();
++                              handleAssignRowIn5ColTable(filteredExcel5ColRows[0]);
++                            }
++                          }}
+                           placeholder="سێرچ لە فایلی ئێکسڵ بە کۆد (وەک 1200067)، ناوی مۆدێل، وەسف، نرخ..."
+                           className="w-full pl-8 pr-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-slate-500 transition-all font-mono"
+                           dir="ltr"
+@@ -1709,6 +1725,17 @@ export default function PriceMatcherModal({
+                         </button>
+                       </div>
+ 
++                      {excel5ColSearch.trim() && filteredExcel5ColRows.length > 0 && (
++                        topExcel5Reason === 'code-exact' ? (
++                          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
++                            ✓ کۆدەکە بە تەواوی ڕێک دۆزرایەوە — دوگمەی <span className="font-mono">Enter</span> دابگرە بۆ وەرگرتنی نرخی یەکەم دێڕ
++                          </div>
++                        ) : (
++                          <div className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
++                            ⚠ ئەم کۆدە بە تەواوی لە شیتەکەدا نەدۆزرایەوە (ڕەنگە ژمارەی دوای - جیاواز بێت). نزیکترینەکان نیشان دراون، بە وردی بزانە کامیان ڕاستە.
++                          </div>
++                        )
++                      )}
+                       <div className="text-[11px] font-bold text-slate-500">
+                         پیشاندانی <strong className="font-mono text-slate-900 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">نزیکترین {filteredExcel5ColRows.length} داتا</strong>
+                       </div>
+@@ -1902,6 +1929,13 @@ export default function PriceMatcherModal({
+                     dir="ltr"
+                     value={excelSearchQuery}
+                     onChange={(e) => setExcelSearchQuery(e.target.value)}
++                    onKeyDown={(e) => {
++                      const top = excelDialogRanked[0];
++                      if (e.key === 'Enter' && top && top.reason === 'code-exact') {
++                        e.preventDefault();
++                        handleAssignExcelRowToModel(excelSearchTarget.model.id, top.item);
++                      }
++                    }}
+                     placeholder="کۆدی تەواو (1200067) یان دوو بەش (12000-67 / 12000 67)، ناوی مۆدێل، یان وەسف..."
+                     className="w-full pl-9 pr-9 py-2.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 focus:border-slate-500 focus:bg-white rounded-xl focus:outline-none transition-all shadow-2xs"
+                   />
+diff --git a/src/main.jsx b/src/main.jsx
+index 9d3e552..adeddef 100644
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -9,11 +9,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
+   </React.StrictMode>
+ );
+ 
+-// Register Service Worker for PWA (Installable standalone app on iPad & Tablets)
++// Service Worker (PWA for iPad & tablets)
+ if ('serviceWorker' in navigator) {
+-  window.addEventListener('load', () => {
+-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+-      console.log('Service Worker registration skipped:', err);
++  if (import.meta.env.DEV) {
++    // While developing (start.bat) a service worker only causes stale code: remove it and its caches.
++    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
++    if (window.caches) caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
++  } else {
++    window.addEventListener('load', () => {
++      navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch((err) => {
++        console.log('Service Worker registration skipped:', err);
++      });
+     });
+-  });
++  }
+ }
+diff --git a/src/utils/modelExtractor.js b/src/utils/modelExtractor.js
+index 443de0c..f1106f5 100644
+--- a/src/utils/modelExtractor.js
++++ b/src/utils/modelExtractor.js
+@@ -526,6 +526,20 @@ export function parseNameEn(nameEn = '', category = '', modelName = '', knownCat
+   return empty;
+ }
+ 
++/**
++ * What should be typed into the search box when the user starts matching a catalog model by hand?
++ * -> the model number itself (sku, or the code found inside the name), never the whole sentence.
++ *    "B771-36" -> "B771-36" ;  name "Johnelle Dresser B776-31" -> "B776-31"
++ */
++export function getCatalogSearchSeed(model = {}) {
++  const sku = cleanModelNumber(String(model.sku || '').trim());
++  if (sku) return sku;
++  const name = String(model.name || '').trim();
++  const m = name.match(/[A-Za-z]{0,3}\d{3,}[A-Za-z0-9._/]*(?:-[A-Za-z0-9._/]+)*/);
++  if (m) return m[0];
++  return cleanModelNumber(name) || name;
++}
++
+ // Normalised search keys per Excel row (cached, so searching 19k rows stays instant)
+ const rowKeyCache = new WeakMap();
+ const EMPTY_KEYS = { parsed: null, code: '', codeN: '', modelN: '', nameModelN: '', catN: '', descN: '', hayN: '' };
