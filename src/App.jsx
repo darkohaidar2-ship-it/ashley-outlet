@@ -432,8 +432,8 @@ export default function App() {
         return pB - pA;
       }
       if (sortBy === 'discount-desc') {
-        const dA = a.originalPrice && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
-        const dB = b.originalPrice && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
+        const dA = a.originalPrice && a.salePrice && Number(a.salePrice) > 0 && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
+        const dB = b.originalPrice && b.salePrice && Number(b.salePrice) > 0 && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
         return dB - dA;
       }
       if (sortBy === 'stock-desc') {

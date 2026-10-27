@@ -30,8 +30,8 @@ export default function ProductCard({
     }
   };
 
-  const discountPercent = model.originalPrice && model.originalPrice > model.salePrice
-    ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
+  const discountPercent = model.originalPrice && model.salePrice && Number(model.salePrice) > 0 && Number(model.originalPrice) > Number(model.salePrice)
+    ? Math.round(((Number(model.originalPrice) - Number(model.salePrice)) / Number(model.originalPrice)) * 100)
     : 0;
 
   const isOutOfStock = !model.stock || model.stock <= 0;

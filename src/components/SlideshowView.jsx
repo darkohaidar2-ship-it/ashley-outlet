@@ -171,8 +171,8 @@ export default function SlideshowView({
         return pB - pA;
       }
       if (localSort === 'discount-desc') {
-        const dA = a.originalPrice && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
-        const dB = b.originalPrice && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
+        const dA = a.originalPrice && a.salePrice && Number(a.salePrice) > 0 && a.originalPrice > a.salePrice ? ((a.originalPrice - a.salePrice) / a.originalPrice) : 0;
+        const dB = b.originalPrice && b.salePrice && Number(b.salePrice) > 0 && b.originalPrice > b.salePrice ? ((b.originalPrice - b.salePrice) / b.originalPrice) : 0;
         return dB - dA;
       }
       if (localSort === 'stock-desc') {
@@ -420,8 +420,8 @@ export default function SlideshowView({
     ? collections
     : collections.filter((c) => c.categoryId === sidebarCategory);
 
-  const discountPercent = activeModel?.originalPrice && activeModel.originalPrice > activeModel.salePrice
-    ? Math.round(((activeModel.originalPrice - activeModel.salePrice) / activeModel.originalPrice) * 100)
+  const discountPercent = activeModel?.originalPrice && activeModel?.salePrice && Number(activeModel.salePrice) > 0 && Number(activeModel.originalPrice) > Number(activeModel.salePrice)
+    ? Math.round(((Number(activeModel.originalPrice) - Number(activeModel.salePrice)) / Number(activeModel.originalPrice)) * 100)
     : 0;
 
   const isOutOfStock = !activeModel?.stock || activeModel.stock <= 0;

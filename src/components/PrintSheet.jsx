@@ -268,8 +268,8 @@ export default function PrintSheet({
         const cat = categories.find(c => c.id === model.categoryId);
         const catName = getCategoryName(model.categoryId);
         const colName = getCollectionName(model.collectionId);
-        const discountPercent = model.originalPrice && model.originalPrice > model.salePrice
-          ? Math.round(((model.originalPrice - model.salePrice) / model.originalPrice) * 100)
+        const discountPercent = model.originalPrice && model.salePrice && Number(model.salePrice) > 0 && Number(model.originalPrice) > Number(model.salePrice)
+          ? Math.round(((Number(model.originalPrice) - Number(model.salePrice)) / Number(model.originalPrice)) * 100)
           : 0;
 
         const itemStatus = model.itemType || (model.sku && model.sku !== model.name ? model.sku : '');

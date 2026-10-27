@@ -301,6 +301,33 @@ export const catalogService = {
     } catch (e) {}
   },
 
+  // Reset prices in catalog: 'salePrice' | 'originalPrice' | 'both'
+  async resetPrices(resetType = 'salePrice') {
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const updatePayload = {};
+        if (resetType === 'salePrice') {
+          updatePayload.sale_price = 0;
+        } else if (resetType === 'originalPrice') {
+          updatePayload.original_price = 0;
+        } else if (resetType === 'both') {
+          updatePayload.sale_price = 0;
+          updatePayload.original_price = 0;
+        }
+
+        const { error } = await supabase
+          .from('models')
+          .update(updatePayload)
+          .neq('id', '__NONE__');
+
+        if (error) console.error('Supabase reset prices error:', error);
+        return true;
+      } catch (err) {
+        console.warn('Supabase reset prices error:', err);
+      }
+    }
+  },
+
   // Delete Category & its associated models & collections
   async deleteCategory(catId) {
     if (isSupabaseConfigured && supabase) {

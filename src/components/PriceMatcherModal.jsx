@@ -28,7 +28,9 @@ import {
   Image as ImageIcon,
   Download,
   Table as TableIcon,
-  LayoutGrid
+  LayoutGrid,
+  RotateCcw,
+  ShieldAlert
 } from 'lucide-react';
 import {
   findExcelMatchForCatalogModel,
@@ -43,6 +45,7 @@ import {
   rankExcelRows,
   cleanModelNumber
 } from '../utils/modelExtractor';
+import { catalogService } from '../services/catalogService';
 
 export default function PriceMatcherModal({
   isOpen,
@@ -600,7 +603,24 @@ export default function PriceMatcherModal({
 
   const handleAssignRowIn5ColTable = (row) => {
     if (!activeManualItem) return;
+    const priceNum = parsePriceToFloat(row.price);
     handleAssignExcelRowToModel(activeManualItem.model.id, row);
+
+    // Save directly to catalog as originalPrice (before discount) with salePrice = 0
+    if (onApplyPriceUpdates && priceNum > 0) {
+      const updated = models.map(m => {
+        if (m.id === activeManualItem.model.id) {
+          return {
+            ...m,
+            originalPrice: priceNum,
+            salePrice: 0
+          };
+        }
+        return m;
+      });
+      onApplyPriceUpdates(updated);
+    }
+
     // Find next unmatched catalog model to auto-advance seamlessly
     const currentIndex = catalogMatchedItems.findIndex(it => it.model.id === activeManualItem.model.id);
     const nextUnmatched = catalogMatchedItems.slice(currentIndex + 1).find(it => !it.excelPrice && it.model.id !== activeManualItem.model.id)
@@ -644,6 +664,8 @@ export default function PriceMatcherModal({
 
   /**
    * Apply Price Updates to Catalog
+   * As requested: "نرخی دوای داشکاندن هەمووی بکە بە سفر . ئەو نرخەی وەرمان گرتوە نرخی پێش داشکاندنە"
+   * The Excel price is originalPrice (before discount) and salePrice is reset to 0.
    */
   // 1. Single model price update
   const handleApplySingleCatalogPrice = (item) => {
@@ -657,14 +679,14 @@ export default function PriceMatcherModal({
         return {
           ...m,
           originalPrice: item.excelPrice,
-          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
+          salePrice: 0
         };
       }
       return m;
     });
 
     onApplyPriceUpdates(updated);
-    setSuccessToast(`نرخی پێش داشکاندنی "${item.model.name}" نوێکرایەوە بۆ $${item.excelPrice}!`);
+    setSuccessToast(`نرخی پێش داشکاندنی "${item.model.name}" نوێکرایەوە بۆ $${item.excelPrice} و نرخی دوای داشکاندن کرا بە $0!`);
   };
 
   // 2. Batch update ALL matched catalog prices
@@ -686,7 +708,7 @@ export default function PriceMatcherModal({
         return {
           ...m,
           originalPrice: priceMap.get(m.id),
-          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
+          salePrice: 0
         };
       }
       return m;
@@ -694,7 +716,7 @@ export default function PriceMatcherModal({
 
     try {
       await onApplyPriceUpdates(updatedCatalog);
-      setSuccessToast(`⚡ ${priceMap.size} مۆدێلی کەتەلۆگ بە نرخی دۆلاری ئێکسڵ ($) نوێکرانەوە!`);
+      setSuccessToast(`⚡ ${priceMap.size} مۆدێلی کەتەلۆگ بە نرخی پێش داشکاندنی ئێکسڵ ($) نوێکرانەوە و نرخی دوای داشکاندن کران بە $0!`);
     } catch (err) {
       alert('هەڵە لە نوێکردنەوەی نرخەکان: ' + err.message);
     } finally {
@@ -724,7 +746,7 @@ export default function PriceMatcherModal({
         return {
           ...m,
           originalPrice: priceMap.get(m.id),
-          salePrice: (m.salePrice !== undefined && m.salePrice !== null && m.salePrice !== '') ? Number(m.salePrice) : 0
+          salePrice: 0
         };
       }
       return m;
@@ -732,12 +754,61 @@ export default function PriceMatcherModal({
 
     try {
       await onApplyPriceUpdates(updatedCatalog);
-      setSuccessToast(`✅ ${priceMap.size} مۆدێلی هەڵبژێردراو نوێکرانەوە!`);
+      setSuccessToast(`✅ ${priceMap.size} مۆدێلی هەڵبژێردراو نوێکرانەوە (salePrice = 0)!`);
       setSelectedCatalogIds(new Set());
     } catch (err) {
       alert('هەڵە: ' + err.message);
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  // 2-Factor Price Reset States (سفرکردنەوەی نرخەکان بە ٢ فاکتەر)
+  const [priceResetCandidate, setPriceResetCandidate] = useState(null);
+  const [priceResetConfirmed, setPriceResetConfirmed] = useState(false);
+  const [isResettingPrice, setIsResettingPrice] = useState(false);
+  const [isPriceResetDropdownOpen, setIsPriceResetDropdownOpen] = useState(false);
+  const priceResetDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (priceResetDropdownRef.current && !priceResetDropdownRef.current.contains(e.target)) {
+        setIsPriceResetDropdownOpen(false);
+      }
+    };
+    if (isPriceResetDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isPriceResetDropdownOpen]);
+
+  const handleExecutePriceReset = async () => {
+    if (!priceResetCandidate) return;
+    setIsResettingPrice(true);
+    const { target } = priceResetCandidate; // 'salePrice' | 'originalPrice' | 'both'
+
+    const updated = models.map(m => {
+      if (target === 'salePrice') {
+        return { ...m, salePrice: 0 };
+      }
+      if (target === 'originalPrice') {
+        return { ...m, originalPrice: 0 };
+      }
+      return { ...m, salePrice: 0, originalPrice: 0 };
+    });
+
+    try {
+      if (onApplyPriceUpdates) {
+        await onApplyPriceUpdates(updated);
+      }
+      await catalogService.resetPrices(target);
+      setSuccessToast(`سەرکەوتووانە ${priceResetCandidate.title} جێبەجێ کرا!`);
+      setPriceResetCandidate(null);
+      setPriceResetConfirmed(false);
+    } catch (err) {
+      alert('هەڵە لە سفرکردنەوەی نرخەکان: ' + err.message);
+    } finally {
+      setIsResettingPrice(false);
     }
   };
 
@@ -803,6 +874,90 @@ export default function PriceMatcherModal({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 2-Factor Price Reset Dropdown Button (سفرکردنەوەی نرخەکان بە ٢ فاکتەر) */}
+            <div className="relative" ref={priceResetDropdownRef}>
+              <button
+                type="button"
+                onClick={() => setIsPriceResetDropdownOpen(!isPriceResetDropdownOpen)}
+                className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-xl text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer flex items-center gap-1.5"
+                title="سفرکردنەوەی نرخەکان بە ٢ فاکتەر (2-Factor Price Reset)"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-rose-600" />
+                <span className="hidden sm:inline">سفرکردنەوەی نرخ (2F)</span>
+                <ChevronDown className={`w-3 h-3 text-rose-500 transition-transform ${isPriceResetDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isPriceResetDropdownOpen && (
+                <div className="absolute top-full end-0 mt-1.5 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 py-1.5 z-50 animate-fadeIn text-start select-none">
+                  <div className="px-3 py-1.5 border-b border-slate-100 text-[10px] font-bold text-slate-400">
+                    فەرمانەکانی سفرکردنەوە (٢ فاکتەر)
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPriceResetDropdownOpen(false);
+                      setPriceResetCandidate({
+                        target: 'salePrice',
+                        title: 'سفرکردنەوەی نرخی دوای داشکاندن',
+                        targetLabel: 'نرخی دوای داشکاندن (Sale Price)',
+                        itemCount: models.length,
+                        description: 'هەموو نرخەکانی دوای داشکاندن دەکرێن بە $0. نرخی پێش داشکاندن وەک خۆی دەمێنێتەوە.'
+                      });
+                      setPriceResetConfirmed(false);
+                    }}
+                    className="w-full px-3 py-2 text-start text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                    <span className="flex-1">سفرکردنەوەی نرخی دوای داشکاندن</span>
+                    <span className="text-[10px] text-slate-400 font-mono">$0</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPriceResetDropdownOpen(false);
+                      setPriceResetCandidate({
+                        target: 'originalPrice',
+                        title: 'سفرکردنەوەی نرخی پێش داشکاندن',
+                        targetLabel: 'نرخی پێش داشکاندن (Original Price)',
+                        itemCount: models.length,
+                        description: 'هەموو نرخەکانی پێش داشکاندن دەکرێن بە $0. نرخی دوای داشکاندن وەک خۆی دەمێنێتەوە.'
+                      });
+                      setPriceResetConfirmed(false);
+                    }}
+                    className="w-full px-3 py-2 text-start text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-800 transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                    <span className="flex-1">سفرکردنەوەی نرخی پێش داشکاندن</span>
+                    <span className="text-[10px] text-slate-400 font-mono">$0</span>
+                  </button>
+
+                  <div className="my-1 border-t border-slate-100" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPriceResetDropdownOpen(false);
+                      setPriceResetCandidate({
+                        target: 'both',
+                        title: 'سفرکردنەوەی گشت نرخەکان (هەردوو نرخەکە)',
+                        targetLabel: 'نرخی پێش و دوای داشکاندن',
+                        itemCount: models.length,
+                        description: 'هەردوو نرخی پێش داشکاندن و دوای داشکاندن بۆ گشت مۆدێلەکان سفر دەکرێنەوە.'
+                      });
+                      setPriceResetConfirmed(false);
+                    }}
+                    className="w-full px-3 py-2 text-start text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+                    <span className="flex-1">سفرکردنەوەی هەردوو نرخەکە</span>
+                    <span className="text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-mono font-black">2F</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Simple Excel File Upload / Change Button */}
             <button
               type="button"
@@ -2034,6 +2189,90 @@ export default function PriceMatcherModal({
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* =========================================================================
+            2-FACTOR PRICE RESET MODAL (سفرکردنەوەی نرخەکان بە ٢ فاکتەر)
+            ========================================================================= */}
+        {priceResetCandidate && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl border border-slate-200 text-center animate-scaleUp">
+              
+              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
+                <RotateCcw className="w-7 h-7" />
+              </div>
+
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 text-amber-900 rounded-full text-[11px] font-black mb-2.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                <span>پشتڕاستکردنەوەی ٢ فاکتەر (2-Factor Confirmation)</span>
+              </div>
+
+              <h3 className="font-black text-base text-slate-900 leading-snug">
+                {priceResetCandidate.title}
+              </h3>
+
+              <div className="mt-3.5 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-start space-y-2 text-xs">
+                <div className="flex items-center justify-between text-slate-700 font-bold">
+                  <span>مەودای جێبەجێکردن:</span>
+                  <span className="text-slate-900 font-black">{priceResetCandidate.itemCount} مۆدێلی ناو کەتەلۆگ</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-700 font-bold">
+                  <span>کۆڵۆمی ئامانج:</span>
+                  <span className="text-red-600 font-black">{priceResetCandidate.targetLabel}</span>
+                </div>
+                <div className="flex items-center justify-between text-slate-700 font-bold">
+                  <span>نرخی نوێ دەبێتە:</span>
+                  <span className="text-emerald-700 font-black font-mono">$0 (سفر دۆلار)</span>
+                </div>
+                <p className="text-[11px] text-slate-500 pt-2 border-t border-slate-200/80 leading-relaxed">
+                  {priceResetCandidate.description}
+                </p>
+              </div>
+
+              <p className="text-[11px] text-rose-600 font-bold mt-3">
+                ⚠️ ئەم هەنگاوە (2F) بۆ پاراستنی نرخەکانە و پاشگەزبوونەوەی نییە!
+              </p>
+
+              {/* 2nd Factor Checkbox */}
+              <label className="mt-3.5 p-2.5 bg-rose-50/70 border border-rose-200 rounded-xl flex items-center gap-2.5 cursor-pointer text-start select-none">
+                <input
+                  type="checkbox"
+                  checked={priceResetConfirmed}
+                  onChange={(e) => setPriceResetConfirmed(e.target.checked)}
+                  className="w-4 h-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-rose-900 leading-tight">
+                  دڵنیام لە سفرکردنەوەی ئەم نرخە بۆ تەواوی مۆدێلەکان
+                </span>
+              </label>
+
+              <div className="mt-5 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPriceResetCandidate(null);
+                    setPriceResetConfirmed(false);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  پاشگەزبوونەوە
+                </button>
+                <button
+                  type="button"
+                  disabled={!priceResetConfirmed || isResettingPrice}
+                  onClick={handleExecutePriceReset}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs rounded-xl shadow-lg shadow-rose-500/25 transition-all cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+                >
+                  {isResettingPrice ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-4 h-4" />
+                  )}
+                  <span>سفر بکەرەوە (2F)</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
