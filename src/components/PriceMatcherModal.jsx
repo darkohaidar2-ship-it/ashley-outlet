@@ -25,7 +25,10 @@ import {
   FolderTree,
   Edit3,
   Unlink,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Download,
+  Table as TableIcon,
+  LayoutGrid
 } from 'lucide-react';
 import {
   findExcelMatchForCatalogModel,
@@ -35,7 +38,8 @@ import {
   cleanNumericPrice,
   parsePriceToFloat,
   detectExcelColumns,
-  getCategoryGroup
+  getCategoryGroup,
+  suggestModelFromRow
 } from '../utils/modelExtractor';
 
 export default function PriceMatcherModal({
@@ -117,8 +121,12 @@ export default function PriceMatcherModal({
   const [excelSearchTarget, setExcelSearchTarget] = useState(null); // catalog model item
   const [excelSearchQuery, setExcelSearchQuery] = useState('');
   const [excelSearchCat, setExcelSearchCat] = useState('all');
-  const [excelSearchTargetCol, setExcelSearchTargetCol] = useState('all'); // 'all' | 'desc' | 'model' | 'price'
+  const [excelSearchTargetCol, setExcelSearchTargetCol] = useState('all'); // 'all' | 'cat' | 'model' | 'desc' | 'price' | 'suggested'
+  const [excelDialogViewMode, setExcelDialogViewMode] = useState('cards'); // 'cards' | 'table'
   const excelSearchInputRef = useRef(null);
+
+  // Search filter for 5-Column Excel tab
+  const [excel5ColSearch, setExcel5ColSearch] = useState('');
 
   const [isApplying, setIsApplying] = useState(false);
   const [successToast, setSuccessToast] = useState('');
@@ -207,7 +215,7 @@ export default function PriceMatcherModal({
     const parsed = [];
     dataRows.forEach((r, idx) => {
       const rawModel = (mIdx >= 0 && r[mIdx] !== undefined) ? String(r[mIdx]).trim() : '';
-      const rawDesc = (dIdx >= 0 && r[dIdx] !== undefined) ? String(r[dIdx]).trim() : (mIdx >= 0 && r[mIdx] !== undefined ? String(r[mIdx]).trim() : '');
+      const rawDesc = (dIdx >= 0 && r[dIdx] !== undefined) ? String(r[dIdx]).trim() : '';
       const rawPrice = (pIdx >= 0 && r[pIdx] !== undefined && r[pIdx] !== null) ? String(r[pIdx]).trim() : '';
       const rawCode = (cIdx >= 0 && r[cIdx] !== undefined && r[cIdx] !== null) ? String(r[cIdx]).trim() : '';
       const rawCat = (catIdx >= 0 && r[catIdx] !== undefined && r[catIdx] !== null) ? String(r[catIdx]).trim() : '';
@@ -217,16 +225,19 @@ export default function PriceMatcherModal({
 
       const extracted = extractSmartModel(rawDesc, rawModel, rawCode, rawPrice, rawCat);
       const cleanPrice = cleanNumericPrice(rawPrice) || extracted.price;
+      const suggestion = suggestModelFromRow(rawCat, rawModel, rawDesc);
 
       parsed.push({
         id: 'stg_' + idx + '_' + Math.random().toString(36).substring(2, 7),
         rawCode,
         extractedCode: extracted.code,
         rawModel: rawModel || extracted.model,
-        rawDesc: rawDesc || rawModel,
-        predictedModel: rawModel || extracted.model,
+        rawDesc: rawDesc || rawModel, // Complete, un-truncated string from Excel!
+        predictedModel: (suggestion.suggestedModel && suggestion.suggestedModel !== '-') ? suggestion.suggestedModel : (rawModel || extracted.model),
         category: rawCat || extracted.category,
         price: cleanPrice,
+        suggestedModel: suggestion.suggestedModel,
+        suggestionReason: suggestion.reason,
         rawNote,
         rawRow: r,
         selected: false
@@ -566,7 +577,7 @@ export default function PriceMatcherModal({
   };
 
   // Filtered Excel rows inside the Manual Search Dialog
-  // Searches across ALL 4 COLUMNS by default: category_name_en, model_name_en, name_en, price_usd
+  // Searches across ALL 4 COLUMNS + SUGGESTED MODEL by default: category_name_en, model_name_en, name_en, price_usd, suggestedModel
   const excelDialogSearchResults = useMemo(() => {
     if (!excelSearchTarget || stagingData.length === 0) return [];
     const q = excelSearchQuery.trim().toLowerCase();
@@ -582,6 +593,7 @@ export default function PriceMatcherModal({
       const model = String(item.rawModel || item.predictedModel || '').toLowerCase();
       const desc = String(item.rawDesc || '').toLowerCase();
       const price = String(item.price || '').toLowerCase();
+      const suggested = String(item.suggestedModel || '').toLowerCase();
 
       // If user specifically filtered by one column:
       if (excelSearchTargetCol === 'cat') {
@@ -596,6 +608,9 @@ export default function PriceMatcherModal({
       if (excelSearchTargetCol === 'price') {
         return price.includes(q);
       }
+      if (excelSearchTargetCol === 'suggested') {
+        return suggested.includes(q);
+      }
       // If a specific column index from rawHeaders was selected:
       if (!isNaN(parseInt(excelSearchTargetCol, 10)) && excelSearchTargetCol !== 'all') {
         const colIdx = parseInt(excelSearchTargetCol, 10);
@@ -604,19 +619,49 @@ export default function PriceMatcherModal({
         }
       }
 
-      // Default 'all': SEARCHES ACROSS ALL FOUR COLUMNS!
-      // 1. category_name_en (category)
-      // 2. model_name_en (model)
-      // 3. name_en (desc)
-      // 4. price_usd (price)
+      // Default 'all': SEARCHES ACROSS ALL FOUR COLUMNS + SUGGESTED MODEL!
       return (
         category.includes(q) ||
         model.includes(q) ||
         desc.includes(q) ||
-        price.includes(q)
+        price.includes(q) ||
+        suggested.includes(q)
       );
     }).slice(0, 80);
   }, [excelSearchTarget, stagingData, excelSearchQuery, excelSearchTargetCol, excelSearchCat]);
+
+  // Filtered rows for 5-Column Excel tab
+  const filteredExcel5ColRows = useMemo(() => {
+    if (!stagingData || stagingData.length === 0) return [];
+    const q = excel5ColSearch.trim().toLowerCase();
+    if (!q) return stagingData;
+    return stagingData.filter(row => {
+      const cat = String(row.category || '').toLowerCase();
+      const model = String(row.rawModel || '').toLowerCase();
+      const desc = String(row.rawDesc || '').toLowerCase();
+      const price = String(row.price || '').toLowerCase();
+      const suggested = String(row.suggestedModel || '').toLowerCase();
+      return cat.includes(q) || model.includes(q) || desc.includes(q) || price.includes(q) || suggested.includes(q);
+    });
+  }, [stagingData, excel5ColSearch]);
+
+  const handleExport5ColExcel = () => {
+    if (stagingData.length === 0) return;
+    const exportData = stagingData.map((row, idx) => ({
+      '#': idx + 1,
+      'category_name_en': row.category || '',
+      'model_name_en': row.rawModel || '',
+      'name_en': row.rawDesc || '',
+      'price_usd': row.price || '',
+      'suggested_model': row.suggestedModel || '',
+      'suggestion_reason': row.suggestionReason || ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Ashley_5_Columns');
+    XLSX.writeFile(wb, 'ashley_outlet_5_columns.xlsx');
+    setSuccessToast('فایلی ٥ کۆڵۆم بە سەرکەوتوویی دابەزێنرا.');
+  };
 
   /**
    * Apply Price Updates to Catalog
@@ -861,6 +906,24 @@ export default function PriceMatcherModal({
               {catalogStats.unmatchedCount} بێ نرخ
             </span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('excel5col')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'excel5col'
+                ? 'bg-slate-900 text-white shadow-xs'
+                : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+            }`}
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-amber-500" />
+            <span>خشتەی ئێکسڵ (٥ کۆڵۆم بە پێشنیار)</span>
+            <span className={`text-[10px] px-2 py-0.2 rounded-full font-mono ${
+              activeTab === 'excel5col' ? 'bg-slate-800 text-amber-300' : 'bg-slate-100 text-slate-600'
+            }`}>
+              {stagingData.length} دێڕ
+            </span>
+          </button>
         </div>
 
         {/* EMPTY STATE IF NO EXCEL FILE LOADED */}
@@ -1092,8 +1155,16 @@ export default function PriceMatcherModal({
                                     ${item.excelPrice}
                                   </div>
                                   {item.matchedExcelRow && (
-                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                      model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 space-y-0.5" dir="ltr">
+                                      <div>
+                                        model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                      </div>
+                                      {item.matchedExcelRow.suggestedModel && item.matchedExcelRow.suggestedModel !== '-' && (
+                                        <div className="text-amber-800 font-sans text-[10px] flex items-center gap-1" dir="rtl">
+                                          <span className="font-bold">💡 پێشنیاری مۆدێل:</span>
+                                          <span className="font-mono font-bold bg-amber-100 px-1 rounded text-amber-950" dir="ltr">{item.matchedExcelRow.suggestedModel}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -1297,8 +1368,16 @@ export default function PriceMatcherModal({
                                     </button>
                                   </div>
                                   {item.matchedExcelRow && (
-                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                      model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                    <div className="text-[10px] text-slate-500 font-mono mt-0.5 space-y-0.5" dir="ltr">
+                                      <div>
+                                        model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                      </div>
+                                      {item.matchedExcelRow.suggestedModel && item.matchedExcelRow.suggestedModel !== '-' && (
+                                        <div className="text-amber-800 font-sans text-[10px] flex items-center gap-1" dir="rtl">
+                                          <span className="font-bold">💡 پێشنیاری مۆدێل:</span>
+                                          <span className="font-mono font-bold bg-amber-100 px-1 rounded text-amber-950" dir="ltr">{item.matchedExcelRow.suggestedModel}</span>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -1342,6 +1421,120 @@ export default function PriceMatcherModal({
                     )}
                     <span>⚡ نوێکردنەوەی هەموو نرخەکان ({catalogStats.matchedCount} مۆدێل بە $)</span>
                   </button>
+                </div>
+
+              </div>
+            )}
+
+            {/* =========================================================================
+                SECTION 3: 5-COLUMN EXCEL SHEET WITH AI SUGGESTIONS
+                "وەک ئێکسڵ بۆم بکە بە پێنچ کۆڵۆم . یەکێکیان پێشنیارەکانی تۆ ، ٤ رەکەی تر با هەر وەک شیتەکە وابێط"
+                ========================================================================= */}
+            {activeTab === 'excel5col' && (
+              <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30">
+                
+                {/* Sub-bar (Search & Export for 5-Column Table) */}
+                <div className="px-6 py-2.5 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 flex-1 min-w-[240px] max-w-md">
+                    <div className="relative w-full">
+                      <input
+                        type="text"
+                        value={excel5ColSearch}
+                        onChange={(e) => setExcel5ColSearch(e.target.value)}
+                        placeholder="گەڕان لە نێو ٥ کۆڵۆمەکە (کەتەگۆری، مۆدێل، وەسف، نرخ، پێشنیار)..."
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-slate-400 font-medium"
+                      />
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                      {excel5ColSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setExcel5ColSearch('')}
+                          className="absolute right-2 top-2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      دۆزراوەتەوە: <strong className="font-mono text-slate-800">{filteredExcel5ColRows.length}</strong> لە {stagingData.length} دێڕ
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={handleExport5ColExcel}
+                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      title="داگرتنی فایلی ئێکسڵ بە ٥ کۆڵۆم"
+                    >
+                      <Download className="w-3.5 h-3.5 text-slate-600" />
+                      <span>داگرتنی فایلی ٥ کۆڵۆم (Excel)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5-Column Table */}
+                <div className="flex-1 overflow-auto bg-white select-text">
+                  <table className="w-full text-xs text-slate-800 border-collapse border border-slate-200">
+                    <thead className="sticky top-0 z-10 bg-slate-100 text-slate-800 text-[11px] font-bold border-b border-slate-300">
+                      <tr>
+                        <th className="p-2 w-8 text-center border-e border-slate-200 font-mono">#</th>
+                        <th className="p-2 w-32 text-center border-e border-slate-200 font-mono">1. category_name_en</th>
+                        <th className="p-2 w-36 text-center border-e border-slate-200 font-mono">2. model_name_en</th>
+                        <th className="p-2 min-w-[320px] text-start border-e border-slate-200 font-mono">3. name_en (وەسفی تەواو بەبێ کورتکردنەوە)</th>
+                        <th className="p-2 w-24 text-center border-e border-slate-200 font-mono">4. price_usd ($)</th>
+                        <th className="p-2 min-w-[260px] text-start font-mono bg-amber-50/70 border-e border-amber-200 text-amber-900">
+                          5. 💡 پێشنیاری پرۆگرام بۆ مۆدێل
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {filteredExcel5ColRows.map((row, idx) => (
+                        <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="p-2 text-center border-e border-slate-200 font-mono text-[11px] text-slate-400">
+                            {idx + 1}
+                          </td>
+                          <td className="p-2 text-center border-e border-slate-200 text-slate-700 font-medium">
+                            <span className="bg-slate-100 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-sans">
+                              {row.category || '-'}
+                            </span>
+                          </td>
+                          <td className="p-2 text-center border-e border-slate-200 font-bold text-slate-900 font-mono">
+                            {row.rawModel || '-'}
+                          </td>
+                          <td className="p-2 border-e border-slate-200 text-xs text-slate-800 font-semibold leading-relaxed break-words font-mono" dir="ltr">
+                            {row.rawDesc || '-'}
+                          </td>
+                          <td className="p-2 text-center border-e border-slate-200 font-black text-emerald-700 text-xs font-mono">
+                            ${row.price || 0}
+                          </td>
+                          <td className="p-2 bg-amber-50/40 border-e border-amber-200">
+                            <div className="flex flex-col gap-1" dir="rtl">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-black text-xs text-amber-950 bg-white px-2 py-0.5 rounded border border-amber-300 shadow-2xs" dir="ltr">
+                                  {row.suggestedModel || '-'}
+                                </span>
+                              </div>
+                              <span className="text-[10.5px] text-amber-800 leading-tight">
+                                {row.suggestionReason || 'بەپێی کۆڵۆمەکانی کەتەگۆری و مۆدێل و name_en'}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Footer Info */}
+                <div className="px-6 py-2.5 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+                  <span>
+                    💡 کۆڵۆمی ٥ بریتییە لە پێشنیاری زیرەکی پرۆگرامەکە بەپێی وەسف و کەتەگۆری بۆ دیاریکردنی مۆدێلی دروست.
+                  </span>
+                  <span className="font-mono text-slate-600 font-bold">
+                    {stagingData.length} دێڕ لە فایلی ئێکسڵ
+                  </span>
                 </div>
 
               </div>
@@ -1496,28 +1689,72 @@ export default function PriceMatcherModal({
                     >
                       <span>💲 نرخ (price_usd)</span>
                     </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('suggested')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        excelSearchTargetCol === 'suggested'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>💡 پێشنیاری مۆدێل</span>
+                    </button>
                   </div>
 
-                  {/* Direct Dropdown for Any Column */}
-                  {rawHeaders.length > 0 && (
-                    <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
-                      <span className="text-[10px] text-slate-400 font-medium">یان ستوونی تر:</span>
-                      <select
-                        value={['all', 'desc', 'model', 'price'].includes(excelSearchTargetCol) ? '' : excelSearchTargetCol}
-                        onChange={(e) => {
-                          if (e.target.value) setExcelSearchTargetCol(e.target.value);
-                        }}
-                        className="text-[11px] font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer max-w-[120px] truncate"
+                  {/* Direct Dropdown for Any Column & View Mode Toggle */}
+                  <div className="flex items-center gap-2">
+                    {/* View Mode Toggle: Cards vs 5-Column Table */}
+                    <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setExcelDialogViewMode('cards')}
+                        className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          excelDialogViewMode === 'cards'
+                            ? 'bg-white text-slate-900 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                        title="پیشاندانی کارتی"
                       >
-                        <option value="">-- هەڵبژاردن --</option>
-                        {rawHeaders.map((h, idx) => (
-                          <option key={idx} value={String(idx)}>
-                            {idx + 1}. {h || `ستوونی ${idx + 1}`}
-                          </option>
-                        ))}
-                      </select>
+                        <LayoutGrid className="w-3 h-3" />
+                        <span>کارتەکان</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExcelDialogViewMode('table')}
+                        className={`px-2 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          excelDialogViewMode === 'table'
+                            ? 'bg-white text-slate-900 shadow-2xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                        title="پیشاندانی خشتەی ٥ کۆڵۆم"
+                      >
+                        <TableIcon className="w-3 h-3" />
+                        <span>خشتەی ٥ کۆڵۆم</span>
+                      </button>
                     </div>
-                  )}
+
+                    {rawHeaders.length > 0 && (
+                      <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-lg">
+                        <span className="text-[10px] text-slate-400 font-medium">یان:</span>
+                        <select
+                          value={['all', 'desc', 'model', 'price', 'cat', 'suggested'].includes(excelSearchTargetCol) ? '' : excelSearchTargetCol}
+                          onChange={(e) => {
+                            if (e.target.value) setExcelSearchTargetCol(e.target.value);
+                          }}
+                          className="text-[11px] font-bold text-slate-700 bg-transparent focus:outline-none cursor-pointer max-w-[110px] truncate"
+                        >
+                          <option value="">-- ستوون --</option>
+                          {rawHeaders.map((h, idx) => (
+                            <option key={idx} value={String(idx)}>
+                              {idx + 1}. {h || `ستوونی ${idx + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Live Result Count Banner */}
@@ -1534,7 +1771,7 @@ export default function PriceMatcherModal({
               </div>
 
               {/* Results from Excel Master Sheet */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50 min-h-[260px] max-h-[380px]">
+              <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50 min-h-[260px] max-h-[420px]">
                 {excelDialogSearchResults.length === 0 ? (
                   <div className="text-center py-12 text-slate-400 text-xs">
                     <div className="text-2xl mb-2">🔍</div>
@@ -1543,7 +1780,61 @@ export default function PriceMatcherModal({
                       هیچ کاڵایەک بە پیتەکانی "{excelSearchQuery}" لە فایلی ئێکسڵدا نییە.
                     </p>
                   </div>
+                ) : excelDialogViewMode === 'table' ? (
+                  /* 5-COLUMN TABLE VIEW INSIDE SEARCH MODAL */
+                  <div className="overflow-x-auto bg-white rounded-xl border border-slate-200">
+                    <table className="w-full text-xs text-slate-800 border-collapse">
+                      <thead className="bg-slate-100 text-slate-800 text-[10.5px] font-bold border-b border-slate-300 font-mono">
+                        <tr>
+                          <th className="p-2 text-center border-e border-slate-200 w-8">#</th>
+                          <th className="p-2 text-center border-e border-slate-200">category_name_en</th>
+                          <th className="p-2 text-center border-e border-slate-200">model_name_en</th>
+                          <th className="p-2 text-start border-e border-slate-200 min-w-[200px]">name_en (تەواو)</th>
+                          <th className="p-2 text-center border-e border-slate-200 w-20">price_usd</th>
+                          <th className="p-2 text-start border-e border-slate-200 min-w-[180px] bg-amber-50/70 text-amber-900">💡 پێشنیاری مۆدێل</th>
+                          <th className="p-2 text-center w-24">کردار</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 font-mono">
+                        {excelDialogSearchResults.map((row, idx) => (
+                          <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="p-2 text-center border-e border-slate-200 text-slate-400 text-[10px]">
+                              {idx + 1}
+                            </td>
+                            <td className="p-2 text-center border-e border-slate-200 font-sans text-[11px] text-slate-700">
+                              {row.category || '-'}
+                            </td>
+                            <td className="p-2 text-center border-e border-slate-200 font-bold text-slate-900">
+                              {row.rawModel || '-'}
+                            </td>
+                            <td className="p-2 border-e border-slate-200 text-slate-800 font-medium break-words font-mono text-[11px]" dir="ltr">
+                              {row.rawDesc || '-'}
+                            </td>
+                            <td className="p-2 text-center border-e border-slate-200 font-black text-emerald-700">
+                              ${row.price || 0}
+                            </td>
+                            <td className="p-2 bg-amber-50/40 border-e border-amber-200 font-sans">
+                              <span className="font-mono font-black text-amber-950 bg-white px-1.5 py-0.5 rounded border border-amber-300 text-xs" dir="ltr">
+                                {row.suggestedModel || '-'}
+                              </span>
+                            </td>
+                            <td className="p-2 text-center font-sans">
+                              <button
+                                type="button"
+                                onClick={() => handleAssignExcelRowToModel(excelSearchTarget.model.id, row)}
+                                className="px-2.5 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-[11px] font-bold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center gap-1 mx-auto"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>وەرگرتن</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
+                  /* 5-FIELD CARD VIEW INSIDE SEARCH MODAL */
                   <div className="grid grid-cols-1 gap-2">
                     {excelDialogSearchResults.map((row) => (
                       <div
@@ -1571,7 +1862,7 @@ export default function PriceMatcherModal({
                             )}
                           </div>
 
-                          {/* Row 2: name_en (Full description from Excel) */}
+                          {/* Row 2: name_en (FULL description from Excel, never truncated!) */}
                           <div className="flex items-start gap-1.5 text-xs text-slate-800">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0 mt-0.5">
                               name_en:
@@ -1580,6 +1871,24 @@ export default function PriceMatcherModal({
                               {row.rawDesc || row.predictedModel}
                             </span>
                           </div>
+
+                          {/* Row 3: Suggested Model Code by AI */}
+                          {row.suggestedModel && row.suggestedModel !== '-' && (
+                            <div className="flex items-center gap-1.5 text-xs text-amber-900 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-lg" dir="rtl">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span className="text-[10.5px] font-bold">
+                                پێشنیاری پرۆگرام بۆ مۆدێل:
+                              </span>
+                              <span className="font-mono font-black text-amber-950 bg-white px-2 py-0.5 rounded border border-amber-300" dir="ltr">
+                                {row.suggestedModel}
+                              </span>
+                              {row.suggestionReason && (
+                                <span className="text-[10px] text-amber-700 hidden sm:inline mr-1">
+                                  ({row.suggestionReason})
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                         </div>
 

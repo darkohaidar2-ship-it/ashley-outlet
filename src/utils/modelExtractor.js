@@ -31,53 +31,42 @@ export function parsePriceToFloat(val) {
 
 /**
  * Smart detection of columns in raw Excel rows.
- * Specifically prioritizes price_usa, price_usd, outlet_price_usa, etc.
+ * Matches exact 4 columns (category_name_en, model_name_en, name_en, price_usd) first,
+ * with strictly isolated fallbacks to prevent substring overlap (e.g. name_en inside category_name_en).
  */
 export function detectExcelColumns(headers = [], sampleRows = []) {
-  const cleanHeaders = headers.map(h => String(h || '').trim().toLowerCase());
+  const cleanHeaders = headers.map(h => String(h || '').trim().toLowerCase().replace(/[\s-]+/g, '_'));
 
-  // 1. Price Column Priority:
-  // Priority A: Exact USA / USD / Outlet prices (User's specific case: 'price_usa'!)
-  const usaPriceKeywords = [
-    'price_usa', 'price_usd', 'priceusa', 'priceusd', 
-    'outlet_price_usa', 'outlet_price_usd', 'outlet_price',
-    'sale_price_usa', 'sale_price_usd', 'sale_price', 
-    'usd_price', 'usa_price', 'usd'
-  ];
+  // 1. EXACT 4-COLUMN MATCH (Highest Priority)
+  let detectedCatIdx = cleanHeaders.findIndex(h => h === 'category_name_en' || h === 'category_name' || h === 'category' || h === 'cat_name');
+  let detectedModelIdx = cleanHeaders.findIndex(h => h === 'model_name_en' || h === 'model_name' || h === 'model_no' || h === 'model');
+  let detectedDescIdx = cleanHeaders.findIndex(h => h === 'name_en' || h === 'item_name_en' || h === 'description' || h === 'item_desc' || h === 'desc');
+  let detectedPriceIdx = cleanHeaders.findIndex(h => h === 'price_usd' || h === 'price_usa' || h === 'price' || h === 'outlet_price_usd' || h === 'outlet_price_usa');
 
-  let detectedPriceIdx = -1;
-
-  // Check USA / USD keywords first
-  for (const kw of usaPriceKeywords) {
-    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
-    if (idx !== -1) {
-      detectedPriceIdx = idx;
-      break;
+  // 2. FALLBACK FOR PRICE (if not found by exact match)
+  if (detectedPriceIdx === -1) {
+    const usaPriceKeywords = ['price_usd', 'price_usa', 'priceusd', 'priceusa', 'outlet_price', 'sale_price', 'usd', 'usa'];
+    for (const kw of usaPriceKeywords) {
+      const idx = cleanHeaders.findIndex((h, cIdx) => (h === kw || h.includes(kw)) && cIdx !== detectedCatIdx && cIdx !== detectedModelIdx && cIdx !== detectedDescIdx);
+      if (idx !== -1) {
+        detectedPriceIdx = idx;
+        break;
+      }
     }
   }
 
-  // If not found by USA keywords, check candidates with non-zero numeric values
   if (detectedPriceIdx === -1) {
     const priceCandidates = [];
     cleanHeaders.forEach((h, idx) => {
-      if (
-        h.includes('price') || 
-        h.includes('نرخ') || 
-        h.includes('سعر') || 
-        h.includes('outlet') || 
-        h.includes('sale') || 
-        h.includes('amount') || 
-        h.includes('cost')
-      ) {
+      if (idx === detectedCatIdx || idx === detectedModelIdx || idx === detectedDescIdx) return;
+      if (h.includes('price') || h.includes('نرخ') || h.includes('سعر') || h.includes('cost') || h.includes('amount')) {
         priceCandidates.push(idx);
       }
     });
 
     if (priceCandidates.length > 0) {
-      // Pick the column that has the most non-zero values
       let bestIdx = priceCandidates[0];
       let maxNonZeroCount = -1;
-
       priceCandidates.forEach(idx => {
         let nonZero = 0;
         const limit = Math.min(sampleRows.length, 50);
@@ -86,9 +75,7 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
           const num = parsePriceToFloat(val);
           if (num > 0) nonZero++;
         }
-        if (cleanHeaders[idx].includes('usa') || cleanHeaders[idx].includes('usd')) {
-          nonZero += 50;
-        }
+        if (cleanHeaders[idx].includes('usa') || cleanHeaders[idx].includes('usd')) nonZero += 50;
         if (nonZero > maxNonZeroCount) {
           maxNonZeroCount = nonZero;
           bestIdx = idx;
@@ -98,66 +85,53 @@ export function detectExcelColumns(headers = [], sampleRows = []) {
     }
   }
 
-  if (detectedPriceIdx === -1) {
-    detectedPriceIdx = headers.length > 1 ? 1 : 0;
-  }
-
-  // 2. Model Name Column Priority:
-  let detectedModelIdx = -1;
-  const modelKeywords = ['model_name_en', 'model_name', 'model', 'مۆدێل', 'item_name'];
-  for (const kw of modelKeywords) {
-    const idx = cleanHeaders.findIndex(h => h === kw || h.includes(kw));
-    if (idx !== -1) {
-      detectedModelIdx = idx;
-      break;
+  // 3. FALLBACK FOR MODEL (Exclude category & desc)
+  if (detectedModelIdx === -1) {
+    const modelKeywords = ['model_name', 'model', 'مۆدێل', 'item_name', 'product_name'];
+    for (const kw of modelKeywords) {
+      const idx = cleanHeaders.findIndex((h, cIdx) => (h === kw || h.includes(kw)) && cIdx !== detectedCatIdx && cIdx !== detectedDescIdx && cIdx !== detectedPriceIdx);
+      if (idx !== -1) {
+        detectedModelIdx = idx;
+        break;
+      }
     }
   }
 
-  // 3. Description Column Priority:
-  let detectedDescIdx = -1;
-  const descKeywords = ['name_en', 'description', 'desc', 'وەسف', 'name', 'item_desc'];
-  for (const kw of descKeywords) {
-    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx);
-    if (idx !== -1) {
-      detectedDescIdx = idx;
-      break;
+  // 4. FALLBACK FOR DESCRIPTION (Strictly exclude category and model keywords!)
+  if (detectedDescIdx === -1) {
+    const descKeywords = ['description', 'desc', 'وەسف', 'item_desc'];
+    for (const kw of descKeywords) {
+      const idx = cleanHeaders.findIndex((h, cIdx) => (h === kw || h.includes(kw)) && !h.includes('category') && !h.includes('model') && cIdx !== detectedCatIdx && cIdx !== detectedModelIdx && cIdx !== detectedPriceIdx);
+      if (idx !== -1) {
+        detectedDescIdx = idx;
+        break;
+      }
     }
   }
 
-  // 4. Code / Barcode Column Priority:
-  let detectedCodeIdx = -1;
-  const codeKeywords = ['barcode', 'code', 'sku', 'کۆد', 'بارکۆد', 'item_code', 'item_no'];
-  for (const kw of codeKeywords) {
-    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx && colIdx !== detectedDescIdx);
-    if (idx !== -1) {
-      detectedCodeIdx = idx;
-      break;
+  // 5. FALLBACK FOR CATEGORY
+  if (detectedCatIdx === -1) {
+    const catKeywords = ['category', 'cat', 'department', 'dept', 'section', 'family', 'class', 'پۆلێن', 'کەتەگۆری', 'بەش', 'قسم'];
+    for (const kw of catKeywords) {
+      const idx = cleanHeaders.findIndex((h, cIdx) => (h === kw || h.includes(kw)) && cIdx !== detectedModelIdx && cIdx !== detectedDescIdx && cIdx !== detectedPriceIdx);
+      if (idx !== -1) {
+        detectedCatIdx = idx;
+        break;
+      }
     }
   }
 
-  // 5. Category Column Priority:
-  let detectedCatIdx = -1;
-  const catKeywords = [
-    'category_name_en', 'category_name', 'major_category', 'sub_category',
-    'category', 'cat_name', 'cat', 'department', 'dept', 'section', 'family',
-    'class', 'پۆلێن', 'کەتەگۆری', 'بەش', 'قسم'
-  ];
-  for (const kw of catKeywords) {
-    const idx = cleanHeaders.findIndex((h, colIdx) => (h === kw || h.includes(kw)) && colIdx !== detectedModelIdx && colIdx !== detectedDescIdx && colIdx !== detectedPriceIdx);
-    if (idx !== -1) {
-      detectedCatIdx = idx;
-      break;
-    }
-  }
-
-  if (detectedModelIdx === -1 && detectedDescIdx >= 0) detectedModelIdx = detectedDescIdx;
-  if (detectedModelIdx === -1) detectedModelIdx = 0;
+  // Final sanity assignments
+  if (detectedPriceIdx === -1 && headers.length > 3) detectedPriceIdx = 3;
+  if (detectedDescIdx === -1 && headers.length > 2) detectedDescIdx = 2;
+  if (detectedModelIdx === -1 && headers.length > 1) detectedModelIdx = 1;
+  if (detectedCatIdx === -1 && headers.length > 0) detectedCatIdx = 0;
 
   return {
     priceCol: detectedPriceIdx,
     modelCol: detectedModelIdx,
     descCol: detectedDescIdx,
-    codeCol: detectedCodeIdx,
+    codeCol: -1,
     catCol: detectedCatIdx
   };
 }
@@ -639,7 +613,7 @@ export function cleanModelNumber(val) {
 
 /**
  * Reverse Direction Matching: Find the matching row in an Excel Master Sheet for a Catalog Model.
- * Strictly matches via Model Number (model_name_en / name_en), ignoring any status like "ئاوتلێت".
+ * Strictly matches via Model Number (model_name_en / suggestedModel / name_en), ignoring any status like "ئاوتلێت".
  */
 export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], categories = []) {
   if (!catalogModel || !excelItems || excelItems.length === 0) {
@@ -675,8 +649,10 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
     // item.rawModel comes directly from model_name_en in Excel!
     const excelModelRaw = cleanModelNumber(item.rawModel || item.predictedModel || item.model || '');
     const excelDescRaw = cleanModelNumber(item.rawDesc || item.desc || '');
+    const excelSuggestedRaw = cleanModelNumber(item.suggestedModel || '');
     const itemModelNorm = normalizeKey(excelModelRaw);
     const itemDescNorm = normalizeKey(excelDescRaw);
+    const itemSuggestedNorm = normalizeKey(excelSuggestedRaw);
     const itemCatGroup = getCategoryGroup(item.category || excelDescRaw);
 
     const isSameCat = catalogCatGroup !== 'unknown' && itemCatGroup !== 'unknown' && catalogCatGroup === itemCatGroup;
@@ -687,8 +663,18 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
       continue;
     }
 
-    // 1. Exact Model Number Match with model_name_en (Highest Priority = 100)
-    if (itemModelNorm) {
+    // 1. Exact Model Number Match with suggestedModel or model_name_en (Highest Priority = 100)
+    if (itemSuggestedNorm) {
+      if (effectiveSku && itemSuggestedNorm === effectiveSku) {
+        score = 100;
+      } else if (normSku && itemSuggestedNorm === normSku) {
+        score = 100;
+      } else if (normName && itemSuggestedNorm === normName) {
+        score = 100;
+      }
+    }
+
+    if (score < 100 && itemModelNorm) {
       if (effectiveSku && itemModelNorm === effectiveSku) {
         score = 100;
       } else if (normName && itemModelNorm === normName) {
@@ -749,10 +735,105 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
 }
 
 /**
+ * Generates an intelligent suggestion for the item's exact model/code
+ * based on category_name_en, model_name_en, and name_en.
+ * 
+ * Returns {
+ *   suggestedModel: string,  // e.g. "1200067" or "U7160458" or "Clan" or "b719-56W1"
+ *   reason: string           // explanation in Kurdish Sorani
+ * }
+ */
+export function suggestModelFromRow(category = '', modelName = '', nameEn = '') {
+  const cat = String(category || '').trim();
+  const rawModel = cleanModelNumber(String(modelName || '').trim());
+  const desc = String(nameEn || '').trim();
+
+  // 1. Dash-separated parts in name_en: "[Category] - [SKU/Model] - [Description]"
+  // e.g. "Corner - 1200067 - Right-Arm Facing Sofa" -> 1200067
+  // e.g. "Corner - U7160458 - Laf Zero Wall Power Recliner ..." -> U7160458
+  // e.g. "Corner - 1200046 - Coffee Armless Chair" -> 1200046
+  // e.g. "Corner - U7160457 - Dunleith Console With Storage" -> U7160457
+  // e.g. "Corner - U7160446 - Dunleith Armless Chair" -> U7160446
+  // e.g. "Home Office - H200-07 - ..." -> H200-07
+  // e.g. "Accessories - D8917 - Accessories" -> D8917
+  // e.g. "Clan - Wall Unit - TV Stand" -> Clan
+  const parts = desc.split(/\s*[-–—|/]\s*/).map(p => p.trim()).filter(Boolean);
+  if (parts.length >= 2) {
+    const p0Lower = parts[0].toLowerCase();
+    const isP0Cat = (
+      p0Lower === cat.toLowerCase() ||
+      ['corner', 'accessories', 'living room', 'bedroom', 'dining room', 'home office', 'sofa set', 'wall unit', 'dining'].includes(p0Lower)
+    );
+    if (isP0Cat && parts[1]) {
+      const candidate = parts[1];
+      if (/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/i.test(candidate) || candidate.length <= 15) {
+        return {
+          suggestedModel: candidate,
+          reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${candidate}`
+        };
+      }
+    }
+  }
+
+  // 2. Specific variant code in name_en when model_name_en is a prefix
+  // e.g. model is "b719-" and name_en has "b719-56W1"
+  // e.g. model is "12000" and name_en has "1200067"
+  if (rawModel) {
+    const cleanPrefix = rawModel.replace(/[-_/\s]+$/, '').trim();
+    if (cleanPrefix) {
+      const tokenRegex = new RegExp(`\\b(${cleanPrefix}[A-Za-z0-9_-]+)\\b`, 'i');
+      const m = desc.match(tokenRegex);
+      if (m && m[1] && m[1].length > cleanPrefix.length) {
+        return {
+          suggestedModel: m[1],
+          reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${m[1]}`
+        };
+      }
+    }
+  }
+
+  // 3. Look for alphanumeric code pattern in name_en
+  const codeMatch = desc.match(/\b([A-Z]\d{2,4}-\d{1,4}[A-Za-z0-9-]*|[A-Z]\d{3,8}(?:-[A-Z0-9]+)?|\d{5,12})\b/i);
+  if (codeMatch && codeMatch[1]) {
+    return {
+      suggestedModel: codeMatch[1],
+      reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${codeMatch[1]}`
+    };
+  }
+
+  // 4. Fall back to model_name_en if clean
+  if (rawModel && rawModel !== '-') {
+    return {
+      suggestedModel: rawModel,
+      reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${rawModel}`
+    };
+  }
+
+  // 5. First part of name_en
+  if (parts.length > 0) {
+    return {
+      suggestedModel: parts[0],
+      reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${parts[0]}`
+    };
+  }
+
+  return {
+    suggestedModel: '-',
+    reason: 'پێشنیاری مۆدێل بەردەست نییە'
+  };
+}
+
+/**
  * Built-in Sample Data with Ashley Furniture and Retail Items (Exact match with user Excel sheet)
  */
 export const sampleDataRows = [
   ['category_name_en', 'model_name_en', 'name_en', 'price_usd'],
+  ['Corner', '12000', 'Corner - 1200067 - Right-Arm Facing Sofa', '550'],
+  ['Corner', '12000', 'Corner - 1200046 - Coffee Armless Chair', '1425'],
+  ['Corner', 'U7160', 'Corner - U7160458 - Laf Zero Wall Power Recliner', '850'],
+  ['Corner', 'U7160', 'Corner - U7160457 - Dunleith Console With Storage', '630'],
+  ['Corner', 'U7160', 'Corner - U7160446 - Dunleith Armless Chair', '420'],
+  ['Home Office', 'H200', 'Home Office - H200-07 - Desk', '310'],
   ['Wall Unit', 'Clan', 'Clan - Wall Unit - TV Stand', '3140'],
   ['Accessories', 'D8917', 'Accessories - D8917 - Accessories', '11'],
   ['Accessories', 'C5473', 'Accessories - C5473 - Accessories', '16'],
