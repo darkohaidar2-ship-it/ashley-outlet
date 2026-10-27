@@ -623,8 +623,23 @@ export function matchStagingItemWithCatalog(stagingItem, catalogModels = [], cat
 }
 
 /**
+ * Cleans status words (ئاوت لێت, ئاوتلێت, ستۆک, یەدەگ, outlet, stock) from a model name or SKU,
+ * ensuring matching is strictly based on the real model number.
+ */
+export function cleanModelNumber(val) {
+  if (val === undefined || val === null) return '';
+  let str = String(val).trim();
+  // Strip out status words: outlet, stock, item, used, new
+  str = str.replace(/\b(outlet|stock|item|used|new)\b/gi, '');
+  // Strip Kurdish/Arabic status words: ئاوت لێت, ئاوتلێت, ئاوت لیت, ستۆک, ستۆك, ستوك, یەدەگ, کاڵا, نوێ
+  str = str.replace(/(ئاوت\s*لێت|ئاوت\s*لیت|ستۆک|ستۆك|ستوك|یەدەگ|کاڵا|نوێ)/gi, '');
+  // Clean surrounding slashes, dashes, colons, or whitespace left over
+  return str.replace(/^[\s/:|#-]+|[\s/:|#-]+$/g, '').trim();
+}
+
+/**
  * Reverse Direction Matching: Find the matching row in an Excel Master Sheet for a Catalog Model.
- * This directly supports the user workflow: "ئەو ئایتمانەی کە هەمانە هەموو پارەکەی لەو شیتەوە دەر ئەکەین".
+ * Strictly matches via Model Number (model_name_en / name_en), ignoring any status like "ئاوتلێت".
  */
 export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], categories = []) {
   if (!catalogModel || !excelItems || excelItems.length === 0) {
@@ -640,12 +655,14 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
   const catalogCatName = cat ? (cat.name_en || cat.name_ku || cat.name || '') : '';
   const catalogCatGroup = getCategoryGroup(catalogCatName || catalogModel.name);
 
-  // Normalize catalog model keys
-  const normSku = normalizeKey(catalogModel.sku || '');
-  const normName = normalizeKey(catalogModel.name || '');
+  // Clean catalog model keys strictly by stripping status words like "ئاوتلێت"
+  const cleanSku = cleanModelNumber(catalogModel.sku || '');
+  const cleanName = cleanModelNumber(catalogModel.name || '');
+  const normSku = normalizeKey(cleanSku);
+  const normName = normalizeKey(cleanName);
 
   // Extract possible code/SKU from catalog model name if sku is generic
-  const nameSkuMatch = String(catalogModel.name || '').match(/([A-Z]\d{2,4}-\d{1,4}[A-Za-z0-9-]*|\d{5,12})/i);
+  const nameSkuMatch = String(cleanName || catalogModel.name || '').match(/([A-Z]\d{2,4}-\d{1,4}[A-Za-z0-9-]*|[A-Z]\d{3,8}(?:-[A-Z0-9]+)?|\d{3,6}-\d{2,6}|\d{4,12})/i);
   const extractedSkuFromName = nameSkuMatch ? normalizeKey(nameSkuMatch[1]) : '';
   const effectiveSku = normSku || extractedSkuFromName;
 
@@ -655,10 +672,12 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
 
   for (const item of excelItems) {
     let score = 0;
-    const itemCodeNorm = normalizeKey(item.extractedCode || item.code || item.rawCode || '');
-    const itemModelNorm = normalizeKey(item.predictedModel || item.model || '');
-    const itemDescNorm = normalizeKey(item.rawDesc || item.desc || '');
-    const itemCatGroup = getCategoryGroup(item.category || itemDescNorm);
+    // item.rawModel comes directly from model_name_en in Excel!
+    const excelModelRaw = cleanModelNumber(item.rawModel || item.predictedModel || item.model || '');
+    const excelDescRaw = cleanModelNumber(item.rawDesc || item.desc || '');
+    const itemModelNorm = normalizeKey(excelModelRaw);
+    const itemDescNorm = normalizeKey(excelDescRaw);
+    const itemCatGroup = getCategoryGroup(item.category || excelDescRaw);
 
     const isSameCat = catalogCatGroup !== 'unknown' && itemCatGroup !== 'unknown' && catalogCatGroup === itemCatGroup;
     const isConflictingCat = catalogCatGroup !== 'unknown' && itemCatGroup !== 'unknown' && catalogCatGroup !== itemCatGroup;
@@ -668,31 +687,39 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
       continue;
     }
 
-    // 1. Exact Full Variant SKU Match (e.g. effectiveSku is 'b71956w1' and itemCodeNorm is 'b71956w1')
-    if (effectiveSku && (itemCodeNorm === effectiveSku || itemModelNorm === effectiveSku)) {
-      score = 100;
-    }
-    // 2. Exact Full Variant SKU contained in Excel description (e.g. 'b71956w1' in 'b71956w1demarloskingbed')
-    else if (effectiveSku && effectiveSku.length >= 4 && itemDescNorm.includes(effectiveSku)) {
-      score = 95;
-    }
-    // 3. Exact Model Name match (e.g. "Clan" === "Clan")
-    else if (normName && itemModelNorm && normName === itemModelNorm) {
-      score = 90;
-    }
-    // 4. Substring Match for Clean Furniture Names (e.g. "Clan TV Stand" contains "Clan")
-    // Disallow partial matching for alphanumeric series codes (like "b719")
-    else if (
-      normName && itemModelNorm &&
-      !/^[a-z]\d{2,4}/i.test(itemModelNorm) &&
-      !/^\d{4,8}/.test(itemModelNorm) &&
-      (normName.includes(itemModelNorm) || itemModelNorm.includes(normName))
-    ) {
-      score = 80;
+    // 1. Exact Model Number Match with model_name_en (Highest Priority = 100)
+    if (itemModelNorm) {
+      if (effectiveSku && itemModelNorm === effectiveSku) {
+        score = 100;
+      } else if (normName && itemModelNorm === normName) {
+        score = 100;
+      } else if (normSku && itemModelNorm === normSku) {
+        score = 100;
+      }
     }
 
-    if (score >= 80) {
-      if (isSameCat) score += 30;
+    // 2. Exact Model Number found in name_en (Excel Description)
+    if (score < 95) {
+      if (effectiveSku && effectiveSku.length >= 3 && itemDescNorm.includes(effectiveSku)) {
+        score = 95;
+      } else if (normSku && normSku.length >= 3 && itemDescNorm.includes(normSku)) {
+        score = 95;
+      } else if (normName && normName.length >= 4 && itemDescNorm.includes(normName)) {
+        score = 95;
+      }
+    }
+
+    // 3. Substring match for furniture names (e.g. "Clan" in "Clan TV Stand")
+    if (score < 90 && itemModelNorm && itemModelNorm.length >= 3) {
+      if (normName && (normName.includes(itemModelNorm) || itemModelNorm.includes(normName))) {
+        score = 90;
+      } else if (normSku && (normSku.includes(itemModelNorm) || itemModelNorm.includes(normSku))) {
+        score = 90;
+      }
+    }
+
+    if (score >= 85) {
+      if (isSameCat) score += 20;
       if (score > bestScore) {
         bestScore = score;
         bestMatch = item;
@@ -701,8 +728,8 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
     }
   }
 
-  // Strict Threshold: If score < 80, leave BLANK (white / spêtî)!
-  if (bestScore < 80 || !bestMatch) {
+  // Strict Threshold: If score < 85, leave BLANK (white / spêtî)!
+  if (bestScore < 85 || !bestMatch) {
     return {
       matchedExcelRow: null,
       excelPrice: null,
@@ -722,22 +749,31 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
 }
 
 /**
- * Built-in Sample Data with Ashley Furniture and Retail Items (Including User Excel Cases)
+ * Built-in Sample Data with Ashley Furniture and Retail Items (Exact match with user Excel sheet)
  */
 export const sampleDataRows = [
-  ['model_name_en', 'name_en', 'price_usa', 'category_name_en'],
-  ['Clan', 'Clan - Wall Unit - TV Stand', '3140', 'Living Room'],
-  ['D8917', 'Accessories - D8917 - Accessories', '11', 'Accessories'],
-  ['C5473', 'Accessories - C5473 - Accessories', '16', 'Accessories'],
-  ['C6183', 'Accessories - C6183-IVOR - Accessories', '42', 'Accessories'],
-  ['b719-', 'b719-56W1 Demarlos King Bed with Storage', '1250', 'Bedroom'],
-  ['1202020', 'Accessories - 1202020 - Accessories Cushion', '45', 'Accessories'],
-  ['1202020', '1202020 Bergere Chair Armchair', '780', 'SOFA SET'],
-  ['76642- Black Set', 'Accessories - 76642- Black Set - Accessories', '150', 'Accessories'],
-  ['73642-BLAC Set', 'Accessories - 73642-BLAC Set - Accessories', '120', 'Accessories'],
-  ['Porter Dresser', 'B697-31 Porter Dresser Dark Brown - 6 Drawers', '850', 'Bedroom'],
-  ['Realyn Dresser', '100-24425 B743-31 Realyn Dresser Chipped White Farmhouse', '920', 'Bedroom'],
-  ['Darcy Sofa', 'A3000245 Darcy Sofa Cobblestone Fabric Living Room', '680', 'SOFA SET'],
-  ['Centiar Dining', 'D372-25 Centiar Dining Room Counter Table', '410', 'Dining Room'],
-  ['Barchuz Recliner', '6540225 Barchuz Power Lift Recliner Brown', '750', 'SOFA SET']
+  ['category_name_en', 'model_name_en', 'name_en', 'price_usd'],
+  ['Wall Unit', 'Clan', 'Clan - Wall Unit - TV Stand', '3140'],
+  ['Accessories', 'D8917', 'Accessories - D8917 - Accessories', '11'],
+  ['Accessories', 'C5473', 'Accessories - C5473 - Accessories', '16'],
+  ['Accessories', 'D8916', 'Accessories - D8916 - Accessories', '11'],
+  ['Accessories', 'C5474', 'Accessories - C5474 - Accessories', '30'],
+  ['Accessories', 'D8706', 'Accessories - D8706 - Accessories', '614'],
+  ['Accessories', 'D8705', 'Accessories - D8705 - Accessories', '1005'],
+  ['Accessories', 'C5475', 'Accessories - C5475 - Accessories', '16'],
+  ['Accessories', 'D8700', 'Accessories - D8700 - Accessories', '55'],
+  ['Accessories', 'C5476', 'Accessories - C5476 - Accessories', '50'],
+  ['Accessories', 'D8699', 'Accessories - D8699 - Accessories', '58'],
+  ['Accessories', 'C5478', 'Accessories - C5478 - Accessories', '15'],
+  ['Accessories', 'D8691', 'Accessories - D8691 - Accessories', '160'],
+  ['Accessories', 'C5479', 'Accessories - C5479 - Accessories', '27'],
+  ['Accessories', 'D8636', 'Accessories - D8636 - Accessories', '29'],
+  ['Accessories', 'C5482', 'Accessories - C5482 - Accessories', '22'],
+  ['Accessories', 'D8634', 'Accessories - D8634 - Accessories', '107'],
+  ['Accessories', 'C5483', 'Accessories - C5483 - Accessories', '37'],
+  ['Accessories', 'D8633', 'Accessories - D8633 - Accessories', '53'],
+  ['Accessories', 'C5546', 'Accessories - C5546 - Accessories', '76'],
+  ['Accessories', 'C5548', 'Accessories - C5548 - Accessories', '71'],
+  ['Bedroom', 'b719-', 'b719-56W1 Demarlos King Bed with Storage', '1250'],
+  ['SOFA SET', '1202020', '1202020 Bergere Chair Armchair', '780']
 ];

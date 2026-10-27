@@ -224,8 +224,8 @@ export default function PriceMatcherModal({
         extractedCode: extracted.code,
         rawModel: rawModel || extracted.model,
         rawDesc: rawDesc || rawModel,
-        predictedModel: extracted.model,
-        category: extracted.category || rawCat,
+        predictedModel: rawModel || extracted.model,
+        category: rawCat || extracted.category,
         price: cleanPrice,
         rawNote,
         rawRow: r,
@@ -566,6 +566,7 @@ export default function PriceMatcherModal({
   };
 
   // Filtered Excel rows inside the Manual Search Dialog
+  // Searches across ALL 4 COLUMNS by default: category_name_en, model_name_en, name_en, price_usd
   const excelDialogSearchResults = useMemo(() => {
     if (!excelSearchTarget || stagingData.length === 0) return [];
     const q = excelSearchQuery.trim().toLowerCase();
@@ -577,18 +578,20 @@ export default function PriceMatcherModal({
       }
       if (!q) return true;
 
+      const category = String(item.category || '').toLowerCase();
+      const model = String(item.rawModel || item.predictedModel || '').toLowerCase();
       const desc = String(item.rawDesc || '').toLowerCase();
-      const rawModel = String(item.rawModel || '').toLowerCase();
-      const model = String(item.predictedModel || '').toLowerCase();
-      const code = String(item.extractedCode || item.rawCode || '').toLowerCase();
       const price = String(item.price || '').toLowerCase();
 
-      // Filter specifically by chosen column!
-      if (excelSearchTargetCol === 'desc') {
-        return desc.includes(q);
+      // If user specifically filtered by one column:
+      if (excelSearchTargetCol === 'cat') {
+        return category.includes(q);
       }
       if (excelSearchTargetCol === 'model') {
-        return rawModel.includes(q) || model.includes(q) || code.includes(q);
+        return model.includes(q) || String(item.extractedCode || '').toLowerCase().includes(q);
+      }
+      if (excelSearchTargetCol === 'desc') {
+        return desc.includes(q);
       }
       if (excelSearchTargetCol === 'price') {
         return price.includes(q);
@@ -601,12 +604,15 @@ export default function PriceMatcherModal({
         }
       }
 
-      // Default 'all' columns
+      // Default 'all': SEARCHES ACROSS ALL FOUR COLUMNS!
+      // 1. category_name_en (category)
+      // 2. model_name_en (model)
+      // 3. name_en (desc)
+      // 4. price_usd (price)
       return (
-        desc.includes(q) ||
-        rawModel.includes(q) ||
+        category.includes(q) ||
         model.includes(q) ||
-        code.includes(q) ||
+        desc.includes(q) ||
         price.includes(q)
       );
     }).slice(0, 80);
@@ -767,7 +773,7 @@ export default function PriceMatcherModal({
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                دۆزینەوە و دیاریکردنی نرخی مۆدێلەکان لە فایلی ئێکسڵ (price_usa)
+                دۆزینەوە و دیاریکردنی نرخی مۆدێلەکان لە فایلی ئێکسڵ (price_usd)
               </p>
             </div>
           </div>
@@ -906,7 +912,7 @@ export default function PriceMatcherModal({
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {/* Model Col */}
                       <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5">
-                        <span className="text-[10px] text-slate-500 font-semibold">مۆدێل (MODEL EN):</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">مۆدێل (model_name_en):</span>
                         <select
                           value={columnMapping.modelCol}
                           onChange={(e) => handleUpdateColumnMapping('modelCol', e.target.value)}
@@ -921,7 +927,7 @@ export default function PriceMatcherModal({
 
                       {/* Desc Col */}
                       <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5">
-                        <span className="text-[10px] text-slate-500 font-semibold">وەسف (NAME EN):</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">وەسف (name_en):</span>
                         <select
                           value={columnMapping.descCol}
                           onChange={(e) => handleUpdateColumnMapping('descCol', e.target.value)}
@@ -936,7 +942,7 @@ export default function PriceMatcherModal({
 
                       {/* Price Col */}
                       <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5">
-                        <span className="text-[10px] text-slate-500 font-semibold">نرخ (price_usa):</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">نرخ (price_usd):</span>
                         <select
                           value={columnMapping.priceCol}
                           onChange={(e) => handleUpdateColumnMapping('priceCol', e.target.value)}
@@ -951,7 +957,7 @@ export default function PriceMatcherModal({
 
                       {/* Cat Col */}
                       <div className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 flex flex-col gap-0.5">
-                        <span className="text-[10px] text-slate-500 font-semibold">کەتەگۆری:</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">کەتەگۆری (category_name_en):</span>
                         <select
                           value={columnMapping.catCol}
                           onChange={(e) => handleUpdateColumnMapping('catCol', e.target.value)}
@@ -1035,10 +1041,10 @@ export default function PriceMatcherModal({
                       <tr>
                         <th className="p-2 w-8 text-center border-e border-slate-200 font-mono">#</th>
                         <th className="p-2 w-12 text-center border-e border-slate-200">وێنە</th>
-                        <th className="p-2 min-w-[170px] text-start border-e border-slate-200">مۆدێلی کەتەلۆگ (ناو و کۆد / SKU)</th>
+                        <th className="p-2 min-w-[170px] text-start border-e border-slate-200">ژمارەی مۆدێل (model_name_en)</th>
                         <th className="p-2 w-28 text-center border-e border-slate-200">کەتەگۆری</th>
                         <th className="p-2 w-24 text-center border-e border-slate-200">نرخی ئێستا ($)</th>
-                        <th className="p-2 min-w-[200px] text-start border-e border-slate-200">نرخ لە ئێکسڵ (price_usa $)</th>
+                        <th className="p-2 min-w-[200px] text-start border-e border-slate-200">نرخ لە ئێکسڵ (price_usd $)</th>
                         <th className="p-2 w-24 text-center">کردار</th>
                       </tr>
                     </thead>
@@ -1064,14 +1070,12 @@ export default function PriceMatcherModal({
                               )}
                             </td>
                             <td className="p-2 border-e border-slate-200">
-                              <div className="font-bold text-slate-900 text-xs">
-                                {item.model.name}
+                              <div className="font-bold text-slate-900 text-xs font-mono" dir="ltr">
+                                {item.model.sku || item.model.name}
                               </div>
-                              {item.model.sku && (
-                                <div className="mt-0.5">
-                                  <span className="font-mono text-[10.5px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200" dir="ltr">
-                                    {item.model.sku}
-                                  </span>
+                              {item.model.name && item.model.sku && item.model.name !== item.model.sku && (
+                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                  {item.model.name}
                                 </div>
                               )}
                             </td>
@@ -1089,7 +1093,7 @@ export default function PriceMatcherModal({
                                   </div>
                                   {item.matchedExcelRow && (
                                     <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                      MODEL EN: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | NAME EN: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                      model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1227,10 +1231,10 @@ export default function PriceMatcherModal({
                       <tr>
                         <th className="p-2 w-8 text-center border-e border-slate-200 font-mono">#</th>
                         <th className="p-2 w-12 text-center border-e border-slate-200">وێنە</th>
-                        <th className="p-2 min-w-[170px] text-start border-e border-slate-200">مۆدێلی کەتەلۆگ</th>
+                        <th className="p-2 min-w-[170px] text-start border-e border-slate-200">ژمارەی مۆدێل (model_name_en)</th>
                         <th className="p-2 w-28 text-center border-e border-slate-200">کەتەگۆری</th>
                         <th className="p-2 w-24 text-center border-e border-slate-200">نرخی ئێستا ($)</th>
-                        <th className="p-2 min-w-[190px] text-start border-e border-slate-200">نرخی دانراو لە ئێکسڵ</th>
+                        <th className="p-2 min-w-[190px] text-start border-e border-slate-200">نرخ لە ئێکسڵ (price_usd $)</th>
                         <th className="p-2 w-36 text-center">سێرچ لە ئێکسڵ</th>
                       </tr>
                     </thead>
@@ -1256,14 +1260,12 @@ export default function PriceMatcherModal({
                               )}
                             </td>
                             <td className="p-2 border-e border-slate-200">
-                              <div className="font-bold text-slate-900 text-xs">
-                                {item.model.name}
+                              <div className="font-bold text-slate-900 text-xs font-mono" dir="ltr">
+                                {item.model.sku || item.model.name}
                               </div>
-                              {item.model.sku && (
-                                <div className="mt-0.5">
-                                  <span className="font-mono text-[10.5px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200" dir="ltr">
-                                    {item.model.sku}
-                                  </span>
+                              {item.model.name && item.model.sku && item.model.name !== item.model.sku && (
+                                <div className="text-[11px] text-slate-500 mt-0.5">
+                                  {item.model.name}
                                 </div>
                               )}
                             </td>
@@ -1296,7 +1298,7 @@ export default function PriceMatcherModal({
                                   </div>
                                   {item.matchedExcelRow && (
                                     <div className="text-[10px] text-slate-500 font-mono mt-0.5" dir="ltr">
-                                      MODEL EN: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | NAME EN: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
+                                      model_name_en: <span className="font-bold text-slate-700">{item.matchedExcelRow.rawModel || item.matchedExcelRow.predictedModel || '-'}</span> | name_en: <span className="text-slate-600">{item.matchedExcelRow.rawDesc || '-'}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1444,22 +1446,19 @@ export default function PriceMatcherModal({
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
                       }`}
                     >
-                      هەموو ستوونەکان
+                      🌐 هەر ٤ ستوونەکە (All 4 Columns)
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => setExcelSearchTargetCol('desc')}
+                      onClick={() => setExcelSearchTargetCol('cat')}
                       className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                        excelSearchTargetCol === 'desc'
+                        excelSearchTargetCol === 'cat'
                           ? 'bg-slate-900 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                     >
-                      <span>وەسف (NAME EN)</span>
-                      {columnMapping.descCol >= 0 && rawHeaders[columnMapping.descCol] && (
-                        <span className="text-[9.5px] opacity-75 font-mono">({rawHeaders[columnMapping.descCol]})</span>
-                      )}
+                      <span>📁 کەتەگۆری (category_name_en)</span>
                     </button>
 
                     <button
@@ -1471,10 +1470,19 @@ export default function PriceMatcherModal({
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                     >
-                      <span>مۆدێل (MODEL EN)</span>
-                      {columnMapping.modelCol >= 0 && rawHeaders[columnMapping.modelCol] && (
-                        <span className="text-[9.5px] opacity-75 font-mono">({rawHeaders[columnMapping.modelCol]})</span>
-                      )}
+                      <span>🏷️ مۆدێل (model_name_en)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setExcelSearchTargetCol('desc')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        excelSearchTargetCol === 'desc'
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <span>📝 وەسف (name_en)</span>
                     </button>
 
                     <button
@@ -1486,7 +1494,7 @@ export default function PriceMatcherModal({
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
                     >
-                      <span>نرخ (price_usa)</span>
+                      <span>💲 نرخ (price_usd)</span>
                     </button>
                   </div>
 
@@ -1544,13 +1552,16 @@ export default function PriceMatcherModal({
                       >
                         <div className="min-w-0 flex-1 space-y-1.5" dir="ltr">
                           
-                          {/* Row 1: MODEL EN and Badges */}
+                          {/* Row 1: category_name_en & model_name_en */}
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                              MODEL EN:
-                            </span>
-                            <span className="font-mono text-xs font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                              {row.rawModel || row.predictedModel || '-'}
+                            {row.category && (
+                              <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
+                                category_name_en: <strong className="text-slate-900">{row.category}</strong>
+                              </span>
+                            )}
+
+                            <span className="text-[11px] font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                              model_name_en: <strong className="text-slate-900">{row.rawModel || row.predictedModel || '-'}</strong>
                             </span>
 
                             {row.extractedCode && row.extractedCode !== (row.rawModel || row.predictedModel) && (
@@ -1558,18 +1569,12 @@ export default function PriceMatcherModal({
                                 SKU: {row.extractedCode}
                               </span>
                             )}
-
-                            {row.category && (
-                              <span className="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200">
-                                {row.category}
-                              </span>
-                            )}
                           </div>
 
-                          {/* Row 2: NAME EN (Full description from Excel) */}
+                          {/* Row 2: name_en (Full description from Excel) */}
                           <div className="flex items-start gap-1.5 text-xs text-slate-800">
                             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0 mt-0.5">
-                              NAME EN:
+                              name_en:
                             </span>
                             <span className="font-semibold text-slate-800 leading-snug break-words">
                               {row.rawDesc || row.predictedModel}
@@ -1582,7 +1587,7 @@ export default function PriceMatcherModal({
                         <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                           <div className="text-start sm:text-end">
                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              price_usa
+                              price_usd
                             </div>
                             <div className="font-mono font-black text-emerald-700 text-base leading-none mt-0.5">
                               ${row.price || 0}
