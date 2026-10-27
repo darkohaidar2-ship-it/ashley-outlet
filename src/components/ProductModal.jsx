@@ -89,7 +89,13 @@ export default function ProductModal({
     }
   };
 
-  const discountPercent = model.originalPrice && model.salePrice && Number(model.salePrice) > 0 && Number(model.originalPrice) > Number(model.salePrice)
+  const hasDiscount = Boolean(
+    model.originalPrice && 
+    model.salePrice && 
+    Number(model.salePrice) > 0 && 
+    Number(model.originalPrice) > Number(model.salePrice)
+  );
+  const discountPercent = hasDiscount
     ? Math.round(((Number(model.originalPrice) - Number(model.salePrice)) / Number(model.originalPrice)) * 100)
     : 0;
 
@@ -252,30 +258,49 @@ export default function ProductModal({
             </h2>
 
             {/* Price Box */}
-            <div className="mt-5 p-4 rounded-2xl bg-red-50/60 border border-red-100">
-              {/* 1. Original Price: Small on top in BLACK */}
-              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 mb-1">
-                <span className="text-[11px] text-slate-600 font-medium">{t.originalPrice || 'نرخی پێش داشکاندن'}:</span>
-                <span className="font-mono font-black text-slate-900">
-                  {model.originalPrice && Number(model.originalPrice) > 0 ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
-                </span>
-                {discountPercent > 0 && (
-                  <span className="text-[10px] font-extrabold text-red-600 bg-red-100 border border-red-200 px-1.5 py-0.2 rounded-md">
-                    %{discountPercent}-
-                  </span>
-                )}
-              </div>
+            <div className="mt-5 p-4 rounded-2xl bg-slate-50 border border-slate-200/90 shadow-2xs">
+              {hasDiscount ? (
+                <>
+                  {/* 1. Old Price: Small in Red with Strikethrough */}
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 mb-1">
+                    <span className="text-[11px] text-slate-400 font-medium">کۆن:</span>
+                    <span className="font-mono font-bold text-rose-600 line-through decoration-rose-500">
+                      {Number(model.originalPrice).toLocaleString()} {t.currency}
+                    </span>
+                    {discountPercent > 0 && (
+                      <span className="text-[10px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.2 rounded-md font-mono">
+                        %{discountPercent}-
+                      </span>
+                    )}
+                  </div>
 
-              {/* 2. Discounted / Sale Price: Larger, 0 if not set */}
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs text-red-600/80 font-bold uppercase tracking-wider">
-                  {t.outletPrice || 'نرخی داشکاندن'}:
-                </span>
-                <span className="text-2xl sm:text-3xl font-black text-red-600 font-mono">
-                  {model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}
-                </span>
-                <span className="text-sm font-bold text-red-600/80">{t.currency}</span>
-              </div>
+                  {/* 2. New Sale Price: Large Modern Emerald Green */}
+                  <div className="flex items-baseline gap-2 text-emerald-600">
+                    <span className="text-xs text-emerald-700 font-bold uppercase tracking-wider">
+                      {t.outletPrice || 'نرخی نوێ'}:
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono tracking-tight">
+                      {Number(model.salePrice).toLocaleString()}
+                    </span>
+                    <span className="text-sm font-bold text-emerald-700">{t.currency}</span>
+                  </div>
+                </>
+              ) : (
+                /* Single Active Price: Large & Clean, Never "0 $" */
+                <div>
+                  <div className="text-[11px] text-slate-400 font-medium mb-1">
+                    {t.price || 'نرخ'}:
+                  </div>
+                  <div className="flex items-baseline gap-1.5 text-slate-900">
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+                      {model.originalPrice && Number(model.originalPrice) > 0 
+                        ? Number(model.originalPrice).toLocaleString() 
+                        : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0')}
+                    </span>
+                    <span className="text-sm font-bold text-slate-500">{t.currency}</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Stock Count & Item Status */}

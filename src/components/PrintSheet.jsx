@@ -268,7 +268,13 @@ export default function PrintSheet({
         const cat = categories.find(c => c.id === model.categoryId);
         const catName = getCategoryName(model.categoryId);
         const colName = getCollectionName(model.collectionId);
-        const discountPercent = model.originalPrice && model.salePrice && Number(model.salePrice) > 0 && Number(model.originalPrice) > Number(model.salePrice)
+        const hasDiscount = Boolean(
+          model.originalPrice && 
+          model.salePrice && 
+          Number(model.salePrice) > 0 && 
+          Number(model.originalPrice) > Number(model.salePrice)
+        );
+        const discountPercent = hasDiscount
           ? Math.round(((Number(model.originalPrice) - Number(model.salePrice)) / Number(model.originalPrice)) * 100)
           : 0;
 
@@ -295,7 +301,7 @@ export default function PrintSheet({
               style={{ backgroundColor: modelCatColor }}
             />
 
-            {/* 1. Header with Ashley Outlet Logo & High-Contrast Status Stamp */}
+            {/* 1. Header with Ashley Logo & 1 Single Clear Status Stamp */}
             <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3 pt-1">
               <div className="flex items-center gap-3">
                 {logoUrl ? (
@@ -318,12 +324,6 @@ export default function PrintSheet({
                     <span className="font-extrabold text-2xl tracking-tight text-slate-900">
                       ASHLEY
                     </span>
-                    <span 
-                      className="text-white text-xs font-black px-2.5 py-0.5 rounded-sm uppercase tracking-wider"
-                      style={{ backgroundColor: statusColor }}
-                    >
-                      OUTLET
-                    </span>
                   </div>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium tracking-wide">
                     {logoSubtitle && (
@@ -332,16 +332,16 @@ export default function PrintSheet({
                       </span>
                     )}
                     <span className="text-slate-300">•</span>
-                    <span>OFFICIAL PRODUCT SPECIFICATION & PRICING</span>
+                    <span>HOMESTORE & OUTLET</span>
                   </div>
                 </div>
               </div>
 
-              {/* Status Watermark Stamp & Date */}
+              {/* Status Watermark Stamp & Date (تەنها لەم بەشە دۆخی کاڵا بە دیاری نیشان دەدرێت) */}
               <div className="flex items-center gap-3">
                 {itemStatus && (
                   <div 
-                    className="px-3.5 py-1.5 rounded-xl border-2 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs"
+                    className="px-4 py-1.5 rounded-xl border-2 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs"
                     style={{
                       backgroundColor: hexToRgba(statusColor, 0.12),
                       borderColor: statusColor,
@@ -353,11 +353,11 @@ export default function PrintSheet({
                   </div>
                 )}
 
-                <div className="text-end ps-2 border-s border-slate-200">
+                <div className="text-end ps-3 border-s border-slate-200">
                   <div className="text-[10px] font-bold text-slate-400 uppercase">
                     DATE / بەروار
                   </div>
-                  <div className="text-xs font-bold text-slate-800">
+                  <div className="text-xs font-bold text-slate-800 font-mono">
                     {currentDate}
                   </div>
                 </div>
@@ -385,7 +385,7 @@ export default function PrintSheet({
                   <span className="text-xs text-slate-400 mt-1">ئەم مۆدێلە لە سیستەمدا بەبێ وێنە تۆمارکراوە</span>
                 </div>
               )}
-              {discountPercent > 0 && (
+              {hasDiscount && (
                 <div 
                   className="absolute top-3 start-3 text-white font-black text-sm px-3 py-1 rounded-lg shadow-sm"
                   style={{ backgroundColor: statusColor }}
@@ -398,7 +398,7 @@ export default function PrintSheet({
             {/* 3. Model Information & Specifications */}
             <div className="space-y-2.5">
               
-              {/* Category, Collection & Item Status */}
+              {/* Category & Collection (لێرەدا وشەی ئاوتلێت دووبارە ناکرێتەوە) */}
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider flex-wrap">
                 {catName && (
                   <span 
@@ -412,17 +412,6 @@ export default function PrintSheet({
                   <>
                     <span className="text-slate-300">•</span>
                     <span className="text-slate-700 font-bold">{colName}</span>
-                  </>
-                )}
-                {itemStatus && (
-                  <>
-                    <span className="text-slate-300">•</span>
-                    <span 
-                      className="px-2.5 py-0.5 rounded-md font-black text-[11px] tracking-wide"
-                      style={getStatusBadgeStyle(itemStatus, statusColors)}
-                    >
-                      {itemStatus}
-                    </span>
                   </>
                 )}
               </div>
@@ -445,79 +434,95 @@ export default function PrintSheet({
               )}
             </div>
 
-            {/* 4. Pricing Box - Luxuriously Themed with Status Color */}
+            {/* 4. Pricing Box - Modern Minimalist Luxury Style */}
             <div 
-              className="my-2 p-3 sm:p-4 rounded-2xl flex items-center justify-between transition-colors"
-              style={{
-                backgroundColor: hexToRgba(statusColor, 0.05),
-                border: `2.5px solid ${statusColor}`
-              }}
+              className="my-3 p-3.5 sm:p-4 rounded-2xl flex items-center justify-between transition-colors bg-slate-50/80 border border-slate-200/90 shadow-2xs"
             >
               
-              {/* Stock info */}
-              <div>
-                <div className="text-[11px] font-bold text-slate-500 uppercase">
-                  {t.stock || 'بڕی بەردەست'}
+              {/* Stock info - Clean Modern Badge */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-lg">
+                  📦
                 </div>
-                <div className="text-base sm:text-lg font-black text-slate-900">
-                  {model.stock && model.stock > 0 ? `${model.stock} ${t.piece}` : t.outOfStock}
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {t.stock || 'بڕی بەردەست'}
+                  </div>
+                  <div className="text-sm sm:text-base font-black text-slate-900 font-mono">
+                    {model.stock && model.stock > 0 ? (
+                      <span>{model.stock} {t.piece || 'دانە'}</span>
+                    ) : (
+                      <span className="text-rose-600 font-bold text-xs">{t.outOfStock || 'نەماوە'}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Pricing Block: Original Price Small on Top (Solid Black), Discount Price Larger (Color) */}
+              {/* Pricing Block */}
               <div className="text-end flex flex-col items-end justify-center">
                 
-                {/* 1. Original Price (نەخی ئێستا / نرخی پێش داشکاندن) - Written small on top in BLACK */}
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900 mb-0.5">
-                  <span className="text-[10.5px] sm:text-xs font-bold text-slate-600">
-                    {t.originalPrice || 'نرخی پێش داشکاندن'}:
-                  </span>
-                  <span className="font-mono font-black text-slate-900 text-sm sm:text-base">
-                    {model.originalPrice && Number(model.originalPrice) > 0
-                      ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}`
-                      : `0 ${t.currency}`}
-                  </span>
-                  {discountPercent > 0 && (
-                    <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-1.5 py-0.2 rounded-md">
-                      %{discountPercent}-
-                    </span>
-                  )}
-                </div>
+                {hasDiscount ? (
+                  <>
+                    {/* Old Price in Small Red with Strikethrough (نرخی کۆن بە سووری بچووک) */}
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-[10.5px] font-bold text-slate-400">کۆن:</span>
+                      <span className="line-through text-rose-600 font-bold text-xs sm:text-sm font-mono decoration-rose-500 decoration-1.5">
+                        {Number(model.originalPrice).toLocaleString()} {t.currency}
+                      </span>
+                      {discountPercent > 0 && (
+                        <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-1.5 py-0.2 rounded-md font-mono">
+                          %{discountPercent}-
+                        </span>
+                      )}
+                    </div>
 
-                {/* 2. Discounted / Outlet Price (نرخی داشکاندن) - MUCH LARGER, 0 if not set */}
-                <div className="flex items-baseline justify-end gap-1.5" style={{ color: statusColor }}>
-                  <span className="text-xs sm:text-sm font-black uppercase tracking-wider opacity-90 me-1">
-                    {itemStatus ? `${t.outletPrice || 'نرخی داشکاندن'} (${itemStatus})` : (t.outletPrice || 'نرخی داشکاندن')}:
-                  </span>
-                  <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono">
-                    {model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}
-                  </span>
-                  <span className="text-sm sm:text-base font-bold opacity-85">{t.currency}</span>
-                </div>
+                    {/* New Discounted Price in Large Modern Emerald Green (نرخی داشکاندن بە سەوزی گەورە) */}
+                    <div className="flex items-baseline justify-end gap-1.5 text-emerald-600">
+                      <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-emerald-700 opacity-90 me-1">
+                        {t.outletPrice || 'نرخی نوێ'}:
+                      </span>
+                      <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-emerald-600">
+                        {Number(model.salePrice).toLocaleString()}
+                      </span>
+                      <span className="text-sm sm:text-base font-bold text-emerald-700">{t.currency}</span>
+                    </div>
+                  </>
+                ) : (
+                  /* Single Active Price (ئەگەر داشکاندن نەبێت، تەنها نرخی سەرەکی نیشان دەدرێت بێ سفر دۆلار) */
+                  <div className="flex items-baseline justify-end gap-1.5 text-slate-900">
+                    <span className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-wider me-1">
+                      {t.price || 'نرخ'}:
+                    </span>
+                    <span className="text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-slate-900">
+                      {model.originalPrice && Number(model.originalPrice) > 0 
+                        ? Number(model.originalPrice).toLocaleString() 
+                        : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0')}
+                    </span>
+                    <span className="text-sm sm:text-base font-bold text-slate-600">{t.currency}</span>
+                  </div>
+                )}
 
               </div>
 
             </div>
 
-            {/* 5. A4 Footer with Department & Brand Presence */}
+            {/* 5. A4 Footer (Clean, Modern, No Redundancy) */}
             <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500 font-medium">
               <div className="flex items-center gap-1.5 font-bold">
-                <span style={{ color: modelCatColor }}>ASHLEY FURNITURE OUTLET</span>
+                <span style={{ color: modelCatColor }}>ASHLEY FURNITURE</span>
                 <span>•</span>
-                <span>OFFICIAL SALES SHEET</span>
+                <span>OFFICIAL SALES SPECIFICATION</span>
                 {catName && (
                   <>
                     <span>•</span>
                     <span style={{ color: modelCatColor }}>[{catName}]</span>
                   </>
                 )}
-                {itemStatus && (
-                  <>
-                    <span>•</span>
-                    <span style={{ color: statusColor }}>[{itemStatus}]</span>
-                  </>
-                )}
               </div>
+              <div className="font-mono text-[10px] text-slate-400">
+                PAGE {idx + 1} OF {modelsToPrint.length}
+              </div>
+            </div>
               <span>PAGE {modelsToPrint.length > 1 ? `${idx + 1} OF ${modelsToPrint.length}` : '1 / 1 (A4 FORMAT)'}</span>
             </div>
 

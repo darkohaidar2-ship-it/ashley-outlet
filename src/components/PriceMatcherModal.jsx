@@ -43,9 +43,81 @@ import {
   getCategoryGroup,
   suggestModelFromRow,
   rankExcelRows,
+  rankExcelRowsDetailed,
+  normalizeKey,
   cleanModelNumber
 } from '../utils/modelExtractor';
+import ExcelRowCard from './ExcelRowCard';
 import { catalogService } from '../services/catalogService';
+
+/**
+ * Turns raw Excel rows into staging items. Pure function (no React) so the same parser is used
+ * for a fresh upload AND when the saved sheet is restored after a page refresh.
+ */
+function parseExcelRows(rows, mapping) {
+  if (!rows || rows.length < 2 || !mapping) return [];
+
+  const dataRows = rows.slice(1);
+  const { modelCol: mIdx, descCol: dIdx, priceCol: pIdx, codeCol: cIdx, catCol: catIdx, noteCol: nIdx } = mapping;
+
+  // every category name that exists in the sheet -> lets name_en "Category - CODE - Desc" be understood exactly
+  const knownCats = new Set();
+  if (catIdx >= 0) {
+    for (const r of dataRows) {
+      const k = normalizeKey(r[catIdx]);
+      if (k) knownCats.add(k);
+    }
+  }
+
+  const parsed = [];
+  dataRows.forEach((r, idx) => {
+    const rawModel = (mIdx >= 0 && r[mIdx] !== undefined) ? String(r[mIdx]).trim() : '';
+    const rawDesc = (dIdx >= 0 && r[dIdx] !== undefined) ? String(r[dIdx]).trim() : '';
+    const rawPrice = (pIdx >= 0 && r[pIdx] !== undefined && r[pIdx] !== null) ? String(r[pIdx]).trim() : '';
+    const rawCode = (cIdx >= 0 && r[cIdx] !== undefined && r[cIdx] !== null) ? String(r[cIdx]).trim() : '';
+    const rawCat = (catIdx >= 0 && r[catIdx] !== undefined && r[catIdx] !== null) ? String(r[catIdx]).trim() : '';
+    const rawNote = (nIdx >= 0 && r[nIdx] !== undefined && r[nIdx] !== null) ? String(r[nIdx]).trim() : '';
+
+    if (!rawDesc && !rawModel && !rawPrice && !rawCode && !rawCat) return;
+
+    const extracted = extractSmartModel(rawDesc, rawModel, rawCode, rawPrice, rawCat);
+    const cleanPrice = cleanNumericPrice(rawPrice) || extracted.price;
+    const suggestion = suggestModelFromRow(rawCat, rawModel, rawDesc, knownCats);
+
+    parsed.push({
+      id: 'stg_' + idx + '_' + Math.random().toString(36).substring(2, 7),
+      rawCode,
+      extractedCode: extracted.code,
+      rawModel: rawModel || extracted.model,
+      rawDesc: rawDesc || rawModel, // Complete, un-truncated string from Excel!
+      predictedModel: (suggestion.suggestedModel && suggestion.suggestedModel !== '-') ? suggestion.suggestedModel : (rawModel || extracted.model),
+      category: rawCat || extracted.category,
+      price: cleanPrice,
+      suggestedModel: suggestion.suggestedModel,
+      suggestionReason: suggestion.reason,
+      rawNote,
+      selected: false,
+      knownCats
+    });
+  });
+
+  return parsed;
+}
+
+/**
+ * A mapping saved in localStorage can be stale (older sheet / older version) - e.g. name_en pointing at the
+ * category column, which made every card show NAME_EN: "Corner". If the sheet has the standard
+ * category_name_en / model_name_en / name_en / price_usd headers, trust the headers.
+ */
+function resolveColumnMapping(saved, headers = [], rows = []) {
+  const clean = (headers || []).map(h => String(h || '').trim().toLowerCase().replace(/[\s-]+/g, '_'));
+  const isStandardSheet = clean.includes('name_en') && clean.includes('model_name_en');
+  if (isStandardSheet || !saved) {
+    const d = detectExcelColumns(headers || [], (rows || []).slice(1));
+    return { modelCol: d.modelCol, descCol: d.descCol, priceCol: d.priceCol, codeCol: d.codeCol, catCol: d.catCol, noteCol: -1 };
+  }
+  return saved;
+}
 
 export default function PriceMatcherModal({
   isOpen,
@@ -59,10 +131,18 @@ export default function PriceMatcherModal({
   lang = 'ku'
 }) {
   // Staging Master Excel Data (saved persistently in LocalStorage)
+  // The parsed rows are NOT stored any more: 19k rows = ~8 MB, which is over the ~5 MB localStorage limit,
+  // so saving failed silently and an OLD parse (wrong name_en) kept coming back after every refresh.
+  // We store only the raw sheet (~1 MB) and re-parse it with the current logic on load.
   const [stagingData, setStagingData] = useState(() => {
     try {
-      const saved = localStorage.getItem('ashley_price_matcher_staging');
-      if (saved) return JSON.parse(saved);
+      localStorage.removeItem('ashley_price_matcher_staging'); // old oversized / stale copy
+      const rows = JSON.parse(localStorage.getItem('ashley_price_matcher_raw_rows') || 'null');
+      if (Array.isArray(rows) && rows.length > 1) {
+        const headers = JSON.parse(localStorage.getItem('ashley_price_matcher_headers') || 'null') || rows[0];
+        const savedMap = JSON.parse(localStorage.getItem('ashley_price_matcher_col_map') || 'null');
+        return parseExcelRows(rows, resolveColumnMapping(savedMap, headers, rows));
+      }
     } catch (e) {}
     return [];
   });
@@ -86,6 +166,11 @@ export default function PriceMatcherModal({
   const [columnMapping, setColumnMapping] = useState(() => {
     try {
       const saved = localStorage.getItem('ashley_price_matcher_col_map');
+      const rows = JSON.parse(localStorage.getItem('ashley_price_matcher_raw_rows') || 'null');
+      if (Array.isArray(rows) && rows.length > 1) {
+        const headers = JSON.parse(localStorage.getItem('ashley_price_matcher_headers') || 'null') || rows[0];
+        return resolveColumnMapping(saved ? JSON.parse(saved) : null, headers, rows);
+      }
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {
@@ -143,16 +228,14 @@ export default function PriceMatcherModal({
   // Persistence effects
   useEffect(() => {
     try {
-      localStorage.setItem('ashley_price_matcher_staging', JSON.stringify(stagingData));
-    } catch (e) {}
-  }, [stagingData]);
-
-  useEffect(() => {
-    try {
       if (rawExcelRows && rawExcelRows.length > 0) {
         localStorage.setItem('ashley_price_matcher_raw_rows', JSON.stringify(rawExcelRows));
       }
-    } catch (e) {}
+    } catch (e) {
+      // Do not fail silently: otherwise an old sheet keeps coming back after refresh
+      try { localStorage.removeItem('ashley_price_matcher_raw_rows'); } catch (e2) {}
+      setSuccessToast('⚠️ شیتەکە زۆر گەورەیە بۆ پاشەکەوتکردن لە وێبگەڕ - دوای ڕیفرێش پێویستە دووبارە باری بکەیتەوە.');
+    }
   }, [rawExcelRows]);
 
   useEffect(() => {
@@ -208,51 +291,7 @@ export default function PriceMatcherModal({
   /**
    * Parse rows using column mapping into staging data items
    */
-  const parseRowsWithMapping = (rows, mapping) => {
-    if (!rows || rows.length < 2) return [];
-
-    const dataRows = rows.slice(1);
-    const mIdx = mapping.modelCol;
-    const dIdx = mapping.descCol;
-    const pIdx = mapping.priceCol;
-    const cIdx = mapping.codeCol;
-    const catIdx = mapping.catCol;
-    const nIdx = mapping.noteCol;
-
-    const parsed = [];
-    dataRows.forEach((r, idx) => {
-      const rawModel = (mIdx >= 0 && r[mIdx] !== undefined) ? String(r[mIdx]).trim() : '';
-      const rawDesc = (dIdx >= 0 && r[dIdx] !== undefined) ? String(r[dIdx]).trim() : '';
-      const rawPrice = (pIdx >= 0 && r[pIdx] !== undefined && r[pIdx] !== null) ? String(r[pIdx]).trim() : '';
-      const rawCode = (cIdx >= 0 && r[cIdx] !== undefined && r[cIdx] !== null) ? String(r[cIdx]).trim() : '';
-      const rawCat = (catIdx >= 0 && r[catIdx] !== undefined && r[catIdx] !== null) ? String(r[catIdx]).trim() : '';
-      const rawNote = (nIdx >= 0 && r[nIdx] !== undefined && r[nIdx] !== null) ? String(r[nIdx]).trim() : '';
-
-      if (!rawDesc && !rawModel && !rawPrice && !rawCode && !rawCat) return;
-
-      const extracted = extractSmartModel(rawDesc, rawModel, rawCode, rawPrice, rawCat);
-      const cleanPrice = cleanNumericPrice(rawPrice) || extracted.price;
-      const suggestion = suggestModelFromRow(rawCat, rawModel, rawDesc);
-
-      parsed.push({
-        id: 'stg_' + idx + '_' + Math.random().toString(36).substring(2, 7),
-        rawCode,
-        extractedCode: extracted.code,
-        rawModel: rawModel || extracted.model,
-        rawDesc: rawDesc || rawModel, // Complete, un-truncated string from Excel!
-        predictedModel: (suggestion.suggestedModel && suggestion.suggestedModel !== '-') ? suggestion.suggestedModel : (rawModel || extracted.model),
-        category: rawCat || extracted.category,
-        price: cleanPrice,
-        suggestedModel: suggestion.suggestedModel,
-        suggestionReason: suggestion.reason,
-        rawNote,
-        rawRow: r,
-        selected: false
-      });
-    });
-
-    return parsed;
-  };
+  const parseRowsWithMapping = (rows, mapping) => parseExcelRows(rows, mapping);
 
   /**
    * Process raw rows from Excel or Sample
@@ -632,10 +671,17 @@ export default function PriceMatcherModal({
 
   // Filtered Excel rows inside the Manual Search Dialog
   // User requested: "داتاکان زۆرە . با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
-  const excelDialogSearchResults = useMemo(() => {
+  const excelDialogRanked = useMemo(() => {
     if (!excelSearchTarget || stagingData.length === 0) return [];
-    return rankExcelRows(stagingData, excelSearchQuery, excelSearchTargetCol, excelSearchCat, 15);
+    return rankExcelRowsDetailed(stagingData, excelSearchQuery, excelSearchTargetCol, excelSearchCat, 15);
   }, [excelSearchTarget, stagingData, excelSearchQuery, excelSearchTargetCol, excelSearchCat]);
+
+  const excelDialogSearchResults = useMemo(() => excelDialogRanked.map(r => r.item), [excelDialogRanked]);
+  const excelDialogReasons = useMemo(() => {
+    const m = {};
+    excelDialogRanked.forEach(r => { m[r.item.id] = r.reason; });
+    return m;
+  }, [excelDialogRanked]);
 
   // Filtered rows for 5-Column Excel tab (Always closest 15 rows)
   // User requested: "داتاکان زۆرە . با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
@@ -1856,7 +1902,7 @@ export default function PriceMatcherModal({
                     dir="ltr"
                     value={excelSearchQuery}
                     onChange={(e) => setExcelSearchQuery(e.target.value)}
-                    placeholder="سێرچ لە فایلی ئێکسڵ بە کۆد (وەک B719-56W1)، ناوی مۆدێل، یان وەسف..."
+                    placeholder="کۆدی تەواو (1200067) یان دوو بەش (12000-67 / 12000 67)، ناوی مۆدێل، یان وەسف..."
                     className="w-full pl-9 pr-9 py-2.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 focus:border-slate-500 focus:bg-white rounded-xl focus:outline-none transition-all shadow-2xs"
                   />
                   <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -2083,85 +2129,16 @@ export default function PriceMatcherModal({
                     </table>
                   </div>
                 ) : (
-                  /* 5-FIELD CARD VIEW INSIDE SEARCH MODAL */
-                  <div className="grid grid-cols-1 gap-2">
+                  /* CARD VIEW INSIDE SEARCH MODAL */
+                  <div className="grid grid-cols-1 gap-2.5">
                     {excelDialogSearchResults.map((row) => (
-                      <div
+                      <ExcelRowCard
                         key={row.id}
-                        className="p-3 bg-white border border-slate-200 hover:border-slate-400 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 hover:shadow-xs transition-all"
-                      >
-                        <div className="min-w-0 flex-1 space-y-1.5" dir="ltr">
-                          
-                          {/* Row 1: category_name_en & model_name_en */}
-                          <div className="flex flex-wrap items-center gap-2">
-                            {row.category && (
-                              <span className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
-                                category_name_en: <strong className="text-slate-900">{row.category}</strong>
-                              </span>
-                            )}
-
-                            <span className="text-[11px] font-mono font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                              model_name_en: <strong className="text-slate-900">{row.rawModel || row.predictedModel || '-'}</strong>
-                            </span>
-
-                            {row.extractedCode && row.extractedCode !== (row.rawModel || row.predictedModel) && (
-                              <span className="font-mono text-[10px] font-medium text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
-                                SKU: {row.extractedCode}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Row 2: name_en (FULL description from Excel, never truncated!) */}
-                          <div className="flex items-start gap-1.5 text-xs text-slate-800">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 shrink-0 mt-0.5">
-                              name_en:
-                            </span>
-                            <span className="font-semibold text-slate-800 leading-snug break-words">
-                              {row.rawDesc || row.predictedModel}
-                            </span>
-                          </div>
-
-                          {/* Row 3: Suggested Model Code by AI */}
-                          {row.suggestedModel && row.suggestedModel !== '-' && (
-                            <div className="flex items-center gap-1.5 text-xs text-amber-900 bg-amber-50/80 border border-amber-200 px-2 py-1 rounded-lg" dir="rtl">
-                              <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                              <span className="text-[10.5px] font-bold">
-                                پێشنیاری پرۆگرام بۆ مۆدێل:
-                              </span>
-                              <span className="font-mono font-black text-amber-950 bg-white px-2 py-0.5 rounded border border-amber-300" dir="ltr">
-                                {row.suggestedModel}
-                              </span>
-                              {row.suggestionReason && (
-                                <span className="text-[10px] text-amber-700 hidden sm:inline mr-1">
-                                  ({row.suggestionReason})
-                                </span>
-                              )}
-                            </div>
-                          )}
-
-                        </div>
-
-                        {/* Price & Pick Button */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                          <div className="text-start sm:text-end">
-                            <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                              price_usd
-                            </div>
-                            <div className="font-mono font-black text-emerald-700 text-base leading-none mt-0.5">
-                              ${row.price || 0}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleAssignExcelRowToModel(excelSearchTarget.model.id, row)}
-                            className="px-3.5 py-2 bg-slate-900 hover:bg-black text-white rounded-xl text-xs font-bold transition-all shadow-xs active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
-                          >
-                            <Check className="w-4 h-4" />
-                            <span>وەرگرتنی ئەم نرخە</span>
-                          </button>
-                        </div>
-                      </div>
+                        row={row}
+                        reason={excelDialogReasons[row.id]}
+                        currentPrice={excelSearchTarget.currentPrice}
+                        onPick={(r) => handleAssignExcelRowToModel(excelSearchTarget.model.id, r)}
+                      />
                     ))}
                   </div>
                 )}

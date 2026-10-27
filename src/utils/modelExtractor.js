@@ -445,6 +445,113 @@ export function normalizeKey(str) {
     .trim();
 }
 
+// ==============================================================
+// name_en STRUCTURE PARSER  -  fixes the "two-part model number" problem
+// ==============================================================
+// In the master sheet the real model number is split over two columns:
+//   model_name_en = "12000"                                     <- first part (series)
+//   name_en       = "Corner - 1200067 - Right-Arm Facing Sofa"  <- series + variant ("67") + details
+// name_en comes in these shapes:
+//   1) "<Category> - <FULL CODE> - <Description>"   Corner - 1200067 - Right-Arm Facing Sofa
+//   2) "<Model> - <Category> - <Description>"       Milano - Corner - Armless Module 150 cm
+//   3) free text, sometimes starting with a code    b719-56W1 Demarlos King Bed with Storage
+const KNOWN_CATEGORY_KEYS = new Set([
+  '1seatersoft', 'accessories', 'accessory', 'armchair', 'babybeds', 'bed', 'bedcover', 'bedroom', 'bench',
+  'berger', 'blanket', 'bookcase', 'carpet', 'chair', 'chairleather', 'chairwitharm', 'clock', 'console',
+  'corner', 'curtain', 'cushion', 'deskset', 'diningroom', 'door', 'dressingroom', 'dressior', 'fabric',
+  'flower', 'gardenset', 'homeoffice', 'lamp', 'lighting', 'livingroom', 'mattress', 'meetingtable', 'mirror',
+  'officeset', 'ofissetchair', 'ofissetsofas', 'pillow', 'pouf', 'receptiondesks', 'sehpa', 'singleswing',
+  'sofaset', 'sofa', 'tvstand', 'table', 'tree', 'wallart', 'wallunit', 'workinggroups', 'youngroom'
+]);
+
+// A separator is a dash/pipe with a space on (at least) one side, so "C6183-IVOR" and "Right-Arm" stay whole.
+const NAME_SEPARATOR = /\s+[-–—|]\s*|\s*[-–—|]\s+/;
+const CODE_SHAPE = /^[A-Za-z0-9][A-Za-z0-9._/#-]*$/;
+const LEADING_CODE = /^([A-Za-z]{0,3}\d{3,}[A-Za-z0-9._/]*(?:-[A-Za-z0-9._/]+)*)\s+(.+)$/;
+
+function isCategoryWord(part, category, knownCats) {
+  const k = normalizeKey(part);
+  if (!k) return false;
+  if (category && k === normalizeKey(category)) return true;
+  if (knownCats && knownCats.has(k)) return true;
+  return KNOWN_CATEGORY_KEYS.has(k);
+}
+
+function looksLikeCode(s) {
+  return !!s && CODE_SHAPE.test(s) && /\d/.test(s);
+}
+
+/**
+ * Splits a full code into [series part | variant part] using model_name_en.
+ * e.g. code "1200067" + model "12000" -> { head: "12000", tail: "67" }
+ */
+export function splitCodeByModel(code = '', modelName = '') {
+  const c = String(code || '');
+  const m = cleanModelNumber(modelName || '');
+  if (c && m && c.length > m.length && c.toLowerCase().startsWith(m.toLowerCase())) {
+    return { head: c.slice(0, m.length), tail: c.slice(m.length) };
+  }
+  return { head: c, tail: '' };
+}
+
+/**
+ * Understands name_en. Returns:
+ * { layout: 'category-code' | 'model-category' | 'free',
+ *   prefix, code (the FULL model number), modelFromName, desc (human description), head, tail }
+ */
+export function parseNameEn(nameEn = '', category = '', modelName = '', knownCats = null) {
+  const text = String(nameEn || '').replace(/\s+/g, ' ').trim();
+  const empty = { layout: 'free', prefix: '', code: '', modelFromName: '', desc: text, head: '', tail: '' };
+  if (!text) return empty;
+
+  const parts = text.split(NAME_SEPARATOR).map(p => p.trim()).filter(Boolean);
+
+  if (parts.length >= 2 && isCategoryWord(parts[0], category, knownCats)) {
+    if (looksLikeCode(parts[1])) {
+      const { head, tail } = splitCodeByModel(parts[1], modelName);
+      return { layout: 'category-code', prefix: parts[0], code: parts[1], modelFromName: '', desc: parts.slice(2).join(' - '), head, tail };
+    }
+    return { layout: 'category-code', prefix: parts[0], code: '', modelFromName: '', desc: parts.slice(1).join(' - '), head: '', tail: '' };
+  }
+
+  if (parts.length >= 2 && isCategoryWord(parts[1], category, knownCats)) {
+    return { layout: 'model-category', prefix: parts[1], code: '', modelFromName: parts[0], desc: parts.slice(2).join(' - '), head: '', tail: '' };
+  }
+
+  const lead = text.match(LEADING_CODE);
+  if (lead) {
+    const { head, tail } = splitCodeByModel(lead[1], modelName);
+    return { layout: 'free', prefix: '', code: lead[1], modelFromName: '', desc: lead[2].trim(), head, tail };
+  }
+  return empty;
+}
+
+// Normalised search keys per Excel row (cached, so searching 19k rows stays instant)
+const rowKeyCache = new WeakMap();
+const EMPTY_KEYS = { parsed: null, code: '', codeN: '', modelN: '', nameModelN: '', catN: '', descN: '', hayN: '' };
+
+export function getRowKeys(row) {
+  if (!row || typeof row !== 'object') return EMPTY_KEYS;
+  let k = rowKeyCache.get(row);
+  if (k) return k;
+  const rawDesc = String(row.rawDesc || '');
+  const rawModel = cleanModelNumber(row.rawModel || '');
+  const parsed = parseNameEn(rawDesc, row.category || '', rawModel, row.knownCats);
+  const code = row.fullCode !== undefined ? row.fullCode : parsed.code;
+  k = {
+    parsed,
+    code,
+    codeN: normalizeKey(code) || normalizeKey(row.extractedCode),
+    modelN: normalizeKey(rawModel),
+    nameModelN: normalizeKey(parsed.modelFromName),
+    catN: normalizeKey(row.category),
+    descN: normalizeKey(parsed.desc),
+    hayN: normalizeKey(`${row.category || ''} ${rawModel} ${rawDesc} ${row.suggestedModel || ''}`)
+  };
+  rowKeyCache.set(row, k);
+  return k;
+}
+
 /**
  * Compares an extracted staging item with the current catalog of models.
  * Returns match object:
@@ -663,8 +770,15 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
       continue;
     }
 
+    // 0. Exact FULL model number (series + variant, read from name_en) - strongest evidence of all
+    const rowKeys = getRowKeys(item);
+    if (rowKeys.codeN && rowKeys.codeN.length >= 3 &&
+        (rowKeys.codeN === effectiveSku || rowKeys.codeN === normSku || rowKeys.codeN === normName)) {
+      score = 110;
+    }
+
     // 1. Exact Model Number Match with suggestedModel or model_name_en (Highest Priority = 100)
-    if (itemSuggestedNorm) {
+    if (score < 100 && itemSuggestedNorm) {
       if (effectiveSku && itemSuggestedNorm === effectiveSku) {
         score = 100;
       } else if (normSku && itemSuggestedNorm === normSku) {
@@ -743,37 +857,24 @@ export function findExcelMatchForCatalogModel(catalogModel, excelItems = [], cat
  *   reason: string           // explanation in Kurdish Sorani
  * }
  */
-export function suggestModelFromRow(category = '', modelName = '', nameEn = '') {
+export function suggestModelFromRow(category = '', modelName = '', nameEn = '', knownCats = null) {
   const cat = String(category || '').trim();
   const rawModel = cleanModelNumber(String(modelName || '').trim());
   const desc = String(nameEn || '').trim();
+  const reasonFor = (v) => `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${v}`;
 
-  // 1. Dash-separated parts in name_en: "[Category] - [SKU/Model] - [Description]"
-  // e.g. "Corner - 1200067 - Right-Arm Facing Sofa" -> 1200067
-  // e.g. "Corner - U7160458 - Laf Zero Wall Power Recliner ..." -> U7160458
-  // e.g. "Corner - 1200046 - Coffee Armless Chair" -> 1200046
-  // e.g. "Corner - U7160457 - Dunleith Console With Storage" -> U7160457
-  // e.g. "Corner - U7160446 - Dunleith Armless Chair" -> U7160446
-  // e.g. "Home Office - H200-07 - ..." -> H200-07
-  // e.g. "Accessories - D8917 - Accessories" -> D8917
-  // e.g. "Clan - Wall Unit - TV Stand" -> Clan
-  const parts = desc.split(/\s*[-–—|/]\s*/).map(p => p.trim()).filter(Boolean);
-  if (parts.length >= 2) {
-    const p0Lower = parts[0].toLowerCase();
-    const isP0Cat = (
-      p0Lower === cat.toLowerCase() ||
-      ['corner', 'accessories', 'living room', 'bedroom', 'dining room', 'home office', 'sofa set', 'wall unit', 'dining'].includes(p0Lower)
-    );
-    if (isP0Cat && parts[1]) {
-      const candidate = parts[1];
-      if (/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/i.test(candidate) || candidate.length <= 15) {
-        return {
-          suggestedModel: candidate,
-          reason: `پێشنیاری من ئەوەیە ئەم مۆدێلە بەپێی کۆڵۆمی کەتەگۆری و مۆدێل و name_en بریتییە لە: ${candidate}`
-        };
-      }
-    }
+  // 1. Structured name_en:  "[Category] - [FULL CODE] - [Description]"  or  "[Model] - [Category] - [Description]"
+  //    "Corner - 1200067 - Right-Arm Facing Sofa" -> 1200067   |   "Accessories - C6183-IVOR - Accessories" -> C6183-IVOR
+  //    "Clan - Wall Unit - TV Stand" -> Clan
+  const parsed = parseNameEn(desc, cat, rawModel, knownCats);
+  if (parsed.code) {
+    return { suggestedModel: parsed.code, reason: reasonFor(parsed.code) };
   }
+  if (parsed.layout === 'model-category' && parsed.modelFromName) {
+    return { suggestedModel: parsed.modelFromName, reason: reasonFor(parsed.modelFromName) };
+  }
+
+  const parts = desc.split(/\s*[-–—|/]\s*/).map(p => p.trim()).filter(Boolean);
 
   // 2. Specific variant code in name_en when model_name_en is a prefix
   // e.g. model is "b719-" and name_en has "b719-56W1"
@@ -823,127 +924,135 @@ export function suggestModelFromRow(category = '', modelName = '', nameEn = '') 
   };
 }
 
+function commonPrefixLen(a, b) {
+  const n = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < n && a[i] === b[i]) i++;
+  return i;
+}
+
 /**
- * Ranks Excel rows and returns the closest / most relevant matches (defaults to top 15).
- * "با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
+ * Ranks Excel rows and returns [{ item, score, reason }] - the closest matches first (default top 15).
+ *
+ * The query is compared in NORMALISED form (letters+digits only), so all of these find the same row:
+ *   "1200067"   "12000-67"   "12000 67"   "12000/67"   "corner 1200067"
+ * i.e. the model number may be typed whole OR in the two parts the sheet keeps it in
+ * (model_name_en + the tail that lives inside name_en).
+ *
+ * reason: 'code-exact' | 'code-prefix' | 'model-exact' | 'model-prefix' | 'code-part' | 'words' | 'close'
  */
-export function rankExcelRows(rows = [], query = '', targetCol = 'all', targetCat = 'all', limit = 15) {
+export function rankExcelRowsDetailed(rows = [], query = '', targetCol = 'all', targetCat = 'all', limit = 15) {
   if (!rows || rows.length === 0) return [];
   const q = String(query || '').trim().toLowerCase();
 
-  // If no search query, return the first `limit` rows (optionally filtered by category)
+  const inCategory = (item) => targetCat === 'all' || getCategoryGroup(item.category || item.rawDesc) === targetCat;
+
+  // No query -> just the first rows (optionally filtered by category)
   if (!q) {
-    if (targetCat !== 'all') {
-      return rows.filter(item => getCategoryGroup(item.category || item.rawDesc) === targetCat).slice(0, limit);
+    const out = [];
+    for (const item of rows) {
+      if (!inCategory(item)) continue;
+      out.push({ item, score: 0, reason: '' });
+      if (out.length >= limit) break;
     }
-    return rows.slice(0, limit);
+    return out;
   }
 
   const cleanQ = cleanModelNumber(q).toLowerCase() || q;
-  const qWords = q.split(/\s+/).filter(Boolean);
+  const qN = normalizeKey(cleanQ) || normalizeKey(q);
+  const tokens = q.split(/[\s,;|]+/).map(normalizeKey).filter(t => t.length >= 2);
+  // "12000 67" typed as two words -> also try them glued together
+  const joins = [];
+  const rawTokens = q.split(/[\s,;|]+/).map(normalizeKey).filter(Boolean);
+  for (let i = 0; i < rawTokens.length - 1; i++) joins.push(rawTokens[i] + rawTokens[i + 1]);
 
   const scored = [];
 
   for (const item of rows) {
-    if (targetCat !== 'all') {
-      const itemCatGroup = getCategoryGroup(item.category || item.rawDesc);
-      if (itemCatGroup !== targetCat) continue;
-    }
-
-    const category = String(item.category || '').toLowerCase();
-    const rawModel = cleanModelNumber(item.rawModel || item.predictedModel || item.model || '').toLowerCase();
-    const desc = String(item.rawDesc || item.desc || '').toLowerCase();
-    const price = String(item.price || '').toLowerCase();
-    const suggested = cleanModelNumber(item.suggestedModel || '').toLowerCase();
-    const code = String(item.extractedCode || item.rawCode || '').toLowerCase();
+    if (!inCategory(item)) continue;
+    const kx = getRowKeys(item);
+    const priceStr = String(item.price || '').toLowerCase();
+    const suggestedN = normalizeKey(cleanModelNumber(item.suggestedModel || ''));
+    const descLower = String(item.rawDesc || item.desc || '').toLowerCase();
 
     let score = 0;
+    let reason = '';
+    const bump = (s, r) => { if (s > score) { score = s; reason = r; } };
 
-    // Filter by specific column if selected by user
     if (targetCol === 'cat') {
-      if (!category.includes(q)) continue;
-      score = category === q ? 500 : 200;
+      if (!qN || !kx.catN.includes(qN)) continue;
+      bump(kx.catN === qN ? 500 : 200, 'words');
     } else if (targetCol === 'model') {
-      const isMatch = rawModel.includes(q) || rawModel.includes(cleanQ) || code.includes(q);
-      if (!isMatch) continue;
-      score = (rawModel === q || rawModel === cleanQ) ? 500 : 250;
+      const hit = qN && (kx.modelN.includes(qN) || kx.codeN.includes(qN) || kx.nameModelN.includes(qN));
+      if (!hit) continue;
+      bump((kx.modelN === qN || kx.codeN === qN || kx.nameModelN === qN) ? 500 : 250, 'model-exact');
     } else if (targetCol === 'desc') {
-      if (!desc.includes(q)) continue;
-      score = desc.startsWith(q) ? 400 : 200;
+      if (!descLower.includes(q) && !(qN.length >= 3 && kx.hayN.includes(qN))) continue;
+      bump(descLower.startsWith(q) ? 400 : 200, 'words');
     } else if (targetCol === 'price') {
-      if (!price.includes(q)) continue;
-      score = price === q ? 500 : 200;
+      if (!priceStr.includes(q)) continue;
+      bump(priceStr === q ? 500 : 200, 'words');
     } else if (targetCol === 'suggested') {
-      if (!suggested.includes(q) && !suggested.includes(cleanQ)) continue;
-      score = (suggested === q || suggested === cleanQ) ? 500 : 250;
+      if (!qN || (!suggestedN.includes(qN) && !kx.codeN.includes(qN))) continue;
+      bump((suggestedN === qN || kx.codeN === qN) ? 500 : 250, 'code-exact');
     } else {
-      // Default: SEARCH ACROSS ALL 5 COLUMNS with closeness weighting
-
-      // 1. Suggested Model Match (Highest Priority)
-      if (suggested) {
-        if (suggested === q || suggested === cleanQ) {
-          score += 1000;
-        } else if (suggested.startsWith(q) || suggested.startsWith(cleanQ)) {
-          score += 600;
-        } else if (suggested.includes(q) || suggested.includes(cleanQ)) {
-          score += 400;
+      // ALL columns, closeness weighted
+      if (qN.length >= 2) {
+        if (kx.codeN) {
+          if (kx.codeN === qN) bump(1000, 'code-exact');
+          else if (qN.length >= 3 && kx.codeN.startsWith(qN)) bump(700, 'code-prefix');
+          else if (qN.length >= 4 && kx.codeN.includes(qN)) bump(450, 'code-part');
         }
-      }
-
-      // 2. Model Name Match
-      if (rawModel) {
-        if (rawModel === q || rawModel === cleanQ) {
-          score += 900;
-        } else if (rawModel.startsWith(q) || rawModel.startsWith(cleanQ)) {
-          score += 500;
-        } else if (rawModel.includes(q) || rawModel.includes(cleanQ)) {
-          score += 350;
+        if (kx.modelN) {
+          if (kx.modelN === qN) bump(850, 'model-exact');
+          else if (qN.length >= 3 && kx.modelN.startsWith(qN)) bump(500, 'model-prefix');
         }
-      }
-
-      // 3. Code match
-      if (code && (code === q || code === cleanQ)) {
-        score += 800;
-      } else if (code && (code.includes(q) || code.includes(cleanQ))) {
-        score += 300;
-      }
-
-      // 4. Description (name_en) match
-      if (desc.includes(q)) {
-        if (desc.startsWith(q)) {
-          score += 300;
-        } else {
-          score += 200;
+        if (kx.nameModelN) {
+          if (kx.nameModelN === qN) bump(850, 'model-exact');
+          else if (qN.length >= 3 && kx.nameModelN.startsWith(qN)) bump(500, 'model-prefix');
         }
+        if (suggestedN && suggestedN === qN) bump(950, 'code-exact');
+      }
+      for (const j of joins) {
+        if (j.length < 4 || !kx.codeN) continue;
+        if (kx.codeN === j) bump(950, 'code-exact');
+        else if (kx.codeN.startsWith(j)) bump(650, 'code-prefix');
       }
 
-      // 5. Multi-word matching
-      let matchedWords = 0;
-      for (const w of qWords) {
-        if (w.length < 2) continue;
-        if (suggested.includes(w) || rawModel.includes(w) || desc.includes(w) || category.includes(w)) {
-          matchedWords++;
-          score += 70;
+      // word coverage (all words found -> big bonus)
+      if (tokens.length > 0) {
+        let hit = 0;
+        for (const t of tokens) if (kx.hayN.includes(t)) hit++;
+        if (hit > 0) {
+          score += Math.round((hit / tokens.length) * 140) + (hit === tokens.length && tokens.length > 1 ? 120 : 0);
+          if (!reason) reason = 'words';
         }
+      } else if (qN.length >= 3 && kx.hayN.includes(qN)) {
+        score += 150;
+        if (!reason) reason = 'words';
       }
+    }
 
-      // Fallback price/cat match
-      if (score === 0 && matchedWords === 0) {
-        if (category.includes(q)) score += 50;
-        if (price === q) score += 50;
-      }
+    // Keep "closest" siblings when nothing matched exactly (e.g. other variants of the same series)
+    if (score === 0 && targetCol === 'all' && kx.codeN && qN.length >= 4) {
+      const lcp = commonPrefixLen(kx.codeN, qN);
+      if (lcp >= 3) { score = lcp * 10; reason = 'close'; }
     }
 
     if (score > 0) {
-      scored.push({ item, score });
+      // shorter code difference wins ties
+      const tie = kx.codeN && qN ? Math.abs(kx.codeN.length - qN.length) * 0.01 : 0;
+      scored.push({ item, score: score - tie, reason });
     }
   }
 
-  // Sort descending: closest matches at top!
   scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
 
-  // Return the closest `limit` items (default: 15)
-  return scored.slice(0, limit).map(s => s.item);
+/** Same as rankExcelRowsDetailed but returns only the rows. */
+export function rankExcelRows(rows = [], query = '', targetCol = 'all', targetCat = 'all', limit = 15) {
+  return rankExcelRowsDetailed(rows, query, targetCol, targetCat, limit).map(r => r.item);
 }
 
 /**

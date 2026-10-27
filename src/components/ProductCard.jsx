@@ -30,7 +30,13 @@ export default function ProductCard({
     }
   };
 
-  const discountPercent = model.originalPrice && model.salePrice && Number(model.salePrice) > 0 && Number(model.originalPrice) > Number(model.salePrice)
+  const hasDiscount = Boolean(
+    model.originalPrice && 
+    model.salePrice && 
+    Number(model.salePrice) > 0 && 
+    Number(model.originalPrice) > Number(model.salePrice)
+  );
+  const discountPercent = hasDiscount
     ? Math.round(((Number(model.originalPrice) - Number(model.salePrice)) / Number(model.originalPrice)) * 100)
     : 0;
 
@@ -136,24 +142,43 @@ export default function ProductCard({
         {/* Price & Action Area */}
         <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
           <div>
-            {/* 1. Original Price: Small on top in BLACK */}
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[10px] text-slate-500 font-medium">پێش داشکاندن:</span>
-              <span className="text-xs font-bold text-slate-900 font-mono">
-                {model.originalPrice && Number(model.originalPrice) > 0 ? `${Number(model.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
-              </span>
-              {discountPercent > 0 && (
-                <span className="text-[9.5px] font-extrabold text-red-600 bg-red-50 border border-red-100 px-1 py-0.2 rounded-md leading-none">
-                  {discountPercent}%-
-                </span>
-              )}
-            </div>
+            {hasDiscount ? (
+              <>
+                {/* 1. Old Price: Small in Red with Strikethrough */}
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[10px] text-slate-400 font-medium">کۆن:</span>
+                  <span className="text-xs font-bold text-rose-600 line-through font-mono decoration-rose-500">
+                    {Number(model.originalPrice).toLocaleString()} {t.currency}
+                  </span>
+                  {discountPercent > 0 && (
+                    <span className="text-[9.5px] font-extrabold text-rose-700 bg-rose-50 border border-rose-200 px-1 py-0.2 rounded-md leading-none font-mono">
+                      %{discountPercent}-
+                    </span>
+                  )}
+                </div>
 
-            {/* 2. Discounted / Sale Price: Larger */}
-            <div className="text-base sm:text-lg font-black text-red-600 leading-none flex items-baseline gap-1 tracking-tight">
-              <span>{model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0'}</span>
-              <span className="text-[10px] font-bold text-red-600/80">{t.currency}</span>
-            </div>
+                {/* 2. Discounted / Sale Price: Large Modern Emerald Green */}
+                <div className="text-base sm:text-lg font-black text-emerald-600 leading-none flex items-baseline gap-1 tracking-tight font-mono">
+                  <span>{Number(model.salePrice).toLocaleString()}</span>
+                  <span className="text-[10px] font-bold text-emerald-700/80">{t.currency}</span>
+                </div>
+              </>
+            ) : (
+              /* Single Active Price: Clean & Large, Never "0 $" */
+              <div>
+                <div className="text-[9.5px] text-slate-400 font-medium mb-0.5">
+                  {t.price || 'نرخ'}:
+                </div>
+                <div className="text-base sm:text-lg font-black text-slate-900 leading-none flex items-baseline gap-1 tracking-tight font-mono">
+                  <span>
+                    {model.originalPrice && Number(model.originalPrice) > 0 
+                      ? Number(model.originalPrice).toLocaleString() 
+                      : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0')}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-500">{t.currency}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
