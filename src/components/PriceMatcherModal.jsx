@@ -44,6 +44,7 @@ import {
   suggestModelFromRow,
   rankExcelRows,
   rankExcelRowsDetailed,
+  getCatalogSearchSeed,
   normalizeKey,
   cleanModelNumber
 } from '../utils/modelExtractor';
@@ -585,7 +586,7 @@ export default function PriceMatcherModal({
   const handleOpenExcelSearch = (catalogItem) => {
     setExcelSearchTarget(catalogItem);
     // Pre-fill with SKU or extracted variant code or name
-    const initial = catalogItem.model.sku || catalogItem.model.name || '';
+    const initial = getCatalogSearchSeed(catalogItem.model);
     setExcelSearchQuery(initial);
     setExcelSearchCat('all');
     setExcelSearchTargetCol('all');
@@ -636,9 +637,16 @@ export default function PriceMatcherModal({
   const handleSelectActiveManualModel = (item) => {
     if (!item) return;
     setActiveManualModelId(item.model.id);
-    const searchCandidate = cleanModelNumber(item.model.sku || item.model.name);
-    setExcel5ColSearch(searchCandidate || item.model.sku || item.model.name || '');
+    setExcel5ColSearch(getCatalogSearchSeed(item.model));
   };
+
+  // Whenever the model being matched changes (tab opened, next model, click in the list)
+  // the search box is filled with that model's number automatically.
+  useEffect(() => {
+    if (activeTab !== 'manual' || !activeManualItem) return;
+    setExcel5ColSearch(getCatalogSearchSeed(activeManualItem.model));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, activeManualItem?.model?.id]);
 
   const handleAssignRowIn5ColTable = (row) => {
     if (!activeManualItem) return;
@@ -685,10 +693,12 @@ export default function PriceMatcherModal({
 
   // Filtered rows for 5-Column Excel tab (Always closest 15 rows)
   // User requested: "داتاکان زۆرە . با نزیکترین 15 داتا هەمیشە نیشان بدات لە سێرچەکە"
-  const filteredExcel5ColRows = useMemo(() => {
+  const filteredExcel5Ranked = useMemo(() => {
     if (!stagingData || stagingData.length === 0) return [];
-    return rankExcelRows(stagingData, excel5ColSearch, excelSearchTargetCol, 'all', 15);
+    return rankExcelRowsDetailed(stagingData, excel5ColSearch, excelSearchTargetCol, 'all', 15);
   }, [stagingData, excel5ColSearch, excelSearchTargetCol]);
+  const filteredExcel5ColRows = useMemo(() => filteredExcel5Ranked.map(r => r.item), [filteredExcel5Ranked]);
+  const topExcel5Reason = filteredExcel5Ranked[0]?.reason || '';
 
   const handleExport5ColExcel = () => {
     if (stagingData.length === 0) return;
@@ -1604,6 +1614,12 @@ export default function PriceMatcherModal({
                           type="text"
                           value={excel5ColSearch}
                           onChange={(e) => setExcel5ColSearch(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && topExcel5Reason === 'code-exact' && filteredExcel5ColRows[0]) {
+                              e.preventDefault();
+                              handleAssignRowIn5ColTable(filteredExcel5ColRows[0]);
+                            }
+                          }}
                           placeholder="سێرچ لە فایلی ئێکسڵ بە کۆد (وەک 1200067)، ناوی مۆدێل، وەسف، نرخ..."
                           className="w-full pl-8 pr-3 py-2 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:outline-none focus:border-slate-500 transition-all font-mono"
                           dir="ltr"
@@ -1709,6 +1725,17 @@ export default function PriceMatcherModal({
                         </button>
                       </div>
 
+                      {excel5ColSearch.trim() && filteredExcel5ColRows.length > 0 && (
+                        topExcel5Reason === 'code-exact' ? (
+                          <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
+                            ✓ کۆدەکە بە تەواوی ڕێک دۆزرایەوە — دوگمەی <span className="font-mono">Enter</span> دابگرە بۆ وەرگرتنی نرخی یەکەم دێڕ
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                            ⚠ ئەم کۆدە بە تەواوی لە شیتەکەدا نەدۆزرایەوە (ڕەنگە ژمارەی دوای - جیاواز بێت). نزیکترینەکان نیشان دراون، بە وردی بزانە کامیان ڕاستە.
+                          </div>
+                        )
+                      )}
                       <div className="text-[11px] font-bold text-slate-500">
                         پیشاندانی <strong className="font-mono text-slate-900 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">نزیکترین {filteredExcel5ColRows.length} داتا</strong>
                       </div>
@@ -1902,6 +1929,13 @@ export default function PriceMatcherModal({
                     dir="ltr"
                     value={excelSearchQuery}
                     onChange={(e) => setExcelSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      const top = excelDialogRanked[0];
+                      if (e.key === 'Enter' && top && top.reason === 'code-exact') {
+                        e.preventDefault();
+                        handleAssignExcelRowToModel(excelSearchTarget.model.id, top.item);
+                      }
+                    }}
                     placeholder="کۆدی تەواو (1200067) یان دوو بەش (12000-67 / 12000 67)، ناوی مۆدێل، یان وەسف..."
                     className="w-full pl-9 pr-9 py-2.5 text-xs font-bold text-slate-800 bg-slate-50 border border-slate-300 focus:border-slate-500 focus:bg-white rounded-xl focus:outline-none transition-all shadow-2xs"
                   />

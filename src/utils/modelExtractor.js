@@ -526,6 +526,20 @@ export function parseNameEn(nameEn = '', category = '', modelName = '', knownCat
   return empty;
 }
 
+/**
+ * What should be typed into the search box when the user starts matching a catalog model by hand?
+ * -> the model number itself (sku, or the code found inside the name), never the whole sentence.
+ *    "B771-36" -> "B771-36" ;  name "Johnelle Dresser B776-31" -> "B776-31"
+ */
+export function getCatalogSearchSeed(model = {}) {
+  const sku = cleanModelNumber(String(model.sku || '').trim());
+  if (sku) return sku;
+  const name = String(model.name || '').trim();
+  const m = name.match(/[A-Za-z]{0,3}\d{3,}[A-Za-z0-9._/]*(?:-[A-Za-z0-9._/]+)*/);
+  if (m) return m[0];
+  return cleanModelNumber(name) || name;
+}
+
 // Normalised search keys per Excel row (cached, so searching 19k rows stays instant)
 const rowKeyCache = new WeakMap();
 const EMPTY_KEYS = { parsed: null, code: '', codeN: '', modelN: '', nameModelN: '', catN: '', descN: '', hayN: '' };

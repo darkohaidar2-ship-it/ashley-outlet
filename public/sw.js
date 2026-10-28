@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ashley-outlet-v3';
+const CACHE_NAME = 'ashley-outlet-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -51,7 +51,32 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. For static assets (images, icons, etc.), Cache-First with Network fallback
+  // 2a. App code (JS / CSS / Vite dev modules): ALWAYS Network-First, otherwise an old cached copy of the code
+  //     keeps being served after an update and the new fixes never appear.
+  const isAppCode =
+    event.request.destination === 'script' ||
+    event.request.destination === 'style' ||
+    event.request.destination === 'worker' ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/node_modules/') ||
+    /\.(js|jsx|mjs|css)$/.test(url.pathname);
+  if (isAppCode) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic' && !url.pathname.startsWith('/src/') && !url.pathname.startsWith('/@') && !url.pathname.startsWith('/node_modules/')) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // 2b. For static assets (images, icons, etc.), Cache-First with Network fallback
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;

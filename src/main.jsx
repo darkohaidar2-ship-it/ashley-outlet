@@ -9,11 +9,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
-// Register Service Worker for PWA (Installable standalone app on iPad & Tablets)
+// Service Worker (PWA for iPad & tablets)
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
-      console.log('Service Worker registration skipped:', err);
+  if (import.meta.env.DEV) {
+    // While developing (start.bat) a service worker only causes stale code: remove it and its caches.
+    navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
+    if (window.caches) caches.keys().then((keys) => keys.forEach((k) => caches.delete(k))).catch(() => {});
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').then((reg) => reg.update()).catch((err) => {
+        console.log('Service Worker registration skipped:', err);
+      });
     });
-  });
+  }
 }
