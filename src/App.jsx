@@ -6,6 +6,9 @@ import ProductModal from './components/ProductModal';
 import SlideshowView from './components/SlideshowView';
 import AdminSpreadsheet from './components/AdminSpreadsheet';
 import Footer from './components/Footer';
+import AdminShell from './components/AdminShell';
+import AdminDashboard from './components/AdminDashboard';
+import StoreHero from './components/StoreHero';
 import PrintSheet from './components/PrintSheet';
 import AdminModal from './components/AdminModal';
 import InstallModal from './components/InstallModal';
@@ -557,137 +560,202 @@ export default function App() {
     await handleSaveSettings({ logoUrl });
   };
 
+  // ---------------------------------------------------------------
+  // LAYOUT: storefront (viewer) vs full-screen admin shell.
+  // Only presentation lives here - every prop / handler below is the same one the old layout used.
+  // ---------------------------------------------------------------
+  const useAdminShell = isAdmin && viewMode !== 'slideshow';
+
+  const navProps = {
+    t,
+    lang,
+    setLang,
+    viewMode,
+    setViewMode,
+    isAdmin,
+    setIsAdmin,
+    logoUrl: data.settings?.logoUrl || '',
+    searchQuery,
+    setSearchQuery,
+    openLoginModal: () => setAdminModal({ isOpen: true, type: 'login', editingModel: null }),
+    openNewModelModal: () => setAdminModal({ isOpen: true, type: 'model', editingModel: null }),
+    openNewCategoryModal: () => setAdminModal({ isOpen: true, type: 'category', editingModel: null }),
+    openNewCollectionModal: () => setAdminModal({ isOpen: true, type: 'collection', editingModel: null }),
+    openLogoModal: () => setAdminModal({ isOpen: true, type: 'settings', editingModel: null }),
+    openSettingsModal: () => setAdminModal({ isOpen: true, type: 'settings', editingModel: null }),
+    openPriceMatcherModal: () => setIsPriceMatcherOpen(true),
+    openInstallModal: () => setIsInstallModalOpen(true),
+    onBatchPrint: handleBatchPrint,
+    filteredCount: filteredModels.length
+  };
+
+  const customStatuses = data.settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت'];
+  const statusColors = data.settings?.customItemTypeColors || {};
+
+  const filterBar = (
+    <FilterBar
+      t={t}
+      lang={lang}
+      categories={data.categories || []}
+      collections={data.collections || []}
+      selectedCategory={selectedCategory}
+      setSelectedCategory={setSelectedCategory}
+      selectedCollection={selectedCollection}
+      setSelectedCollection={setSelectedCollection}
+      selectedStatus={selectedStatus}
+      setSelectedStatus={setSelectedStatus}
+      customStatuses={customStatuses}
+      statusColors={statusColors}
+      models={data.models || []}
+      totalCount={data.models?.length || 0}
+      filteredCount={filteredModels.length}
+      sortBy={sortBy}
+      setSortBy={setSortBy}
+      embedded={useAdminShell}
+    />
+  );
+
+  const productGrid = filteredModels.length === 0 ? (
+    <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 max-w-md mx-auto p-8">
+      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <PackageOpen className="w-8 h-8" />
+      </div>
+      <h4 className="font-bold text-slate-800 text-lg">{t.noResultsFound}</h4>
+      <p className="text-xs text-slate-500 mt-1">تکایە گەڕانەکەت بگۆڕە یان فلتەرەکان لابدە</p>
+    </div>
+  ) : (
+    <div className={`grid gap-3 sm:gap-4 ${
+      useAdminShell
+        ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1900px]:grid-cols-6'
+        : 'grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
+    }`}>
+      {filteredModels.map((model) => (
+        <ProductCard
+          key={model.id}
+          model={model}
+          t={t}
+          categoryName={getCategoryName(model.categoryId)}
+          collectionName={getCollectionName(model.collectionId)}
+          isAdmin={isAdmin}
+          statusColors={statusColors}
+          onOpenDetails={(m) => setDetailModel(m)}
+          onOpenSlideshow={() => openSlideshowOnModel(model)}
+          onPrintSingle={handlePrintSingle}
+          onEdit={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
+          onDelete={handleDeleteModel}
+        />
+      ))}
+    </div>
+  );
+
+  let pageContent;
+  if (isLoading) {
+    pageContent = (
+      <div className="flex-1 flex flex-col items-center justify-center py-20">
+        <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-sm text-slate-500 font-medium">چاوەڕوان بە...</p>
+      </div>
+    );
+  } else if (viewMode === 'sheet' && isAdmin) {
+    /* SPREADSHEET VIEW: Google Sheets / Excel style editable table */
+    pageContent = (
+      <AdminSpreadsheet
+        models={data.models || []}
+        categories={data.categories || []}
+        collections={data.collections || []}
+        settings={data.settings || {}}
+        onSaveSettings={handleSaveSettings}
+        t={t}
+        lang={lang}
+        onSaveBulk={handleSaveBulk}
+        onClose={() => setViewMode('grid')}
+        onBatchPrint={handleBatchPrint}
+      />
+    );
+  } else if (viewMode === 'slideshow') {
+    /* SLIDESHOW VIEW: Left Mini-window + Fullscreen Hero Showcase */
+    pageContent = (
+      <>
+        <SlideshowView
+          models={filteredModels.length > 0 ? filteredModels : (data.models || [])}
+          allModels={data.models || []}
+          categories={data.categories || []}
+          collections={data.collections || []}
+          t={t}
+          lang={lang}
+          isAdmin={isAdmin}
+          logoUrl={data.settings?.logoUrl || ''}
+          settings={data.settings || {}}
+          statusColors={statusColors}
+          customStatuses={customStatuses}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          onPrintSingle={handlePrintSingle}
+          onEditModel={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
+          onOpenSettings={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
+          initialIndex={slideshowIndex}
+        />
+        <Footer t={t} lang={lang} />
+      </>
+    );
+  } else if (isAdmin) {
+    /* ADMIN CATALOG: overview + filters + cards with edit controls (inside the admin shell) */
+    pageContent = (
+      <div className="px-4 sm:px-6 pb-8 space-y-4">
+        <AdminDashboard
+          lang={lang}
+          t={t}
+          models={data.models || []}
+          categories={data.categories || []}
+          collections={data.collections || []}
+          customStatuses={customStatuses}
+          statusColors={statusColors}
+        />
+        <div>
+          <h2 className="text-[18px] font-black text-slate-900 flex items-center gap-2.5">
+            <span>{lang === 'ar' ? 'الكتالوج' : lang === 'en' ? 'Catalog' : 'کاتەلۆگ'}</span>
+            <span className="text-[12px] font-extrabold font-mono bg-white text-slate-600 rounded-full px-2.5 py-0.5 border border-slate-200">
+              {filteredModels.length}
+            </span>
+          </h2>
+          {filterBar}
+        </div>
+        {productGrid}
+      </div>
+    );
+  } else {
+    /* STOREFRONT (salesperson browsing) */
+    pageContent = (
+      <>
+        <StoreHero
+          lang={lang}
+          models={data.models || []}
+          categories={data.categories || []}
+          collections={data.collections || []}
+          onOpenModel={(m) => setDetailModel(m)}
+        />
+        {filterBar}
+        <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8">
+          {productGrid}
+        </main>
+        <Footer t={t} lang={lang} />
+      </>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50/60 flex flex-col selection:bg-red-600 selection:text-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-blue-600 selection:text-white">
       
       {/* SCREEN INTERFACE: Hidden entirely on @media print */}
       <div id="screen-root" className="flex-1 flex flex-col no-print">
         
-        {/* Top Navigation Bar */}
-        <Navbar
-          t={t}
-          lang={lang}
-          setLang={setLang}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          isAdmin={isAdmin}
-          setIsAdmin={setIsAdmin}
-          logoUrl={data.settings?.logoUrl || ''}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          openLoginModal={() => setAdminModal({ isOpen: true, type: 'login', editingModel: null })}
-          openNewModelModal={() => setAdminModal({ isOpen: true, type: 'model', editingModel: null })}
-          openNewCategoryModal={() => setAdminModal({ isOpen: true, type: 'category', editingModel: null })}
-          openNewCollectionModal={() => setAdminModal({ isOpen: true, type: 'collection', editingModel: null })}
-          openLogoModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
-          openSettingsModal={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
-          openPriceMatcherModal={() => setIsPriceMatcherOpen(true)}
-          openInstallModal={() => setIsInstallModalOpen(true)}
-          onBatchPrint={handleBatchPrint}
-          filteredCount={filteredModels.length}
-        />
-
-        {isLoading ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-red-200 border-t-red-600 rounded-full animate-spin"></div>
-            <p className="mt-4 text-sm text-slate-500 font-medium">چاوەڕوان بە...</p>
-          </div>
-        ) : viewMode === 'sheet' && isAdmin ? (
-          /* SPREADSHEET VIEW: Google Sheets / Excel style editable table */
-          <AdminSpreadsheet
-            models={data.models || []}
-            categories={data.categories || []}
-            collections={data.collections || []}
-            settings={data.settings || {}}
-            onSaveSettings={handleSaveSettings}
-            t={t}
-            lang={lang}
-            onSaveBulk={handleSaveBulk}
-            onClose={() => setViewMode('grid')}
-            onBatchPrint={handleBatchPrint}
-          />
-        ) : viewMode === 'slideshow' ? (
-          /* SLIDESHOW VIEW: Left Mini-window + Fullscreen Hero Showcase */
-          <>
-            <SlideshowView
-              models={filteredModels.length > 0 ? filteredModels : (data.models || [])}
-              allModels={data.models || []}
-              categories={data.categories || []}
-              collections={data.collections || []}
-              t={t}
-              lang={lang}
-              isAdmin={isAdmin}
-              logoUrl={data.settings?.logoUrl || ''}
-              settings={data.settings || {}}
-              statusColors={data.settings?.customItemTypeColors || {}}
-              customStatuses={data.settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت']}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              onPrintSingle={handlePrintSingle}
-              onEditModel={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
-              onOpenSettings={() => setAdminModal({ isOpen: true, type: 'settings', editingModel: null })}
-              initialIndex={slideshowIndex}
-            />
-            <Footer t={t} lang={lang} />
-          </>
+        {useAdminShell ? (
+          <AdminShell {...navProps}>{pageContent}</AdminShell>
         ) : (
-          /* GRID VIEW: Windows 11 Modern Cards Layout */
           <>
-            {/* Streamlined Category Strip */}
-            <FilterBar
-              t={t}
-              lang={lang}
-              categories={data.categories || []}
-              collections={data.collections || []}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              selectedCollection={selectedCollection}
-              setSelectedCollection={setSelectedCollection}
-              selectedStatus={selectedStatus}
-              setSelectedStatus={setSelectedStatus}
-              customStatuses={data.settings?.customItemTypes || ['ستۆک', 'یەدەگ', 'ئاوتلێت']}
-              statusColors={data.settings?.customItemTypeColors || {}}
-              models={data.models || []}
-              totalCount={data.models?.length || 0}
-              filteredCount={filteredModels.length}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-            />
-
-            {/* Product Grid */}
-            <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4">
-              {filteredModels.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-xs max-w-md mx-auto p-8">
-                  <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <PackageOpen className="w-8 h-8" />
-                  </div>
-                  <h4 className="font-bold text-slate-800 text-lg">{t.noResultsFound}</h4>
-                  <p className="text-xs text-slate-500 mt-1">تکایە گەڕانەکەت بگۆڕە یان فلتەرەکان لابدە</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {filteredModels.map((model) => (
-                    <ProductCard
-                      key={model.id}
-                      model={model}
-                      t={t}
-                      categoryName={getCategoryName(model.categoryId)}
-                      collectionName={getCollectionName(model.collectionId)}
-                      isAdmin={isAdmin}
-                      statusColors={data.settings?.customItemTypeColors || {}}
-                      onOpenDetails={(m) => setDetailModel(m)}
-                      onOpenSlideshow={() => openSlideshowOnModel(model)}
-                      onPrintSingle={handlePrintSingle}
-                      onEdit={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
-                      onDelete={handleDeleteModel}
-                    />
-                  ))}
-                </div>
-              )}
-            </main>
-
-            {/* Footer with Darko Haidar Project Attribution */}
-            <Footer t={t} lang={lang} />
+            {/* Top Navigation Bar */}
+            <Navbar {...navProps} />
+            {pageContent}
           </>
         )}
 

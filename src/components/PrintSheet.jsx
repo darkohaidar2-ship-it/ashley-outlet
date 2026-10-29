@@ -523,8 +523,6 @@ export default function PrintSheet({
                 PAGE {idx + 1} OF {modelsToPrint.length}
               </div>
             </div>
-              <span>PAGE {modelsToPrint.length > 1 ? `${idx + 1} OF ${modelsToPrint.length}` : '1 / 1 (A4 FORMAT)'}</span>
-            </div>
 
           </div>
         );

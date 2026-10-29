@@ -53,9 +53,9 @@ export default function Navbar({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-2xs no-print">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6">
-        <div className="flex items-center justify-between h-13 sm:h-15">
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-200/70 no-print">
+      <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-[54px] sm:h-[60px] md:h-[68px] gap-2">
           
           {/* Logo & Outlet Branding */}
           <div className="flex items-center space-x-2 rtl:space-x-reverse shrink-0">
@@ -68,11 +68,11 @@ export default function Navbar({
               }}
             />
 
-            <div className="flex items-center space-x-1.5 rtl:space-x-reverse">
+            <div className="hidden sm:flex items-center space-x-1.5 rtl:space-x-reverse">
               <span className="font-black text-base sm:text-lg tracking-tight text-slate-900">
                 ASHLEY
               </span>
-              <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+              <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
                 OUTLET
               </span>
             </div>
@@ -95,7 +95,7 @@ export default function Navbar({
                 }
               }}
               placeholder={t.searchPlaceholder || 'گەڕان...'}
-              className="w-full ps-8.5 pe-8 py-1.5 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-slate-200/80 focus:border-red-500 rounded-xl text-xs font-medium text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
+              className="w-full ps-8.5 pe-8 py-2 bg-slate-100 hover:bg-slate-200/60 focus:bg-white border border-transparent focus:border-blue-500 rounded-full text-xs font-medium text-slate-800 placeholder-slate-400 outline-none transition-all shadow-2xs"
             />
             {searchQuery && (
               <button
@@ -129,7 +129,7 @@ export default function Navbar({
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 transition-all shrink-0 shadow-2xs"
                 title={t.slideshowView}
               >
-                <Tv className="w-3.5 h-3.5 text-red-600" />
+                <Tv className="w-3.5 h-3.5 text-blue-600" />
                 <span className="hidden sm:inline">{t.slideshowView}</span>
               </button>
             )}
@@ -154,11 +154,11 @@ export default function Navbar({
             {filteredCount > 0 && viewMode !== 'sheet' && (
               <button
                 onClick={onBatchPrint}
-                className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition-all shadow-2xs shrink-0"
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-full transition-all shadow-2xs shrink-0"
                 title={t.batchPrint}
               >
-                <Printer className="w-3.5 h-3.5 text-red-600" />
-                <span className="bg-red-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
+                <Printer className="w-3.5 h-3.5 text-blue-600" />
+                <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">
                   {filteredCount}
                 </span>
               </button>
@@ -169,7 +169,7 @@ export default function Navbar({
               <div className="flex items-center space-x-1 rtl:space-x-reverse">
                 <button
                   onClick={openNewModelModal}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-2xs transition-all"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-2xs transition-all"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
                   <span className="hidden lg:inline">{t.addNewModel}</span>
@@ -197,7 +197,7 @@ export default function Navbar({
                   className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl border border-slate-200 transition-all"
                   title={t.slideshowSettings}
                 >
-                  <Sliders className="w-3.5 h-3.5 text-red-600" />
+                  <Sliders className="w-3.5 h-3.5 text-blue-600" />
                 </button>
 
                 {/* Smart Price Matcher Modal Trigger */}
@@ -217,7 +217,7 @@ export default function Navbar({
               className="p-1.5 sm:px-2.5 sm:py-1.5 inline-flex items-center text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all shrink-0"
               title={lang === 'ar' ? 'تثبيت التطبيق' : lang === 'en' ? 'Install App' : 'دابەزاندنی ئەپ'}
             >
-              <Download className="w-3.5 h-3.5 text-red-600" />
+              <Download className="w-3.5 h-3.5 text-blue-600" />
               <span className="hidden lg:inline text-xs font-bold ms-1">
                 {lang === 'ar' ? 'تثبيت' : lang === 'en' ? 'App' : 'ئەپ'}
               </span>
@@ -229,7 +229,7 @@ export default function Navbar({
                 onClick={() => setLang('ku')}
                 className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'ku' 
-                    ? 'bg-white text-red-600 shadow-2xs font-bold' 
+                    ? 'bg-white text-blue-600 shadow-2xs font-bold' 
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -239,7 +239,7 @@ export default function Navbar({
                 onClick={() => setLang('ar')}
                 className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'ar' 
-                    ? 'bg-white text-red-600 shadow-2xs font-bold' 
+                    ? 'bg-white text-blue-600 shadow-2xs font-bold' 
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
@@ -249,7 +249,7 @@ export default function Navbar({
                 onClick={() => setLang('en')}
                 className={`px-1.5 py-0.5 rounded-lg transition-all ${
                   lang === 'en' 
-                    ? 'bg-white text-red-600 shadow-2xs font-bold' 
+                    ? 'bg-white text-blue-600 shadow-2xs font-bold' 
                     : 'text-slate-500 hover:text-slate-900'
                 }`}
               >

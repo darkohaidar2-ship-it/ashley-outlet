@@ -19,7 +19,8 @@ export default function FilterBar({
   totalCount,
   filteredCount,
   sortBy = 'name-asc',
-  setSortBy
+  setSortBy,
+  embedded = false
 }) {
   // Collections that belong to current category
   const relevantCollections = selectedCategory === 'all'
@@ -33,10 +34,10 @@ export default function FilterBar({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 no-print">
+    <div className={`no-print ${embedded ? 'py-1' : 'w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4'}`}>
       <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
         {/* Single Unified Horizontal Pill Strip */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0 w-full sm:w-auto">
         
         {/* All Pill with Count */}
         <button
@@ -44,15 +45,15 @@ export default function FilterBar({
             setSelectedCategory('all');
             setSelectedCollection('all');
           }}
-          className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+          className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-bold transition-colors cursor-pointer ${
             selectedCategory === 'all'
-              ? 'bg-slate-900 text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,0.6)]'
               : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           <span>{t.allCategories}</span>
           <span className={`ms-1.5 text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-            selectedCategory === 'all' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+            selectedCategory === 'all' ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
           }`}>
             {totalCount}
           </span>
@@ -68,9 +69,9 @@ export default function FilterBar({
                 setSelectedCategory(cat.id);
                 setSelectedCollection('all');
               }}
-              className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`shrink-0 px-4 py-2 rounded-full text-[13px] font-bold transition-colors cursor-pointer ${
                 isSelected
-                  ? 'bg-red-600 text-white shadow-xs'
+                  ? 'bg-blue-600 text-white shadow-[0_6px_16px_-6px_rgba(37,99,235,0.6)]'
                   : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
@@ -89,9 +90,9 @@ export default function FilterBar({
                 <button
                   key={col.id}
                   onClick={() => setSelectedCollection(isColSelected ? 'all' : col.id)}
-                  className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                     isColSelected
-                      ? 'bg-red-100 text-red-700 font-bold border border-red-200'
+                      ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-transparent'
                   }`}
                 >
@@ -105,7 +106,7 @@ export default function FilterBar({
 
         {/* Sort Selector Dropdown */}
         {setSortBy && (
-          <div className="shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2.5 py-1 shadow-2xs hover:border-slate-300 transition-all">
+          <div className="shrink-0 flex items-center gap-1.5 bg-white border border-slate-200 rounded-full ps-3 pe-2 py-1.5 hover:border-slate-300 transition-colors">
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
             <select
               value={sortBy}
@@ -127,7 +128,7 @@ export default function FilterBar({
 
       {/* Status Filters Strip (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...) */}
       {setSelectedStatus && customStatuses && customStatuses.length > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 mt-2 border-t border-slate-200/70 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-3 mt-3 border-t border-slate-200/70 scrollbar-none">
           <span className="text-[11px] font-black text-slate-500 shrink-0 flex items-center gap-1 px-1">
             <Tag className="w-3.5 h-3.5 text-slate-400" />
             <span>دۆخی کاڵا:</span>
@@ -137,9 +138,9 @@ export default function FilterBar({
           <button
             type="button"
             onClick={() => setSelectedStatus('all')}
-            className={`shrink-0 px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
               selectedStatus === 'all'
-                ? 'bg-slate-800 text-white shadow-xs'
+                ? 'bg-slate-900 text-white'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
@@ -163,9 +164,9 @@ export default function FilterBar({
                 type="button"
                 onClick={() => setSelectedStatus(isSelected ? 'all' : st)}
                 style={isSelected ? getStatusBadgeStyle(st, statusColors) : {}}
-                className={`shrink-0 px-3 py-1 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-black transition-colors cursor-pointer flex items-center gap-1.5 ${
                   isSelected
-                    ? 'shadow-xs ring-2 ring-black/10 scale-102'
+                    ? 'shadow-xs ring-2 ring-black/10'
                     : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
