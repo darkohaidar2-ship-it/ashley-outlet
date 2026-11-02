@@ -53,6 +53,21 @@ function createWedgePath(startAngleDeg, endAngleDeg, innerR, outerR) {
   return `M ${x1} ${y1} A ${outerR} ${outerR} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${innerR} ${innerR} 0 ${largeArc} 0 ${x4} ${y4} Z`;
 }
 
+/**
+ * SVG arc path generator between two angles with radius r
+ */
+function describeArc(cx, cy, r, startAngleDeg, endAngleDeg) {
+  const startRad = (startAngleDeg * Math.PI) / 180;
+  const endRad = (endAngleDeg * Math.PI) / 180;
+  const x1 = cx + r * Math.cos(startRad);
+  const y1 = cy + r * Math.sin(startRad);
+  const x2 = cx + r * Math.cos(endRad);
+  const y2 = cy + r * Math.sin(endRad);
+  const angleDiff = ((endAngleDeg - startAngleDeg) % 360 + 360) % 360;
+  const largeArc = angleDiff > 180 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`;
+}
+
 export default function RadialCategoryWheel({
   categories = [],
   models = [],
@@ -131,8 +146,8 @@ export default function RadialCategoryWheel({
     list.push({
       id: 'module-bf',
       type: 'black_friday',
-      name: lang === 'ku' ? 'بلاک فرایدەی' : lang === 'ar' ? 'بلاك فرايدي' : 'Black Friday',
-      name_en: 'BLACK FRIDAY VIP',
+      name: lang === 'ku' ? 'سێتەکانی بلاک فرایدەی' : lang === 'ar' ? 'أطقم بلاك فرايدي' : 'Black Friday Sets',
+      name_en: 'BLACK FRIDAY SETS',
       count: bfCount,
       color: '#ff6b00',
       icon: Flame,
@@ -153,6 +168,7 @@ export default function RadialCategoryWheel({
   const innerR = 98;
   const outerR = 212; // generous depth for both icon and text
   const labelR = 265;
+  const rimR = 230; // Radius for the glowing moving red outlet rim
 
   const modulesWithAngles = useMemo(() => {
     let currentAngle = -90; // Start at top 12 o'clock
@@ -173,6 +189,23 @@ export default function RadialCategoryWheel({
       };
     });
   }, [rawModules, totalWeight]);
+
+  // Unified Outlet Zone Arc boundaries
+  const outletArcData = useMemo(() => {
+    const outlets = modulesWithAngles.filter(m => m.isOutlet);
+    if (outlets.length === 0) return null;
+    const first = outlets[0];
+    const last = outlets[outlets.length - 1];
+    const startAngle = first.startAngle - (gap / 2);
+    const endAngle = last.endAngle + (gap / 2);
+    const midAngle = (startAngle + endAngle) / 2;
+    return {
+      startAngle,
+      endAngle,
+      midAngle,
+      count: outlets.reduce((sum, o) => sum + (o.count || 0), 0)
+    };
+  }, [modulesWithAngles, gap]);
 
   const handleModuleClick = (mod) => {
     if (mod.type === 'stats') {
@@ -243,6 +276,11 @@ export default function RadialCategoryWheel({
               <filter id="hub-glow" x="-20%" y="-20%" width="140%" height="140%">
                 <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000000" floodOpacity="0.65" />
               </filter>
+
+              {/* Red Laser Neon Glow for Outlet Rim */}
+              <filter id="red-laser-glow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#ef4444" floodOpacity="0.9" />
+              </filter>
             </defs>
 
             {/* ========================================================
@@ -277,6 +315,106 @@ export default function RadialCategoryWheel({
               stroke="rgba(255, 255, 255, 0.22)"
               strokeWidth="1.5"
             />
+
+            {/* ========================================================
+                OUTLET ZONE: GLOWING MOVING RED PERIMETER RIM
+                Requested: لێوارێکی درەوشاوەی و جوڵاوی سور لە دەوری هەموو بەشەکانی ئاوتلێت
+                لە دەرەوەی هەموویان یەک جار بنووسرێ ئاوت لێت
+               ======================================================== */}
+            {outletArcData && (() => {
+              const startRad = (outletArcData.startAngle * Math.PI) / 180;
+              const endRad = (outletArcData.endAngle * Math.PI) / 180;
+              const midRad = (outletArcData.midAngle * Math.PI) / 180;
+              const startX = rimR * Math.cos(startRad);
+              const startY = rimR * Math.sin(startRad);
+              const endX = rimR * Math.cos(endRad);
+              const endY = rimR * Math.sin(endRad);
+
+              // Unified label position directly outside the rim
+              const labelRadius = rimR + 32;
+              const labelX = labelRadius * Math.cos(midRad);
+              const labelY = labelRadius * Math.sin(midRad);
+
+              return (
+                <g key="outlet-zone-rim" className="select-none">
+                  {/* 1. Ambient Red Neon Glow */}
+                  <path
+                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="9"
+                    filter="url(#red-laser-glow)"
+                    opacity="0.85"
+                  />
+
+                  {/* 2. Core Solid Crimson Border */}
+                  <path
+                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
+                    fill="none"
+                    stroke="#dc2626"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                  />
+
+                  {/* 3. Hardware-Accelerated Moving Laser Pulse */}
+                  <path
+                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
+                    fill="none"
+                    stroke="#ffffff"
+                    strokeWidth="3"
+                    strokeDasharray="25 65"
+                    strokeLinecap="round"
+                    opacity="0.9"
+                  >
+                    <animate attributeName="stroke-dashoffset" from="0" to="-720" dur="3s" repeatCount="indefinite" />
+                  </path>
+
+                  {/* Start Terminal Node */}
+                  <circle
+                    cx={startX}
+                    cy={startY}
+                    r="5"
+                    fill="#ef4444"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    filter="url(#red-laser-glow)"
+                  />
+
+                  {/* End Terminal Node */}
+                  <circle
+                    cx={endX}
+                    cy={endY}
+                    r="5"
+                    fill="#ef4444"
+                    stroke="#ffffff"
+                    strokeWidth="2"
+                    filter="url(#red-laser-glow)"
+                  />
+
+                  {/* Unified Overarching Outlet Banner */}
+                  {/* Requested: لێوارەکە لە هەموویانەوە بێتە دەرەوە یەک جار بنووسرێ ئاوت لێت */}
+                  <foreignObject
+                    x={labelX - 85}
+                    y={labelY - 16}
+                    width={170}
+                    height={36}
+                    className="overflow-visible pointer-events-auto cursor-pointer"
+                    onClick={() => {
+                      if (setCampaign) setCampaign('outlet');
+                      if (onSelectCategory) onSelectCategory('all');
+                    }}
+                  >
+                    <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-red-600/95 hover:bg-red-500 text-white rounded-full shadow-[0_0_20px_rgba(239,68,68,0.95)] border-2 border-red-300 backdrop-blur-md transition-all hover:scale-105 active:scale-95 group">
+                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                      <span className="text-[11px] font-black tracking-wide">🏷️ بەشەکانی ئاوتلێت</span>
+                      <span className="text-[9.5px] font-mono opacity-90 font-black bg-black/30 px-1.5 py-0.2 rounded-full">
+                        {outletCount || outletArcData.count}
+                      </span>
+                    </div>
+                  </foreignObject>
+                </g>
+              );
+            })()}
 
             {/* Directional Flow Arrows on Tracks (Clockwise loop like ERP) */}
             {modulesWithAngles.map((mod) => {
@@ -438,10 +576,19 @@ export default function RadialCategoryWheel({
                           {mod.name}
                         </div>
 
+                        {/* Explicit Outlet Tag inside each individual outlet slice as requested:
+                            بەس زانیاری هەر پارچەیەک لە بازنەکە با بنوسێ: ئاوت لێت */}
+                        {mod.isOutlet && (
+                          <div className="bg-red-600/90 text-white text-[8px] font-black px-1.5 py-0.2 rounded-full border border-red-300/40 shadow-xs mt-0.5 tracking-tight flex items-center gap-0.5">
+                            <span className="w-1 h-1 rounded-full bg-white animate-ping" />
+                            <span>ئاوتلێت</span>
+                          </div>
+                        )}
+
                         {/* Extra VIP Tag for Black Friday slice */}
                         {mod.isBF && (
-                          <div className="bg-black/90 text-amber-300 text-[8.5px] font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider mt-0.5 border border-amber-300/40">
-                            2X VIP EDITION
+                          <div className="bg-black/90 text-amber-300 text-[8.5px] font-black px-2 py-0.2 rounded-full uppercase tracking-wider mt-0.5 border border-amber-300/40 shadow-sm">
+                            سێتی تەواو • FULL SET
                           </div>
                         )}
                       </div>

@@ -90,11 +90,11 @@ export default function ProductCard({
           <>
             <div className="absolute top-2.5 start-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full shadow-lg border border-amber-300/60 animate-gold-shimmer text-black font-black text-[10px] tracking-wider uppercase">
               <span className="text-xs">👑</span>
-              <span className="font-black tracking-wider text-[9px] drop-shadow-2xs">VIP BLACK FRIDAY</span>
+              <span className="font-black tracking-wider text-[9.5px] drop-shadow-2xs">سێتی تەواو • FULL SET</span>
             </div>
             <div className="absolute top-2.5 end-2.5 bg-neutral-950/85 backdrop-blur-md border border-orange-500/50 text-orange-400 px-2 py-0.5 rounded-full text-[9px] font-black flex items-center gap-1 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
-              <span>VIP 2026</span>
+              <span>بلاک فرایدەی VIP</span>
             </div>
           </>
         )}

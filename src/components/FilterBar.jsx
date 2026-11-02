@@ -100,9 +100,9 @@ export default function FilterBar({
                   ? 'bg-blue-600 text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="بەشی ئاوتلێت"
+              title="بەشەکانی ئاوتلێت"
             >
-              <span>ئاوتلێت</span>
+              <span>🏷️ بەشەکانی ئاوتلێت</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 campaign === 'outlet' ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600'
               }`}>
@@ -118,10 +118,10 @@ export default function FilterBar({
                   ? 'bg-gradient-to-r from-neutral-950 to-black text-orange-400 shadow-sm ring-1 ring-orange-500/50'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="کەمپەینی بلاک فرایدەی"
+              title="سێتەکانی بلاک فرایدەی"
             >
               <Flame className={`w-3.5 h-3.5 ${campaign === 'black_friday' ? 'text-orange-500 fill-orange-500 animate-pulse' : 'text-slate-400'}`} />
-              <span>بلاک فرایدەی</span>
+              <span>👑 سێتەکانی بلاک فرایدەی</span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                 campaign === 'black_friday' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
               }`}>

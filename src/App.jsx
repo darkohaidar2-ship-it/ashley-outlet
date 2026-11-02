@@ -519,12 +519,20 @@ export default function App() {
   };
 
   // Helper names
-  const getCategoryName = (catId) => {
+  const getCategoryName = (catId, isBF = false) => {
     const cat = data.categories.find(c => c.id === catId);
     if (!cat) return '';
-    if (lang === 'ku') return cat.name_ku || cat.name;
-    if (lang === 'ar') return cat.name_ar || cat.name;
-    return cat.name_en || cat.name;
+    const raw = lang === 'ku' ? (cat.name_ku || cat.name) : lang === 'ar' ? (cat.name_ar || cat.name) : (cat.name_en || cat.name);
+    if (isBF) {
+      if (lang === 'ku') {
+        return raw.startsWith('سێتی') ? raw : `سێتی ${raw}`;
+      } else if (lang === 'ar') {
+        return raw.startsWith('طقم') ? raw : `طقم ${raw}`;
+      } else {
+        return raw.endsWith('Set') ? raw : `${raw} Set`;
+      }
+    }
+    return raw;
   };
 
   const getCollectionName = (colId) => {
@@ -691,23 +699,28 @@ export default function App() {
         ? 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1900px]:grid-cols-6'
         : 'grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5'
     }`}>
-      {filteredModels.map((model) => (
-        <ProductCard
-          key={model.id}
-          model={model}
-          t={t}
-          categoryName={getCategoryName(model.categoryId)}
-          collectionName={getCollectionName(model.collectionId)}
-          isAdmin={isAdmin}
-          statusColors={statusColors}
-          isBlackFriday={campaign === 'black_friday' || (model.itemType || model.sku || '').includes('بلاک فرایدەی')}
-          onOpenDetails={(m) => setDetailModel(m)}
-          onOpenSlideshow={() => openSlideshowOnModel(model)}
-          onPrintSingle={handlePrintSingle}
-          onEdit={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
-          onDelete={handleDeleteModel}
-        />
-      ))}
+      {filteredModels.map((model) => {
+        const isBFModel = campaign === 'black_friday' || 
+          (model.itemType || model.sku || '').toLowerCase().includes('بلاک فرایدەی') ||
+          (model.itemType || model.sku || '').toLowerCase().includes('black friday');
+        return (
+          <ProductCard
+            key={model.id}
+            model={model}
+            t={t}
+            categoryName={getCategoryName(model.categoryId, isBFModel)}
+            collectionName={getCollectionName(model.collectionId)}
+            isAdmin={isAdmin}
+            statusColors={statusColors}
+            isBlackFriday={isBFModel}
+            onOpenDetails={(m) => setDetailModel(m)}
+            onOpenSlideshow={() => openSlideshowOnModel(model)}
+            onPrintSingle={handlePrintSingle}
+            onEdit={(m) => setAdminModal({ isOpen: true, type: 'model', editingModel: m })}
+            onDelete={handleDeleteModel}
+          />
+        );
+      })}
     </div>
   );
 
@@ -886,7 +899,7 @@ export default function App() {
           models={filteredModels.length > 0 ? filteredModels : (data.models || [])}
           onSelectModel={(m) => setDetailModel(m)}
           t={t}
-          categoryName={detailModel ? getCategoryName(detailModel.categoryId) : ''}
+          categoryName={detailModel ? getCategoryName(detailModel.categoryId, (detailModel.itemType || detailModel.sku || '').toLowerCase().includes('بلاک فرایدەی') || (detailModel.itemType || detailModel.sku || '').toLowerCase().includes('black friday')) : ''}
           collectionName={detailModel ? getCollectionName(detailModel.collectionId) : ''}
           logoUrl={data.settings?.logoUrl || ''}
           statusColors={data.settings?.customItemTypeColors || {}}
