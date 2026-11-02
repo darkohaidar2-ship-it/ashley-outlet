@@ -37,8 +37,8 @@ function createWedgePath(startAngleDeg, endAngleDeg, innerR, outerR) {
 }
 
 /**
- * Borderless, Expansive & Delicate Radial Wheel Component
- * (بەبێ سنور، گەورە و فراوان، بەش بەش ناسک و جوان)
+ * Borderless, Expansive & Full-Size Radial Wheel Component
+ * (سرێچ بە فوول سایز بەبێ سنور، بە فۆنتی سروشتی ناسک بێ بۆڵد)
  */
 function SingleWheel({
   wheelId,
@@ -58,9 +58,9 @@ function SingleWheel({
   const [hoveredId, setHoveredId] = useState(null);
 
   // Precision delicate geometry
-  const gap = 2.8; // Sleek delicate gap between slices
+  const gap = 2.6; // Sleek delicate gap between slices
   const innerR = 96;
-  const outerR = 232;
+  const outerR = 234;
 
   // Calculate angles
   const totalWeight = modules.reduce((sum, m) => sum + (m.weight || 1), 0);
@@ -84,27 +84,27 @@ function SingleWheel({
   });
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full transition-all duration-300">
+    <div className="relative flex flex-col items-center justify-center w-full h-full flex-1 transition-all duration-300">
       
-      {/* Delicate Floating Header (بێ سنور و چوارچێوە) */}
+      {/* Delicate Floating Header (بێ سنور، فۆنتی سروشتی ناسک بێ بۆڵد) */}
       <div 
         onClick={onActivateWheel}
-        className="w-full max-w-[560px] flex items-center justify-between gap-3 mb-3 px-3 cursor-pointer group select-none"
+        className="w-full max-w-[620px] flex items-center justify-between gap-3 mb-2 px-3 cursor-pointer group select-none"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-110 ${
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-105 ${
             badgeTone === 'gold' 
               ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-black shadow-amber-500/20' 
               : 'bg-gradient-to-br from-rose-500 to-red-700 text-white shadow-red-500/20'
           }`}>
             <TitleIcon className="w-4 h-4" />
           </div>
-          <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2 truncate">
+          <h3 className="text-base sm:text-lg font-normal tracking-tight text-white flex items-center gap-2 truncate">
             <span>{title}</span>
           </h3>
         </div>
 
-        <div className={`px-3 py-1 rounded-full text-xs font-mono font-black shrink-0 border backdrop-blur-md shadow-xs transition-transform group-hover:scale-105 ${
+        <div className={`px-3 py-1 rounded-full text-xs font-mono font-normal shrink-0 border backdrop-blur-md shadow-xs transition-transform group-hover:scale-105 ${
           badgeTone === 'gold'
             ? 'bg-amber-400/15 border-amber-400/40 text-amber-300'
             : 'bg-rose-500/15 border-rose-500/40 text-rose-300'
@@ -113,10 +113,11 @@ function SingleWheel({
         </div>
       </div>
 
-      {/* Large SVG Wheel Canvas (گەورە بەبێ سنور) */}
-      <div className="relative w-full max-w-[520px] sm:max-w-[580px] lg:max-w-[640px] xl:max-w-[700px] 2xl:max-w-[740px] aspect-square flex items-center justify-center">
+      {/* Full-Size Responsive SVG Wheel (سرێچ دەبێت بۆ پڕاوپڕی شاشەکە) */}
+      <div className="relative w-full h-auto max-h-[75vh] lg:max-h-[82vh] aspect-square flex items-center justify-center">
         <svg
           viewBox="-280 -280 560 560"
+          preserveAspectRatio="xMidYMid meet"
           className="w-full h-full overflow-visible drop-shadow-[0_12px_36px_rgba(0,0,0,0.35)]"
         >
           <defs>
@@ -132,11 +133,11 @@ function SingleWheel({
             cy="0"
             r={innerR - 5}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.18)"
+            stroke="rgba(255, 255, 255, 0.16)"
             strokeWidth="1.2"
           />
 
-          {/* Slices: Crisp Pure WHITE + Deep BLACK Icons & Text + Delicate Color Stroke */}
+          {/* Slices: Crisp Pure WHITE + Deep BLACK Icons & Text (بێ بۆڵد) + Delicate Color Stroke */}
           {modulesWithAngles.map((mod) => {
             const midRad = (mod.midAngle * Math.PI) / 180;
             const isHovered = hoveredId === mod.id;
@@ -184,7 +185,7 @@ function SingleWheel({
                     strokeWidth={isSelected ? 3.5 : isHovered ? 2.8 : 2}
                   />
 
-                  {/* Content INSIDE Wedge: Deep BLACK Text & Deep BLACK Icon */}
+                  {/* Content INSIDE Wedge: Deep BLACK Text & Deep BLACK Icon (بێ بۆڵد، فۆنتی سروشتی) */}
                   <foreignObject
                     x={contentX - 48}
                     y={contentY - 37}
@@ -196,17 +197,17 @@ function SingleWheel({
                       
                       {/* Deep Black Icon */}
                       <div className="flex items-center justify-center mb-0.5 text-slate-950 transition-transform">
-                        <IconComponent className="w-6 h-6 sm:w-6.5 sm:h-6.5 stroke-[2.3]" />
+                        <IconComponent className="w-6 h-6 sm:w-6.5 sm:h-6.5 stroke-[2.2]" />
                       </div>
 
-                      {/* Deep Black Category Name */}
-                      <div className="text-slate-950 font-black text-[12px] sm:text-[13px] leading-tight px-1 tracking-tight">
+                      {/* Deep Black Category Name (فۆنتی کوردی بێ بۆڵد) */}
+                      <div className="text-slate-950 font-normal text-[13px] sm:text-[14px] leading-tight px-1 tracking-tight">
                         {mod.name}
                       </div>
 
                       {/* Delicate Pill Badge showing count */}
                       <div 
-                        className="text-[9.5px] font-mono font-black px-2 py-0.2 rounded-full mt-0.5 text-white shadow-2xs"
+                        className="text-[10px] font-mono font-normal px-2 py-0.2 rounded-full mt-0.5 text-white shadow-2xs"
                         style={{ backgroundColor: mod.badgeColor || '#0f172a' }}
                       >
                         {mod.badgeText}
@@ -248,7 +249,7 @@ function SingleWheel({
               strokeWidth="1.2"
             />
 
-            {/* Center Hub Content */}
+            {/* Center Hub Content (فۆنتی ناسک بێ بۆڵد) */}
             <foreignObject
               x={-(innerR - 14)}
               y={-(innerR - 14)}
@@ -263,13 +264,13 @@ function SingleWheel({
                       <Crown className="w-4 h-4 text-amber-300 fill-amber-300 animate-bounce" />
                       <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                     </div>
-                    <div className="text-[13px] sm:text-[14px] font-black text-amber-300 tracking-wider leading-none">
+                    <div className="text-[13px] sm:text-[14px] font-normal text-amber-300 tracking-wider leading-none">
                       BLACK FRIDAY
                     </div>
-                    <div className="font-mono text-[8.5px] font-black uppercase tracking-wider text-amber-400 bg-neutral-900/90 px-2 py-0.5 rounded border border-amber-300/30 mt-1">
+                    <div className="font-mono text-[8.5px] font-normal uppercase tracking-wider text-amber-400 bg-neutral-900/90 px-2 py-0.5 rounded border border-amber-300/30 mt-1">
                       2026 SETS
                     </div>
-                    <div className="text-[9px] font-bold text-neutral-300 mt-1">
+                    <div className="text-[9.5px] font-normal text-neutral-300 mt-1">
                       {centerCount} سێت
                     </div>
                   </>
@@ -282,14 +283,14 @@ function SingleWheel({
                         className="h-8 sm:h-9 max-w-[100px] object-contain mb-0.5 transition-transform group-hover:scale-105"
                       />
                     ) : (
-                      <div className="text-xl font-black text-slate-900 tracking-tight leading-none mb-0.5">
+                      <div className="text-xl font-normal text-slate-900 tracking-tight leading-none mb-0.5">
                         ASHLEY
                       </div>
                     )}
-                    <div className="font-mono text-[8px] font-black uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 mt-0.5">
+                    <div className="font-mono text-[8px] font-normal uppercase tracking-wider text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 mt-0.5">
                       ashley suli | darko
                     </div>
-                    <div className="text-[9px] font-bold text-slate-600 mt-1">
+                    <div className="text-[9.5px] font-normal text-slate-600 mt-1">
                       {centerCount} مۆدێل
                     </div>
                   </>
@@ -339,7 +340,7 @@ export default function RadialCategoryWheel({
     return () => clearInterval(timer);
   }, [showcaseImages.length]);
 
-  // Counts per category for Outlet vs Black Friday
+  // Counts per category strictly separated between Outlet and Black Friday
   const { outletCounts, bfCounts } = useMemo(() => {
     const oCounts = {};
     const bCounts = {};
@@ -357,12 +358,12 @@ export default function RadialCategoryWheel({
     return { outletCounts: oCounts, bfCounts: bCounts };
   }, [models]);
 
-  // 1. OUTLET WHEEL MODULES (Excludes Dining room, as requested)
+  // 1. OUTLET WHEEL MODULES: Individual Outlet Models (Excludes Dining Room, as it has 0 outlet models)
   const outletModules = useMemo(() => {
     return [
       {
         id: 'cat-1789155949761',
-        name: lang === 'ku' ? 'قەنەفە' : 'Sofa',
+        name: lang === 'ku' ? 'دانیشتن / قەنەفە' : 'Sofa',
         icon: Sofa,
         weight: 1,
         borderColor: '#0d9488', // Emerald
@@ -417,12 +418,12 @@ export default function RadialCategoryWheel({
     ];
   }, [lang, outletCounts, outletCount]);
 
-  // 2. BLACK FRIDAY SETS MODULES (Delicate Vibrant Colors + White Interior)
+  // 2. BLACK FRIDAY SETS MODULES: Complete Luxury Sets (دابەشکردنی دروست بۆ سێتەکان)
   const bfModules = useMemo(() => {
     return [
       {
         id: 'cat-1789155949761',
-        name: lang === 'ku' ? 'سێتی سۆفا' : 'Sofa Sets',
+        name: lang === 'ku' ? 'سێتی دانیشتن' : 'Living Sets',
         icon: Sofa,
         weight: 1,
         borderColor: '#f59e0b', // Vibrant Gold
@@ -437,15 +438,6 @@ export default function RadialCategoryWheel({
         borderColor: '#ff6b00', // Flame
         badgeColor: '#c2410c',
         badgeText: `${bfCounts['cat-1789142347391'] || 0} سێت`
-      },
-      {
-        id: 'cat-sehpa',
-        name: lang === 'ku' ? 'سێتی تەپڵەک' : 'Sehpa Sets',
-        icon: Coffee,
-        weight: 1,
-        borderColor: '#8b5cf6', // Royal Purple
-        badgeColor: '#6d28d9',
-        badgeText: `${bfCounts['cat-sehpa'] || 0} سێت`
       },
       {
         id: 'cat-1792925556263',
@@ -466,8 +458,17 @@ export default function RadialCategoryWheel({
         badgeText: `${bfCounts['cat-dining-room'] || 0} سێت`
       },
       {
+        id: 'cat-sehpa',
+        name: lang === 'ku' ? 'سێتی تەپڵەک و سێپایە' : 'Table Sets',
+        icon: Coffee,
+        weight: 1,
+        borderColor: '#8b5cf6', // Royal Purple
+        badgeColor: '#6d28d9',
+        badgeText: `${bfCounts['cat-sehpa'] || 0} سێت`
+      },
+      {
         id: 'cat-tv-vitrine',
-        name: lang === 'ku' ? 'سێتی فاترین' : 'TV & Vitrine',
+        name: lang === 'ku' ? 'سێتی فاترین و تیڤی' : 'TV & Vitrine',
         icon: Tv,
         weight: 1,
         borderColor: '#06b6d4', // Sapphire Cyan
@@ -499,9 +500,9 @@ export default function RadialCategoryWheel({
   };
 
   return (
-    <section className="no-print w-full min-h-[92vh] lg:min-h-screen py-8 px-3 sm:px-6 lg:px-12 relative flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[#2a2e3a] via-[#21242d] to-[#181a22] text-white select-none">
+    <section className="no-print w-full min-h-[94vh] lg:min-h-screen py-4 sm:py-6 px-2 sm:px-4 lg:px-8 relative flex flex-col justify-between overflow-hidden bg-gradient-to-b from-[#2a2e3a] via-[#21242d] to-[#181a22] text-white select-none">
       
-      {/* 1. Ambient Gray Atmospheric Lighting (ڕەساسی مۆدێرن و ناسک) */}
+      {/* 1. Ambient Gray Atmospheric Lighting (ڕەساسی شاهانەیی) */}
       <div 
         className="absolute inset-0 pointer-events-none select-none z-0"
         style={{
@@ -537,13 +538,13 @@ export default function RadialCategoryWheel({
         <div className="absolute inset-0 bg-gradient-to-b from-[#2a2e3a]/80 via-transparent to-[#181a22]/90" />
       </div>
 
-      {/* 3. Expansive Full-Size Dual Wheels (بێ سنور، گەورە و فراوان) */}
-      <div className="relative z-10 max-w-[1850px] w-full mx-auto flex-1 flex flex-col justify-between">
+      {/* 3. Expansive Full-Size Dual Wheels (سرێچ بۆ فوول سایز بە هەموو قیاسێک) */}
+      <div className="relative z-10 w-full mx-auto flex-1 flex flex-col justify-between">
         
-        {/* Wheels Grid: Both wheels proudly floating side-by-side without confining borders */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-20 items-center justify-items-center flex-1 my-auto w-full">
+        {/* Wheels Grid: Both wheels proudly side-by-side stretching to fill screen */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 xl:gap-12 items-center justify-items-center flex-1 my-auto w-full">
           
-          {/* Outlet Wheel (بەشەکانی ئاوتلێت - بێ سنور و گەورە) */}
+          {/* Outlet Wheel (بەشەکانی ئاوتلێت - بێ سنور و فوول سایز) */}
           <SingleWheel
             wheelId="outlet"
             title="بەشەکانی ئاوتلێت"
@@ -563,7 +564,7 @@ export default function RadialCategoryWheel({
             centerCount={outletCount}
           />
 
-          {/* Black Friday Sets Wheel (سێتەکانی بلاک فرایدەی - بێ سنور و گەورە) */}
+          {/* Black Friday Sets Wheel (سێتەکانی بلاک فرایدەی - بێ سنور و فوول سایز) */}
           <SingleWheel
             wheelId="black_friday"
             title="سێتەکانی بلاک فرایدەی"
@@ -586,12 +587,12 @@ export default function RadialCategoryWheel({
         </div>
 
         {/* 4. Bottom Animated Indicator (ئاماژەی جوڵاو بۆ کردنەوەی کاڵاکان لە خوارەوە) */}
-        <div className="mt-4 flex flex-col items-center justify-center">
+        <div className="mt-3 flex flex-col items-center justify-center">
           <button
             onClick={scrollToCatalog}
             className="group flex flex-col items-center gap-1.5 cursor-pointer text-white/80 hover:text-white transition-all transform hover:scale-105 active:scale-95"
           >
-            <div className={`flex items-center gap-2.5 px-6 py-2.5 rounded-full backdrop-blur-xl border text-xs font-black shadow-xl transition-all ${
+            <div className={`flex items-center gap-2.5 px-6 py-2 rounded-full backdrop-blur-xl border text-xs font-normal shadow-xl transition-all ${
               selectedCategory && selectedCategory !== 'all'
                 ? (campaign === 'black_friday' ? 'bg-amber-500/25 border-amber-400/50 text-amber-200' : 'bg-red-500/25 border-red-400/50 text-red-200')
                 : 'bg-white/15 hover:bg-white/25 border-white/25 text-white'

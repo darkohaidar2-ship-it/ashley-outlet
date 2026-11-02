@@ -496,7 +496,7 @@ export default function App() {
       // Default: 'name-asc' (A to Z)
       return (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' });
     });
-  }, [data.models, selectedCategory, selectedCollection, selectedStatus, searchQuery, sortBy]);
+  }, [data.models, selectedCategory, selectedCollection, selectedStatus, searchQuery, sortBy, campaign]);
 
   // Robust Print Handlers
   const handlePrintSingle = (model) => {
@@ -518,21 +518,20 @@ export default function App() {
     }, 250);
   };
 
-  // Helper names
+  // Dedicated Category Names for Black Friday Sets vs Outlet Items
   const getCategoryName = (catId, isBF = false) => {
+    if (isBF) {
+      if (catId === 'cat-1789155949761') return lang === 'ku' ? 'سێتی دانیشتن' : lang === 'ar' ? 'طقم جلوس' : 'Living Set';
+      if (catId === 'cat-1789142347391') return lang === 'ku' ? 'سێتی کۆڕنەر' : lang === 'ar' ? 'طقم زاوية' : 'Corner Set';
+      if (catId === 'cat-1792925556263') return lang === 'ku' ? 'سێتی نووستن' : lang === 'ar' ? 'طقم غرفة نوم' : 'Bedroom Set';
+      if (catId === 'cat-dining-room') return lang === 'ku' ? 'سێتی نانخواردن' : lang === 'ar' ? 'طقم طعام' : 'Dining Set';
+      if (catId === 'cat-sehpa') return lang === 'ku' ? 'سێتی تەپڵەک و سێپایە' : lang === 'ar' ? 'طقم طاولات' : 'Table Set';
+      if (catId === 'cat-tv-vitrine') return lang === 'ku' ? 'سێتی فاترین و تیڤی' : lang === 'ar' ? 'طقم فاترينة وتلفزيون' : 'TV & Vitrine Set';
+    }
+
     const cat = data.categories.find(c => c.id === catId);
     if (!cat) return '';
-    const raw = lang === 'ku' ? (cat.name_ku || cat.name) : lang === 'ar' ? (cat.name_ar || cat.name) : (cat.name_en || cat.name);
-    if (isBF) {
-      if (lang === 'ku') {
-        return raw.startsWith('سێتی') ? raw : `سێتی ${raw}`;
-      } else if (lang === 'ar') {
-        return raw.startsWith('طقم') ? raw : `طقم ${raw}`;
-      } else {
-        return raw.endsWith('Set') ? raw : `${raw} Set`;
-      }
-    }
-    return raw;
+    return lang === 'ku' ? (cat.name_ku || cat.name) : lang === 'ar' ? (cat.name_ar || cat.name) : (cat.name_en || cat.name);
   };
 
   const getCollectionName = (colId) => {

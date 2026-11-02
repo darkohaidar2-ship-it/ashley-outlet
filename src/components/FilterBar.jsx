@@ -151,7 +151,7 @@ export default function FilterBar({
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               aria-label={t.sortBy || 'سۆرت'}
-              className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer pe-1 py-0.5"
+              className="bg-transparent text-xs font-normal text-slate-700 outline-none cursor-pointer pe-1 py-0.5"
             >
               <option value="name-asc">{t.sortAZ || 'A ➔ Z (ئەلفوبێ)'}</option>
               <option value="name-desc">{t.sortZA || 'Z ➔ A (پێچەوانە)'}</option>
@@ -166,7 +166,70 @@ export default function FilterBar({
 
       </div>
 
-      {/* 2. SUB-BAR: Active Collections (if category selected) & Status Filter Chips */}
+      {/* 2. DEDICATED CATEGORY FILTER CHIPS: Strictly Separates Outlet from Black Friday Sets */}
+      {setSelectedCategory && (
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
+          <span className="text-[11px] font-normal text-slate-500 shrink-0 flex items-center gap-1 px-1">
+            <span>{campaign === 'black_friday' ? 'سێتەکانی بلاک فرایدەی:' : 'بەشەکانی ئاوتلێت:'}</span>
+          </span>
+
+          {/* All button */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory('all');
+              if (setSelectedCollection) setSelectedCollection('all');
+            }}
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
+              selectedCategory === 'all'
+                ? (campaign === 'black_friday' ? 'bg-amber-400 text-black shadow-xs font-normal' : 'bg-slate-900 text-white shadow-xs font-normal')
+                : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+            }`}
+          >
+            <span>{campaign === 'black_friday' ? 'هەموو سێتەکان' : (campaign === 'outlet' ? 'هەموو ئاوتلێت' : 'هەمووی')}</span>
+          </button>
+
+          {/* Categories tailored to campaign */}
+          {(campaign === 'black_friday'
+            ? [
+                { id: 'cat-1789155949761', name: 'سێتی دانیشتن' },
+                { id: 'cat-1789142347391', name: 'سێتی کۆڕنەر' },
+                { id: 'cat-1792925556263', name: 'سێتی نووستن' },
+                { id: 'cat-dining-room', name: 'سێتی نانخواردن' },
+                { id: 'cat-sehpa', name: 'سێتی تەپڵەک و سێپایە' },
+                { id: 'cat-tv-vitrine', name: 'سێتی فاترین و تیڤی' }
+              ]
+            : [
+                { id: 'cat-1789155949761', name: 'دانیشتن / قەنەفە' },
+                { id: 'cat-1789142347391', name: 'کۆڕنەر' },
+                { id: 'cat-1792925556263', name: 'ژووری نووستن' },
+                { id: 'cat-sehpa', name: 'سێپایە' },
+                { id: 'cat-tv-vitrine', name: 'فاترین و تیڤی' }
+              ]
+          ).map((c) => {
+            const isCatSelected = selectedCategory === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCategory(isCatSelected ? 'all' : c.id);
+                  if (setSelectedCollection) setSelectedCollection('all');
+                }}
+                className={`shrink-0 px-3 py-1 rounded-full text-xs font-normal transition-all cursor-pointer flex items-center gap-1.5 ${
+                  isCatSelected
+                    ? (campaign === 'black_friday' ? 'bg-amber-400 text-black shadow-xs ring-1 ring-amber-500' : 'bg-red-600 text-white shadow-xs')
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <span>{c.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 3. SUB-BAR: Active Collections (if category selected) & Status Filter Chips */}
       <div className="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-slate-200/60">
         
         {/* Status Filters Strip (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...) */}
