@@ -2216,7 +2216,7 @@ export default function AdminSpreadsheet({
                     }
                   }}
                   placeholder="بۆ نموونە: ستۆک، ئاوتلێت، یەدەگ..."
-                  className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 bg-white rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
+                  className="flex-1 px-3 py-2 text-xs font-bold border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 rounded-xl focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
                 />
                 <button
                   type="button"
@@ -2303,7 +2303,7 @@ export default function AdminSpreadsheet({
                               }
                             }}
                             autoFocus
-                            className="flex-1 px-2 py-1 text-xs font-bold border border-amber-400 rounded-lg focus:outline-none bg-white"
+                            className="flex-1 px-2 py-1 text-xs font-bold border border-amber-400 rounded-lg focus:outline-none bg-white text-slate-900"
                           />
                           <button
                             type="button"

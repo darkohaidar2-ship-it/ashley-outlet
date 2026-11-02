@@ -1222,7 +1222,7 @@ export default function PriceMatcherModal({
                         value={catalogSearch}
                         onChange={(e) => setCatalogSearch(e.target.value)}
                         placeholder="گەڕان لە مۆدێلەکان..."
-                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-slate-400 font-medium"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 text-slate-900 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:border-slate-400 font-medium"
                       />
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
                       {catalogSearch && (

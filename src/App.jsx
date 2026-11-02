@@ -790,7 +790,7 @@ export default function App() {
               statusColors={statusColors}
             />
           ) : (
-            <>
+            <div id="catalog-content-anchor" className="scroll-mt-6">
               <div>
                 <h2 className="text-[18px] font-black text-slate-900 flex items-center gap-2.5">
                   <span>{lang === 'ar' ? 'الكتالوج' : lang === 'en' ? 'Catalog' : 'کاتەلۆگ'}</span>
@@ -801,7 +801,7 @@ export default function App() {
                 {filterBar}
               </div>
               {productGrid}
-            </>
+            </div>
           )}
         </div>
       </div>

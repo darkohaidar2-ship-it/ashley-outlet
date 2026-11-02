@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Sofa, 
   Maximize2, 
@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Sparkles
 } from 'lucide-react';
+import { getOptimizedImageUrl } from '../utils/imageUrl';
 
 /**
  * SVG arc path generator for donut slices
@@ -41,7 +42,6 @@ function createWedgePath(startAngleDeg, endAngleDeg, innerR, outerR) {
 function SingleWheel({
   wheelId,
   title,
-  subtitle,
   icon: TitleIcon,
   headerBadge,
   badgeTone = 'red',
@@ -57,8 +57,8 @@ function SingleWheel({
   const [hoveredId, setHoveredId] = useState(null);
 
   const gap = 3.6; // Gap between slices
-  const innerR = 86;
-  const outerR = 196;
+  const innerR = 88;
+  const outerR = 205;
 
   // Calculate angles
   const totalWeight = modules.reduce((sum, m) => sum + (m.weight || 1), 0);
@@ -82,18 +82,20 @@ function SingleWheel({
   });
 
   return (
-    <div className={`relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-3xl transition-all duration-300 ${
+    <div className={`relative flex flex-col items-center justify-center p-3 sm:p-5 rounded-3xl transition-all duration-300 backdrop-blur-md ${
       isWheelActive 
-        ? (centerHubType === 'bf' ? 'bg-[#18161f]/90 border border-amber-500/40 shadow-[0_0_35px_rgba(245,158,11,0.15)] ring-1 ring-amber-400/20' : 'bg-[#181a24]/90 border border-red-500/40 shadow-[0_0_35px_rgba(239,68,68,0.15)] ring-1 ring-red-400/20')
-        : 'bg-[#12131a]/60 border border-white/5 hover:border-white/15'
+        ? (centerHubType === 'bf' 
+            ? 'bg-black/60 border border-amber-500/50 shadow-[0_0_40px_rgba(245,158,11,0.2)] ring-1 ring-amber-400/30' 
+            : 'bg-black/60 border border-red-500/50 shadow-[0_0_40px_rgba(239,68,68,0.2)] ring-1 ring-red-400/30')
+        : 'bg-black/35 border border-white/10 hover:border-white/20'
     }`}>
       
-      {/* Wheel Header Badge */}
+      {/* Wheel Clean Header: Icon + Title + Count Badge */}
       <div 
         onClick={onActivateWheel}
-        className="w-full flex items-center justify-between gap-2 mb-3 px-2 cursor-pointer group"
+        className="w-full flex items-center justify-between gap-3 mb-2 px-2 cursor-pointer group"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105 ${
             badgeTone === 'gold' 
               ? 'bg-gradient-to-br from-amber-400 to-amber-600 text-black' 
@@ -101,30 +103,25 @@ function SingleWheel({
           }`}>
             <TitleIcon className="w-4 h-4" />
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-1.5 truncate">
-              <span>{title}</span>
-            </h3>
-            <p className="text-[10px] sm:text-[11px] text-neutral-400 font-medium truncate">
-              {subtitle}
-            </p>
-          </div>
+          <h3 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-1.5 truncate">
+            {title}
+          </h3>
         </div>
 
-        <div className={`px-2.5 py-1 rounded-full text-xs font-mono font-black shrink-0 shadow-xs border ${
+        <div className={`px-3 py-1 rounded-full text-xs font-mono font-black shrink-0 shadow-xs border ${
           badgeTone === 'gold'
-            ? 'bg-amber-400/10 border-amber-400/40 text-amber-300'
-            : 'bg-red-500/10 border-red-500/40 text-red-300'
+            ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
+            : 'bg-red-500/20 border-red-500/50 text-red-300'
         }`}>
           {headerBadge}
         </div>
       </div>
 
-      {/* SVG Wheel Canvas */}
-      <div className="relative w-full max-w-[420px] sm:max-w-[460px] aspect-square flex items-center justify-center">
+      {/* SVG Wheel Canvas (Generous Scale) */}
+      <div className="relative w-full max-w-[460px] sm:max-w-[500px] xl:max-w-[540px] aspect-square flex items-center justify-center">
         <svg
           viewBox="-260 -260 520 520"
-          className="w-full h-full overflow-visible drop-shadow-xl"
+          className="w-full h-full overflow-visible drop-shadow-2xl"
         >
           <defs>
             {/* Shimmer gradient */}
@@ -136,7 +133,7 @@ function SingleWheel({
 
             {/* Hub shadow */}
             <filter id={`hub-shadow-${wheelId}`} x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000000" floodOpacity="0.7" />
+              <feDropShadow dx="0" dy="6" stdDeviation="12" floodColor="#000000" floodOpacity="0.8" />
             </filter>
           </defs>
 
@@ -146,11 +143,11 @@ function SingleWheel({
             cy="0"
             r={innerR - 4}
             fill="none"
-            stroke="rgba(255, 255, 255, 0.12)"
+            stroke="rgba(255, 255, 255, 0.15)"
             strokeWidth="1.2"
           />
 
-          {/* Slices: Crisp WHITE Background + BLACK Icons & BLACK Text as requested */}
+          {/* Slices: Crisp WHITE Interior + Deep BLACK Icons & Deep BLACK Text */}
           {modulesWithAngles.map((mod) => {
             const midRad = (mod.midAngle * Math.PI) / 180;
             const isHovered = hoveredId === mod.id;
@@ -177,50 +174,50 @@ function SingleWheel({
                 {/* Wedge Group with hover lift */}
                 <g 
                   style={{
-                    transform: isHovered || isSelected ? `translate(${7 * Math.cos(midRad)}px, ${7 * Math.sin(midRad)}px)` : 'none',
+                    transform: isHovered || isSelected ? `translate(${8 * Math.cos(midRad)}px, ${8 * Math.sin(midRad)}px)` : 'none',
                     transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                 >
-                  {/* WHITE Wedge Interior (ناو پارچەکان سپی) */}
+                  {/* WHITE Wedge Interior */}
                   <path
                     d={wedgePath}
                     fill="#ffffff"
                     className="transition-all duration-200"
                     style={{
                       filter: isSelected 
-                        ? `drop-shadow(0 0 16px ${mod.borderColor || '#ffd700'})` 
+                        ? `drop-shadow(0 0 18px ${mod.borderColor || '#ffd700'})` 
                         : isHovered 
-                        ? 'drop-shadow(0 0 10px rgba(255,255,255,0.6))' 
-                        : 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))',
-                      opacity: isSelected ? 1 : isHovered ? 0.98 : 0.94
+                        ? 'drop-shadow(0 0 12px rgba(255,255,255,0.7))' 
+                        : 'drop-shadow(0 3px 6px rgba(0,0,0,0.25))',
+                      opacity: isSelected ? 1 : isHovered ? 0.99 : 0.95
                     }}
                     stroke={isSelected ? '#000000' : (mod.borderColor || '#cbd5e1')}
-                    strokeWidth={isSelected ? 3.5 : isHovered ? 2.8 : 2}
+                    strokeWidth={isSelected ? 3.8 : isHovered ? 3 : 2}
                   />
 
-                  {/* Content INSIDE Wedge: BLACK Text & BLACK Icon (نووسین و هێماکەی ناوەوە ڕەش) */}
+                  {/* Content INSIDE Wedge: BLACK Text & BLACK Icon */}
                   <foreignObject
-                    x={contentX - 42}
-                    y={contentY - 32}
-                    width={84}
-                    height={64}
+                    x={contentX - 44}
+                    y={contentY - 34}
+                    width={88}
+                    height={68}
                     className="pointer-events-none"
                   >
                     <div className="w-full h-full flex flex-col items-center justify-center text-center select-none font-sans">
                       
-                      {/* Black Icon */}
-                      <div className="flex items-center justify-center mb-0.5 text-slate-900 transition-transform">
-                        <IconComponent className="w-5 h-5 sm:w-5.5 sm:h-5.5 stroke-[2.4]" />
+                      {/* Deep Black Icon */}
+                      <div className="flex items-center justify-center mb-0.5 text-slate-950 transition-transform">
+                        <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.5]" />
                       </div>
 
-                      {/* Black Category Name */}
-                      <div className="text-slate-950 font-black text-[11px] sm:text-[11.5px] leading-tight px-1 tracking-tight">
+                      {/* Deep Black Category Name */}
+                      <div className="text-slate-950 font-black text-[11.5px] sm:text-[12.5px] leading-tight px-1 tracking-tight">
                         {mod.name}
                       </div>
 
                       {/* Pill Badge showing count */}
                       <div 
-                        className="text-[8.5px] font-mono font-extrabold px-1.5 py-0.2 rounded-full mt-0.5 text-white shadow-2xs"
+                        className="text-[9px] font-mono font-black px-1.5 py-0.2 rounded-full mt-0.5 text-white shadow-2xs"
                         style={{ backgroundColor: mod.badgeColor || '#0f172a' }}
                       >
                         {mod.badgeText}
@@ -258,7 +255,7 @@ function SingleWheel({
               cy="0"
               r={innerR - 11}
               fill="none"
-              stroke={centerHubType === 'bf' ? 'rgba(255,215,0,0.25)' : 'rgba(0,0,0,0.06)'}
+              stroke={centerHubType === 'bf' ? 'rgba(255,215,0,0.3)' : 'rgba(0,0,0,0.06)'}
               strokeWidth="1.2"
             />
 
@@ -280,11 +277,11 @@ function SingleWheel({
                     <div className="text-xs sm:text-[13px] font-black text-amber-300 tracking-wider leading-none">
                       BLACK FRIDAY
                     </div>
-                    <div className="font-mono text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider text-amber-400 bg-neutral-900 px-1.5 py-0.5 rounded border border-amber-300/30 mt-0.5">
-                      👑 2026 SETS
+                    <div className="font-mono text-[8px] font-black uppercase tracking-wider text-amber-400 bg-neutral-900 px-1.5 py-0.5 rounded border border-amber-300/30 mt-0.5">
+                      2026 SETS
                     </div>
-                    <div className="text-[7.5px] font-bold text-neutral-400 mt-0.5">
-                      {selectedCategory && isWheelActive && selectedCategory !== 'all' ? 'کرتە بۆ هەمووی' : `${centerCount} سێتی تەواو`}
+                    <div className="text-[8.5px] font-bold text-neutral-300 mt-1">
+                      {centerCount} سێت
                     </div>
                   </>
                 ) : (
@@ -303,8 +300,8 @@ function SingleWheel({
                     <div className="font-mono text-[7.5px] sm:text-[8px] font-black uppercase tracking-wider text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 mt-0.5">
                       ashley suli | darko
                     </div>
-                    <div className="text-[7.5px] font-bold text-slate-500 mt-0.5">
-                      {selectedCategory && isWheelActive && selectedCategory !== 'all' ? 'کرتە بۆ هەمووی' : `${centerCount} کاڵای ئاوتلێت`}
+                    <div className="text-[8.5px] font-bold text-slate-600 mt-1">
+                      {centerCount} مۆدێل
                     </div>
                   </>
                 )}
@@ -334,6 +331,25 @@ export default function RadialCategoryWheel({
   setActiveTab,
   lang = 'ku'
 }) {
+  // Extract top showcase images for ambient blurred background slideshow
+  const showcaseImages = useMemo(() => {
+    if (!models || models.length === 0) return [];
+    return models
+      .filter(m => m.image && typeof m.image === 'string' && m.image.startsWith('http'))
+      .map(m => getOptimizedImageUrl(m.image, 'hero'))
+      .slice(0, 16);
+  }, [models]);
+
+  const [slideIdx, setSlideIdx] = useState(0);
+
+  useEffect(() => {
+    if (showcaseImages.length <= 1) return;
+    const timer = setInterval(() => {
+      setSlideIdx((prev) => (prev + 1) % showcaseImages.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, [showcaseImages.length]);
+
   // Counts per category for Outlet vs Black Friday
   const { outletCounts, bfCounts } = useMemo(() => {
     const oCounts = {};
@@ -352,7 +368,7 @@ export default function RadialCategoryWheel({
     return { outletCounts: oCounts, bfCounts: bCounts };
   }, [models]);
 
-  // 1. OUTLET WHEEL MODULES (Excludes Dining room, as requested!)
+  // 1. OUTLET WHEEL MODULES (Excludes Dining room, as requested)
   const outletModules = useMemo(() => {
     return [
       {
@@ -477,7 +493,7 @@ export default function RadialCategoryWheel({
     if (onSelectCategory) onSelectCategory(catId);
     if (setActiveTab) setActiveTab('categories');
 
-    // Smooth scroll down to content
+    // Smooth scroll down to catalog content
     setTimeout(() => {
       const el = document.getElementById('catalog-content-anchor');
       if (el) {
@@ -486,26 +502,57 @@ export default function RadialCategoryWheel({
     }, 150);
   };
 
-  return (
-    <section className="no-print w-full pt-4 pb-6 px-3 sm:px-6 relative overflow-hidden bg-gradient-to-b from-[#14151d] via-[#101117] to-[#0a0a0d] text-white">
-      
-      {/* Background Decorative Ambient Glows */}
-      <div className="absolute top-1/4 start-1/4 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/4 end-1/4 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+  const scrollToCatalog = () => {
+    const el = document.getElementById('catalog-content-anchor');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-      {/* Side-by-Side Dual Wheels Container */}
-      <div className="max-w-[1600px] mx-auto select-none">
+  return (
+    <section className="no-print w-full min-h-[88vh] lg:min-h-[94vh] py-6 px-3 sm:px-6 relative flex flex-col justify-between overflow-hidden bg-[#0c0d12] text-white select-none">
+      
+      {/* 1. Ambient Blurred Slideshow in Background (پشتەوەی سلاید شۆوی کاڵ و تەڵخ) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+        {showcaseImages.map((imgUrl, i) => {
+          const isActive = i === slideIdx;
+          return (
+            <div
+              key={imgUrl + i}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                isActive ? 'opacity-35 scale-105' : 'opacity-0 scale-100'
+              }`}
+              style={{
+                transitionProperty: 'opacity, transform',
+                transitionDuration: isActive ? '1200ms, 6000ms' : '1000ms, 1000ms'
+              }}
+            >
+              <img
+                src={imgUrl}
+                alt="Showcase Ambient"
+                className="w-full h-full object-cover filter blur-2xl brightness-[0.45] contrast-[1.1]"
+                loading="lazy"
+              />
+            </div>
+          );
+        })}
+        {/* Soft Vignette Overlay to ensure perfect contrast */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-[#0b0b0e]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(0,0,0,0.65)_100%)]" />
+      </div>
+
+      {/* 2. Side-by-Side Dual Wheels Container (Expansive & Responsive) */}
+      <div className="relative z-10 max-w-[1700px] w-full mx-auto flex-1 flex flex-col justify-between">
         
-        {/* Wheels Grid: Both wheels side-by-side as requested */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 xl:gap-8 items-start">
+        {/* Wheels Grid: Both wheels proudly side-by-side filling the screen */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 xl:gap-12 items-center justify-items-center flex-1 my-auto w-full">
           
-          {/* 1. OUTLET WHEEL (Right/Left side) */}
+          {/* Outlet Wheel */}
           <SingleWheel
             wheelId="outlet"
             title="بەشەکانی ئاوتلێت"
-            subtitle="مۆدێل و کاڵاکانی ئاوتلێتی ئاشڵی (تەنها پارچەی تاک)"
             icon={Sofa}
-            headerBadge={`${outletCount} کاڵای ئاوتلێت`}
+            headerBadge={`${outletCount} مۆدێل`}
             badgeTone="red"
             modules={outletModules}
             selectedCategory={selectedCategory}
@@ -520,13 +567,12 @@ export default function RadialCategoryWheel({
             centerCount={outletCount}
           />
 
-          {/* 2. BLACK FRIDAY SETS WHEEL (Side-by-side) */}
+          {/* Black Friday Sets Wheel */}
           <SingleWheel
             wheelId="black_friday"
             title="سێتەکانی بلاک فرایدەی"
-            subtitle="سێتە شاهانەییە تەواوەکان (سۆفا، کۆڕنەر، نووستن، نانخواردن...)"
             icon={Crown}
-            headerBadge={`${bfCount} سێتی تەواو VIP`}
+            headerBadge={`${bfCount} سێت`}
             badgeTone="gold"
             modules={bfModules}
             selectedCategory={selectedCategory}
@@ -543,35 +589,27 @@ export default function RadialCategoryWheel({
 
         </div>
 
-        {/* Global Active Selection Indicator */}
-        <div className="mt-4 flex flex-col items-center justify-center text-center">
-          {selectedCategory && selectedCategory !== 'all' && selectedCategory !== 'stats' ? (
-            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full border text-xs font-bold shadow-lg animate-fadeIn ${
-              campaign === 'black_friday' 
-                ? 'bg-neutral-900/95 border-amber-400/50 text-amber-200' 
-                : 'bg-neutral-900/95 border-red-400/50 text-red-200'
+        {/* 3. Bottom Animated Indicator (ئاماژەی جوڵاو بۆ کردنەوەی کاڵاکان لە خوارەوە) */}
+        <div className="mt-4 flex flex-col items-center justify-center">
+          <button
+            onClick={scrollToCatalog}
+            className="group flex flex-col items-center gap-1.5 cursor-pointer text-white/80 hover:text-white transition-all transform hover:scale-105 active:scale-95"
+          >
+            <div className={`flex items-center gap-2.5 px-6 py-2.5 rounded-full backdrop-blur-xl border text-xs font-black shadow-xl transition-all ${
+              selectedCategory && selectedCategory !== 'all'
+                ? (campaign === 'black_friday' ? 'bg-amber-500/20 border-amber-400/50 text-amber-200' : 'bg-red-500/20 border-red-400/50 text-red-200')
+                : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
             }`}>
-              <span>بەشی هەڵبژێردراو:</span>
-              <span className={`font-black ${campaign === 'black_friday' ? 'text-amber-400' : 'text-red-400'}`}>
-                {(campaign === 'black_friday' ? bfModules : outletModules).find(m => m.id === selectedCategory)?.name || ''}
-              </span>
-              <span className="text-neutral-400 text-[10px]">
-                ({campaign === 'black_friday' ? 'بلاک فرایدەی' : 'ئاوتلێت'})
-              </span>
-              <button
-                onClick={() => onSelectCategory && onSelectCategory('all')}
-                className="ms-1.5 text-[10px] bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded-full cursor-pointer transition-colors"
-              >
-                پیشاندانی هەمووی
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-xs font-semibold text-neutral-400">
               <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-              <span>کرتە لەسەر هەر بەشێکی بازنەکان بکە بۆ فلتەرکردنی دەستبەجێ لە خوارەوە</span>
-              <ChevronDown className="w-4 h-4 text-neutral-400 animate-bounce" />
+              <span>
+                {selectedCategory && selectedCategory !== 'all'
+                  ? `بەشی ${(campaign === 'black_friday' ? bfModules : outletModules).find(m => m.id === selectedCategory)?.name || ''} لە خوارەوە کرایەوە`
+                  : 'بینینی مۆدێلەکان لە خوارەوە'}
+              </span>
+              <ChevronDown className="w-4 h-4 text-white group-hover:translate-y-1 transition-transform animate-bounce" />
             </div>
-          )}
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping mt-0.5" />
+          </button>
         </div>
 
       </div>

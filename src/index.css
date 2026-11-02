@@ -22,6 +22,26 @@
     text-rendering: optimizeLegibility;
     letter-spacing: -0.01em;
   }
+
+  /* Form Fields: Force crisp dark text on all white/light backgrounds */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  textarea,
+  select {
+    color: #0f172a !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+}
+
+/* Light Containers & Modals must enforce dark typography */
+.bg-white,
+.bg-slate-50,
+.bg-slate-100,
+.modal-light-card {
+  color: #0f172a;
 }
 
 /* Windows 11 Fluent UI Glassmorphism */

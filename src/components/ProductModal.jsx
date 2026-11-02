@@ -111,7 +111,7 @@ export default function ProductModal({
       <div className={`w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[94vh] sm:max-h-[92vh] ${
         isBF 
           ? 'bg-[#121217] border-2 border-orange-500/50 ring-1 ring-amber-400/30 text-white shadow-orange-950/40' 
-          : 'bg-white border border-slate-200'
+          : 'bg-white text-slate-900 border border-slate-200'
       }`}>
         
         {/* Left Side: Large Uncropped Image with Ambient Glow & Full View Capability */}

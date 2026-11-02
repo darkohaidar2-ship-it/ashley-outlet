@@ -145,8 +145,8 @@ export default function AdminShell({
   );
 
   return (
-    <div className="no-print h-screen w-screen overflow-hidden bg-[#d9d9e2] p-0 sm:p-3">
-      <div className="h-full w-full flex bg-[#eeeef3] sm:rounded-[28px] overflow-hidden">
+    <div className="no-print min-h-screen w-full bg-[#d9d9e2] p-0 sm:p-3">
+      <div className="min-h-[calc(100vh-24px)] w-full flex bg-[#eeeef3] sm:rounded-[28px] overflow-hidden">
         {/* Sidebar (desktop) */}
         <aside className="hidden lg:block w-[272px] shrink-0 border-e border-slate-300/50">{sidebar}</aside>
 
