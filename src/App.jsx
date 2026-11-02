@@ -663,6 +663,12 @@ export default function App() {
       filteredCount={filteredModels.length}
       sortBy={sortBy}
       setSortBy={setSortBy}
+      searchQuery={searchQuery}
+      setSearchQuery={setSearchQuery}
+      campaign={campaign}
+      setCampaign={setCampaign}
+      bfCount={bfCount}
+      outletCount={outletCount}
       embedded={useAdminShell}
     />
   );

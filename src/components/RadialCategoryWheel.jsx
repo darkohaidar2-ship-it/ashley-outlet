@@ -11,7 +11,8 @@ import {
   Sparkles,
   ChevronDown,
   Layers,
-  ArrowRight
+  Crown,
+  Tag
 } from 'lucide-react';
 
 /**
@@ -31,7 +32,7 @@ function getModuleIcon(id, name = '') {
 }
 
 /**
- * Modern SVG arc path generator for donut slices
+ * SVG arc path generator for donut slices with customizable radius
  */
 function createWedgePath(startAngleDeg, endAngleDeg, innerR, outerR) {
   const startRad = (startAngleDeg * Math.PI) / 180;
@@ -63,14 +64,13 @@ export default function RadialCategoryWheel({
   totalCount = 0,
   bfCount = 0,
   outletCount = 0,
-  activeTab, // 'categories' | 'stats'
+  activeTab,
   setActiveTab,
   lang = 'ku'
 }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Trigger animations after mount
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 50);
     return () => clearTimeout(timer);
@@ -87,8 +87,9 @@ export default function RadialCategoryWheel({
     return counts;
   }, [models]);
 
-  // Build the unified modules list (Categories + Stats + Black Friday)
-  const modules = useMemo(() => {
+  // Build the unified modules list
+  // Black Friday has weight = 2 (Double size as requested!)
+  const rawModules = useMemo(() => {
     const colors = [
       '#10b981', // Emerald (Sofa)
       '#f59e0b', // Amber (Corner)
@@ -96,8 +97,6 @@ export default function RadialCategoryWheel({
       '#ec4899', // Pink (Bed room)
       '#8b5cf6', // Purple (Dining room)
       '#06b6d4', // Cyan (TV & Vitrine)
-      '#3b82f6', // Blue (Stats)
-      '#ef4444'  // Red/Fiery (Black Friday)
     ];
 
     const list = categories.map((cat, idx) => {
@@ -109,42 +108,71 @@ export default function RadialCategoryWheel({
         name_en: cat.name_en || '',
         count: categoryCounts[cat.id] || 0,
         color: colors[idx % colors.length],
-        icon: getModuleIcon(cat.id, cat.name_en || cat.name_ku || cat.name)
+        icon: getModuleIcon(cat.id, cat.name_en || cat.name_ku || cat.name),
+        weight: 1,
+        isOutlet: true // Mark as outlet category
       };
     });
 
-    // Add Stats module
+    // Add Stats module (weight 1)
     list.push({
       id: 'module-stats',
       type: 'stats',
-      name: lang === 'ku' ? 'ئامارەکان' : lang === 'ar' ? 'الإحصائيات' : 'ANALYTICS',
+      name: lang === 'ku' ? 'ئامارەکان' : lang === 'ar' ? 'الإحصائيات' : 'Stats',
       name_en: 'STATISTICS',
       count: totalCount,
       color: '#3b82f6',
-      icon: BarChart3
+      icon: BarChart3,
+      weight: 1,
+      isOutlet: false
     });
 
-    // Add Black Friday VIP module
+    // Add Black Friday VIP module with weight = 2 (Double Size & Gold Shimmer!)
     list.push({
       id: 'module-bf',
       type: 'black_friday',
-      name: lang === 'ku' ? 'بلاک فرایدەی' : lang === 'ar' ? 'الجمعة السوداء' : 'BLACK FRIDAY',
-      name_en: 'BLACK FRIDAY',
+      name: lang === 'ku' ? 'بلاک فرایدەی' : lang === 'ar' ? 'بلاك فرايدي' : 'Black Friday',
+      name_en: 'BLACK FRIDAY VIP',
       count: bfCount,
       color: '#ff6b00',
-      icon: Flame
+      icon: Flame,
+      weight: 2, // 2x double the size!
+      isBF: true,
+      isOutlet: false
     });
 
     return list;
   }, [categories, categoryCounts, lang, totalCount, bfCount]);
 
-  const numSlices = modules.length;
-  const anglePerSlice = 360 / (numSlices || 1);
-  const gap = 3.5; // Gap degrees between wedges
+  // Calculate angles based on weights (Total weight = sum(weight))
+  const totalWeight = useMemo(() => {
+    return rawModules.reduce((sum, m) => sum + (m.weight || 1), 0);
+  }, [rawModules]);
 
-  const innerR = 100;
-  const outerR = 195;
-  const labelR = 248;
+  const gap = 3.2; // degrees gap between wedges
+  const innerR = 98;
+  const outerR = 212; // generous depth for both icon and text
+  const labelR = 265;
+
+  const modulesWithAngles = useMemo(() => {
+    let currentAngle = -90; // Start at top 12 o'clock
+    return rawModules.map((mod, idx) => {
+      const span = (mod.weight / totalWeight) * 360;
+      const startAngle = currentAngle + gap / 2;
+      const endAngle = currentAngle + span - gap / 2;
+      const midAngle = currentAngle + span / 2;
+      currentAngle += span;
+
+      return {
+        ...mod,
+        idx,
+        span,
+        startAngle,
+        endAngle,
+        midAngle
+      };
+    });
+  }, [rawModules, totalWeight]);
 
   const handleModuleClick = (mod) => {
     if (mod.type === 'stats') {
@@ -157,7 +185,6 @@ export default function RadialCategoryWheel({
     } else {
       if (setActiveTab) setActiveTab('categories');
       if (onSelectCategory) {
-        // Toggle if clicked again
         onSelectCategory(selectedCategory === mod.id ? 'all' : mod.id);
       }
     }
@@ -172,63 +199,161 @@ export default function RadialCategoryWheel({
   };
 
   return (
-    <section className="no-print w-full py-6 sm:py-10 px-4 sm:px-6 relative overflow-hidden bg-gradient-to-b from-[#1e2029] via-[#16171f] to-[#0f1015] text-white">
+    <section className="no-print w-full py-8 sm:py-12 px-4 sm:px-6 relative overflow-hidden bg-gradient-to-b from-[#1b1c24] via-[#14151b] to-[#0c0d11] text-white">
       
       {/* Background Decorative Ambient Radial Glows */}
-      <div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/3 end-1/4 w-[400px] h-[400px] bg-orange-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/4 end-1/5 w-[420px] h-[420px] bg-orange-600/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 start-1/5 w-[380px] h-[380px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Wheel Container */}
       <div className="max-w-4xl mx-auto flex flex-col items-center justify-center relative select-none">
         
         {/* Responsive SVG Wheel */}
-        <div className="relative w-full max-w-[560px] sm:max-w-[640px] aspect-square flex items-center justify-center">
+        <div className="relative w-full max-w-[580px] sm:max-w-[680px] aspect-square flex items-center justify-center">
           <svg
-            viewBox="-320 -320 640 640"
+            viewBox="-350 -350 700 700"
             className="w-full h-full overflow-visible drop-shadow-2xl"
           >
             <defs>
-              {/* Outer decorative dashed circle track */}
+              {/* Native Hardware-Accelerated Metallic Gold Shimmer Pattern */}
+              <linearGradient id="gold-shimmer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#cf9b32">
+                  <animate attributeName="stop-color" values="#cf9b32; #fceda2; #ffd700; #b8860b; #cf9b32" dur="3s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="30%" stopColor="#fceda2">
+                  <animate attributeName="stop-color" values="#fceda2; #ffd700; #b8860b; #cf9b32; #fceda2" dur="3s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="60%" stopColor="#ffd700">
+                  <animate attributeName="stop-color" values="#ffd700; #b8860b; #cf9b32; #fceda2; #ffd700" dur="3s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="#b8860b">
+                  <animate attributeName="stop-color" values="#b8860b; #cf9b32; #fceda2; #ffd700; #b8860b" dur="3s" repeatCount="indefinite" />
+                </stop>
+              </linearGradient>
+
+              {/* Fire gradient for Black Friday base */}
+              <linearGradient id="bf-fire-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ff7700" />
+                <stop offset="40%" stopColor="#e11d48" />
+                <stop offset="100%" stopColor="#0a0a0c" />
+              </linearGradient>
+
+              {/* Hub Shadow */}
               <filter id="hub-glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="#000000" floodOpacity="0.5" />
+                <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000000" floodOpacity="0.65" />
               </filter>
             </defs>
 
-            {/* Concentric Guide Circles */}
+            {/* ========================================================
+                ERP INFOGRAPHIC TRACKS & DIRECTIONAL ARROWS
+                Matches the technical circular ERP reference diagram
+               ======================================================== */}
+            {/* Outer Circular Track */}
             <circle
               cx="0"
               cy="0"
               r={outerR + 10}
               fill="none"
-              stroke="rgba(255, 255, 255, 0.12)"
+              stroke="rgba(255, 255, 255, 0.22)"
               strokeWidth="1.5"
-              strokeDasharray="4 4"
             />
+            {/* Outer Concentric Dash Guide */}
             <circle
               cx="0"
               cy="0"
               r={outerR + 24}
               fill="none"
-              stroke="rgba(255, 255, 255, 0.06)"
+              stroke="rgba(255, 255, 255, 0.08)"
               strokeWidth="1"
+              strokeDasharray="4 6"
+            />
+            {/* Inner Circular Track around Central Hub */}
+            <circle
+              cx="0"
+              cy="0"
+              r={innerR - 4}
+              fill="none"
+              stroke="rgba(255, 255, 255, 0.22)"
+              strokeWidth="1.5"
             />
 
-            {/* Surrounding Slices / Modules (Staggered Animation: 0.20s per segment) */}
-            {modules.map((mod, idx) => {
-              const startAngle = idx * anglePerSlice + gap / 2 - 90;
-              const endAngle = (idx + 1) * anglePerSlice - gap / 2 - 90;
-              const midAngle = (startAngle + endAngle) / 2;
-              const midRad = (midAngle * Math.PI) / 180;
+            {/* Directional Flow Arrows on Tracks (Clockwise loop like ERP) */}
+            {modulesWithAngles.map((mod) => {
+              const midRad = (mod.midAngle * Math.PI) / 180;
+              // Outer arrow position
+              const outerArrowX = (outerR + 10) * Math.cos(midRad);
+              const outerArrowY = (outerR + 10) * Math.sin(midRad);
+              // Inner arrow position
+              const innerArrowX = (innerR - 4) * Math.cos(midRad);
+              const innerArrowY = (innerR - 4) * Math.sin(midRad);
+              const tangentDeg = mod.midAngle + 90;
 
+              // Boundary divider angle (at start of slice)
+              const boundAngle = mod.startAngle - (gap / 2);
+              const boundRad = (boundAngle * Math.PI) / 180;
+              const divInnerX = (innerR - 4) * Math.cos(boundRad);
+              const divInnerY = (innerR - 4) * Math.sin(boundRad);
+              const divOuterX = (outerR + 10) * Math.cos(boundRad);
+              const divOuterY = (outerR + 10) * Math.sin(boundRad);
+
+              return (
+                <g key={`track-decor-${mod.id}`} className="pointer-events-none opacity-80">
+                  {/* Radial Divider Line between Wedges */}
+                  <line
+                    x1={divInnerX}
+                    y1={divInnerY}
+                    x2={divOuterX}
+                    y2={divOuterY}
+                    stroke="rgba(255, 255, 255, 0.2)"
+                    strokeWidth="1"
+                  />
+                  {/* Pin Node at Inner Track */}
+                  <circle
+                    cx={divInnerX}
+                    cy={divInnerY}
+                    r={2.5}
+                    fill="#1e293b"
+                    stroke="#ffffff"
+                    strokeWidth="1"
+                  />
+                  {/* Pin Node at Outer Track */}
+                  <circle
+                    cx={divOuterX}
+                    cy={divOuterY}
+                    r={3}
+                    fill="#1e293b"
+                    stroke="#ffffff"
+                    strokeWidth="1.2"
+                  />
+                  {/* Outer Arrow */}
+                  <path
+                    d="M -3 -3 L 3 0 L -3 3 Z"
+                    transform={`translate(${outerArrowX}, ${outerArrowY}) rotate(${tangentDeg})`}
+                    fill="rgba(255, 255, 255, 0.55)"
+                  />
+                  {/* Inner Arrow */}
+                  <path
+                    d="M -2.5 -2.5 L 2.5 0 L -2.5 2.5 Z"
+                    transform={`translate(${innerArrowX}, ${innerArrowY}) rotate(${tangentDeg})`}
+                    fill="rgba(255, 255, 255, 0.45)"
+                  />
+                </g>
+              );
+            })}
+
+            {/* Surrounding Slices / Modules (Staggered Animation: 0.20s per segment) */}
+            {modulesWithAngles.map((mod) => {
+              const midRad = (mod.midAngle * Math.PI) / 180;
               const isHovered = hoveredId === mod.id;
               const isSelected = selectedCategory === mod.id || 
                 (mod.type === 'black_friday' && campaign === 'black_friday') ||
                 (mod.type === 'stats' && activeTab === 'stats');
 
-              // Icon position inside wedge
-              const iconR = (innerR + outerR) / 2;
-              const iconX = iconR * Math.cos(midRad);
-              const iconY = iconR * Math.sin(midRad);
+              // Center position of slice for Icon + Name text
+              const midR = (innerR + outerR) / 2;
+              const contentX = midR * Math.cos(midRad);
+              const contentY = midR * Math.sin(midRad);
 
               // Outer label line anchor
               const lineStartR = outerR + 10;
@@ -239,10 +364,10 @@ export default function RadialCategoryWheel({
               const lineEndY = labelR * Math.sin(midRad);
 
               const IconComponent = mod.icon;
-              const wedgePath = createWedgePath(startAngle, endAngle, innerR, outerR);
+              const wedgePath = createWedgePath(mod.startAngle, mod.endAngle, innerR, outerR);
 
               // Stagger delay: starts after center circle (0.25s) with 0.20s increments
-              const staggerDelay = 0.25 + idx * 0.20;
+              const staggerDelay = 0.25 + mod.idx * 0.20;
 
               return (
                 <g 
@@ -261,32 +386,64 @@ export default function RadialCategoryWheel({
                   {/* Wedge Slice with scale lift on hover */}
                   <g 
                     style={{
-                      transform: isHovered || isSelected ? `translate(${6 * Math.cos(midRad)}px, ${6 * Math.sin(midRad)}px)` : 'none',
+                      transform: isHovered || isSelected ? `translate(${7 * Math.cos(midRad)}px, ${7 * Math.sin(midRad)}px)` : 'none',
                       transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
+                    {/* Wedge Path */}
                     <path
                       d={wedgePath}
-                      fill={mod.color}
+                      fill={mod.isBF ? 'url(#gold-shimmer-grad)' : mod.color}
                       className="transition-all duration-200"
                       style={{
-                        filter: isHovered || isSelected ? `drop-shadow(0 0 16px ${mod.color}99)` : 'none',
-                        opacity: isSelected ? 1 : isHovered ? 0.95 : 0.85
+                        filter: isHovered || isSelected || mod.isBF 
+                          ? (mod.isBF ? 'drop-shadow(0 0 20px rgba(255,107,0,0.85))' : `drop-shadow(0 0 16px ${mod.color}99)`) 
+                          : 'none',
+                        opacity: isSelected ? 1 : isHovered ? 0.98 : 0.88
                       }}
-                      stroke={isSelected ? '#ffffff' : 'rgba(255,255,255,0.2)'}
-                      strokeWidth={isSelected ? 3 : 1}
+                      stroke={mod.isBF ? '#ffd700' : isSelected ? '#ffffff' : 'rgba(255,255,255,0.22)'}
+                      strokeWidth={mod.isBF ? 3.5 : isSelected ? 3 : 1.2}
                     />
 
-                    {/* Icon inside Wedge */}
+                    {/* Content INSIDE the Wedge: Icon + Section Name directly inside! */}
                     <foreignObject
-                      x={iconX - 18}
-                      y={iconY - 18}
-                      width={36}
-                      height={36}
+                      x={contentX - (mod.isBF ? 62 : 46)}
+                      y={contentY - (mod.isBF ? 42 : 34)}
+                      width={mod.isBF ? 124 : 92}
+                      height={mod.isBF ? 84 : 68}
                       className="pointer-events-none"
                     >
-                      <div className="w-full h-full flex flex-col items-center justify-center text-white drop-shadow-md">
-                        <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
+                      <div className="w-full h-full flex flex-col items-center justify-center text-center select-none">
+                        
+                        {/* Icon */}
+                        <div className={`flex items-center justify-center rounded-xl p-1 mb-0.5 ${
+                          mod.isBF ? 'text-black drop-shadow-sm' : 'text-white drop-shadow-md'
+                        }`}>
+                          {mod.isBF ? (
+                            <div className="flex items-center gap-0.5">
+                              <Crown className="w-5 h-5 fill-amber-300 stroke-black stroke-[2]" />
+                              <Flame className="w-5 h-5 fill-orange-600 stroke-black stroke-[2] animate-bounce" />
+                            </div>
+                          ) : (
+                            <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.4]" />
+                          )}
+                        </div>
+
+                        {/* Category Name Written Directly INSIDE the Wedge */}
+                        <div className={`font-black tracking-tight leading-tight px-1 ${
+                          mod.isBF 
+                            ? 'text-black text-xs sm:text-[13px] font-mono tracking-wider drop-shadow-xs font-black' 
+                            : 'text-white text-[11px] sm:text-xs drop-shadow-md'
+                        }`}>
+                          {mod.name}
+                        </div>
+
+                        {/* Extra VIP Tag for Black Friday slice */}
+                        {mod.isBF && (
+                          <div className="bg-black/90 text-amber-300 text-[8.5px] font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider mt-0.5 border border-amber-300/40">
+                            2X VIP EDITION
+                          </div>
+                        )}
                       </div>
                     </foreignObject>
                   </g>
@@ -297,45 +454,57 @@ export default function RadialCategoryWheel({
                     y1={lineStartY}
                     x2={lineEndX}
                     y2={lineEndY}
-                    stroke={mod.color}
-                    strokeWidth={isSelected ? 2.5 : 1.5}
+                    stroke={mod.isBF ? '#ffd700' : mod.color}
+                    strokeWidth={isSelected || mod.isBF ? 2.5 : 1.5}
                     strokeDasharray={isSelected ? 'none' : '2 2'}
-                    opacity={isSelected ? 1 : isHovered ? 0.9 : 0.6}
+                    opacity={isSelected || mod.isBF ? 1 : isHovered ? 0.9 : 0.6}
                   />
                   <circle
                     cx={lineEndX}
                     cy={lineEndY}
-                    r={isSelected ? 4 : 2.5}
-                    fill={mod.color}
+                    r={isSelected || mod.isBF ? 4.5 : 3}
+                    fill={mod.isBF ? '#ffd700' : mod.color}
                   />
 
-                  {/* Outer Name & Count Pill outside the wheel */}
+                  {/* Outer Indicators: Showing Outlet Badge & Model Counts */}
                   <foreignObject
-                    x={lineEndX - 65}
-                    y={lineEndY - 15}
-                    width={130}
-                    height={32}
+                    x={lineEndX - 70}
+                    y={lineEndY - 16}
+                    width={140}
+                    height={34}
                     className="overflow-visible pointer-events-none"
                   >
                     <div 
                       className={`px-2.5 py-0.5 rounded-full backdrop-blur-md flex items-center justify-center gap-1.5 transition-all text-center shadow-lg ${
-                        isSelected 
+                        mod.isBF
+                          ? 'animate-gold-shimmer text-black ring-2 ring-amber-300 scale-105 font-black'
+                          : isSelected 
                           ? 'bg-white text-slate-900 ring-2 ring-white scale-105 font-black' 
                           : isHovered
                           ? 'bg-neutral-900/95 text-white ring-1 ring-white/50 scale-105 font-bold'
                           : 'bg-[#181922]/90 text-neutral-200 border border-white/10 font-bold'
                       }`}
                       style={{
-                        borderColor: isSelected ? undefined : mod.color
+                        borderColor: mod.isBF ? undefined : isSelected ? undefined : mod.color
                       }}
                     >
-                      <span className="text-[10px] sm:text-[11px] truncate leading-tight">
+                      {/* Outlet indication tag if this is an outlet category */}
+                      {mod.isOutlet && (
+                        <span className="text-[9px] bg-blue-600/90 text-white font-extrabold px-1.5 py-0.1 rounded-md">
+                          ئاوتلێت
+                        </span>
+                      )}
+
+                      <span className="text-[10px] sm:text-[11px] truncate leading-tight font-bold">
                         {mod.name}
                       </span>
+
                       {mod.count !== undefined && (
                         <span 
                           className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full font-extrabold ${
-                            isSelected ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
+                            mod.isBF
+                              ? 'bg-black text-amber-300'
+                              : isSelected ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
                           }`}
                         >
                           {mod.count}
@@ -432,7 +601,7 @@ export default function RadialCategoryWheel({
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-white shadow-lg animate-fadeIn">
               <span>بەشی هەڵبژێردراو:</span>
               <span className="text-amber-400 font-black">
-                {modules.find(m => m.id === selectedCategory)?.name || ''}
+                {rawModules.find(m => m.id === selectedCategory)?.name || ''}
               </span>
               <button
                 onClick={() => onSelectCategory && onSelectCategory('all')}
