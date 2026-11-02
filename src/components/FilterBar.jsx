@@ -76,7 +76,11 @@ export default function FilterBar({
           <div className="flex items-center p-0.5 bg-slate-100 rounded-2xl border border-slate-200/80 shadow-2xs shrink-0">
             <button
               type="button"
-              onClick={() => setCampaign('all')}
+              onClick={() => {
+                setCampaign('all');
+                if (setSelectedCategory) setSelectedCategory('all');
+                if (setSelectedCollection) setSelectedCollection('all');
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                 campaign === 'all'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -94,7 +98,11 @@ export default function FilterBar({
 
             <button
               type="button"
-              onClick={() => setCampaign('outlet')}
+              onClick={() => {
+                setCampaign('outlet');
+                if (setSelectedCategory) setSelectedCategory('all');
+                if (setSelectedCollection) setSelectedCollection('all');
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                 campaign === 'outlet'
                   ? 'bg-blue-600 text-white shadow-sm font-black'
@@ -112,7 +120,11 @@ export default function FilterBar({
 
             <button
               type="button"
-              onClick={() => setCampaign('black_friday')}
+              onClick={() => {
+                setCampaign('black_friday');
+                if (setSelectedCategory) setSelectedCategory('all');
+                if (setSelectedCollection) setSelectedCollection('all');
+              }}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
                 campaign === 'black_friday'
                   ? 'bg-gradient-to-r from-neutral-950 to-black text-orange-400 shadow-sm ring-1 ring-orange-500/50'

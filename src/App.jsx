@@ -40,9 +40,9 @@ export default function App() {
   const [campaign, setCampaign] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      return params.get('campaign') || 'all';
+      return params.get('campaign') || localStorage.getItem('ashley_campaign') || 'outlet';
     }
-    return 'all';
+    return 'outlet';
   });
 
   useEffect(() => {
@@ -252,6 +252,9 @@ export default function App() {
     if (sortBy && sortBy !== 'name-asc') {
       params.set('sort', sortBy);
     }
+    if (campaign && campaign !== 'all') {
+      params.set('campaign', campaign);
+    }
 
     const qs = params.toString();
     const targetUrl = qs ? `${path}?${qs}` : path;
@@ -266,7 +269,7 @@ export default function App() {
         window.history.pushState({ viewMode, modelId: detailModel?.id }, '', targetUrl);
       }
     }
-  }, [viewMode, detailModel?.id, selectedCategory, selectedCollection, searchQuery, sortBy]);
+  }, [viewMode, detailModel?.id, selectedCategory, selectedCollection, searchQuery, sortBy, campaign]);
 
   // Browser Back/Forward navigation support
   useEffect(() => {
@@ -297,6 +300,7 @@ export default function App() {
       setSelectedCollection(params.get('collection') || 'all');
       setSearchQuery(params.get('search') || '');
       setSortBy(params.get('sort') || 'name-asc');
+      setCampaign(params.get('campaign') || 'outlet');
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -425,16 +429,12 @@ export default function App() {
   const filteredModels = useMemo(() => {
     const list = (data.models || []).filter((model) => {
       // 0. Campaign Filter (بلاک فرایدەی vs ئاوتلێت vs هەمووی)
+      const isBFItem = (model.itemType || model.sku || '').toLowerCase().includes('بلاک فرایدەی') || 
+                       (model.itemType || model.sku || '').toLowerCase().includes('black friday');
       if (campaign === 'black_friday') {
-        const itemType = (model.itemType || (model.sku && model.sku !== model.name ? model.sku : '')).toLowerCase();
-        if (!itemType.includes('بلاک فرایدەی') && !itemType.includes('black friday')) {
-          return false;
-        }
+        if (!isBFItem) return false;
       } else if (campaign === 'outlet') {
-        const itemType = (model.itemType || (model.sku && model.sku !== model.name ? model.sku : '')).toLowerCase();
-        if (itemType.includes('بلاک فرایدەی') || itemType.includes('black friday')) {
-          return false;
-        }
+        if (isBFItem) return false;
       }
 
       // 1. Category Filter
