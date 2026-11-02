@@ -9,6 +9,7 @@ import Footer from './components/Footer';
 import AdminShell from './components/AdminShell';
 import AdminDashboard from './components/AdminDashboard';
 import StoreHero from './components/StoreHero';
+import RadialCategoryWheel from './components/RadialCategoryWheel';
 import PrintSheet from './components/PrintSheet';
 import AdminModal from './components/AdminModal';
 import InstallModal from './components/InstallModal';
@@ -73,6 +74,8 @@ export default function App() {
     }
     return 'all';
   });
+
+  const [activeTab, setActiveTab] = useState('categories'); // 'categories' | 'stats'
 
   const [searchQuery, setSearchQuery] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -756,43 +759,98 @@ export default function App() {
     /* ADMIN CATALOG: overview + filters + cards with edit controls (inside the admin shell) */
     pageContent = (
       <div className="px-4 sm:px-6 pb-8 space-y-4">
-        <AdminDashboard
-          lang={lang}
-          t={t}
+        {/* Interactive Radial Wheel Dashboard */}
+        <RadialCategoryWheel
+          categories={activeCategories}
           models={data.models || []}
-          categories={data.categories || []}
-          collections={data.collections || []}
-          customStatuses={customStatuses}
-          statusColors={statusColors}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(catId) => {
+            setSelectedCategory(catId);
+            setSelectedCollection('all');
+          }}
+          campaign={campaign}
+          setCampaign={setCampaign}
+          logoUrl={data.settings?.logoUrl || ''}
+          totalCount={data.models?.length || 0}
+          bfCount={bfCount}
+          outletCount={outletCount}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          lang={lang}
         />
-        <div>
-          <h2 className="text-[18px] font-black text-slate-900 flex items-center gap-2.5">
-            <span>{lang === 'ar' ? 'الكتالوج' : lang === 'en' ? 'Catalog' : 'کاتەلۆگ'}</span>
-            <span className="text-[12px] font-extrabold font-mono bg-white text-slate-600 rounded-full px-2.5 py-0.5 border border-slate-200">
-              {filteredModels.length}
-            </span>
-          </h2>
-          {filterBar}
+        <div id="catalog-content-anchor" className="scroll-mt-6">
+          {activeTab === 'stats' ? (
+            <AdminDashboard
+              lang={lang}
+              t={t}
+              models={data.models || []}
+              categories={data.categories || []}
+              collections={data.collections || []}
+              customStatuses={customStatuses}
+              statusColors={statusColors}
+            />
+          ) : (
+            <>
+              <div>
+                <h2 className="text-[18px] font-black text-slate-900 flex items-center gap-2.5">
+                  <span>{lang === 'ar' ? 'الكتالوج' : lang === 'en' ? 'Catalog' : 'کاتەلۆگ'}</span>
+                  <span className="text-[12px] font-extrabold font-mono bg-white text-slate-600 rounded-full px-2.5 py-0.5 border border-slate-200">
+                    {filteredModels.length}
+                  </span>
+                </h2>
+                {filterBar}
+              </div>
+              {productGrid}
+            </>
+          )}
         </div>
-        {productGrid}
       </div>
     );
   } else {
     /* STOREFRONT (salesperson browsing) */
     pageContent = (
       <>
-        <StoreHero
-          lang={lang}
-          models={data.models || []}
+        {/* Interactive Radial Wheel Dashboard */}
+        <RadialCategoryWheel
           categories={activeCategories}
-          collections={data.collections || []}
+          models={data.models || []}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(catId) => {
+            setSelectedCategory(catId);
+            setSelectedCollection('all');
+          }}
           campaign={campaign}
-          onOpenModel={(m) => setDetailModel(m)}
+          setCampaign={setCampaign}
+          logoUrl={data.settings?.logoUrl || ''}
+          totalCount={data.models?.length || 0}
+          bfCount={bfCount}
+          outletCount={outletCount}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          lang={lang}
         />
-        {filterBar}
-        <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8">
-          {productGrid}
-        </main>
+        <div id="catalog-content-anchor" className="scroll-mt-6">
+          {activeTab === 'stats' ? (
+            <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+              <AdminDashboard
+                lang={lang}
+                t={t}
+                models={data.models || []}
+                categories={data.categories || []}
+                collections={data.collections || []}
+                customStatuses={customStatuses}
+                statusColors={statusColors}
+              />
+            </div>
+          ) : (
+            <>
+              {filterBar}
+              <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 pb-8">
+                {productGrid}
+              </main>
+            </>
+          )}
+        </div>
         <Footer t={t} lang={lang} />
       </>
     );
