@@ -2,17 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: '42_Sarchia_Hawin';
+  src: url('/fonts/42_Sarchia_Hawin.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    font-family: 'Vazirmatn', 'Plus Jakarta Sans', 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
+    font-family: '42_Sarchia_Hawin', 'Vazirmatn', 'Plus Jakarta Sans', 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.01em;
   }
 }
 
