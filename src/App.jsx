@@ -447,8 +447,8 @@ export default function App() {
         return false;
       }
 
-      // 3. Status Filter (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...)
-      if (selectedStatus !== 'all') {
+      // 3. Status Filter (دۆخی کاڵا: ستۆک، ئاوتلێت، یەدەگ...) - ONLY for Outlet / All, never for Black Friday
+      if (campaign !== 'black_friday' && selectedStatus !== 'all') {
         const itemType = model.itemType || (model.sku && model.sku !== model.name ? model.sku : '');
         if (itemType !== selectedStatus) {
           return false;
@@ -856,7 +856,10 @@ export default function App() {
                 setSelectedCollection('all');
               }}
               campaign={campaign}
-              setCampaign={setCampaign}
+              setCampaign={(c) => {
+                setCampaign(c);
+                if (c === 'black_friday') setSelectedStatus('all');
+              }}
               logoUrl={data.settings?.logoUrl || ''}
               totalCount={data.models?.length || 0}
               bfCount={bfCount}
