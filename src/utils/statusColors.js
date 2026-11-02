@@ -16,7 +16,9 @@ export const STATUS_COLOR_PALETTE = [
 export const DEFAULT_STATUS_COLORS = {
   'ستۆک': '#9333ea', // مۆر (Purple) - as requested by user
   'ئاوتلێت': '#dc2626', // سوور (Red)
-  'یەدەگ': '#2563eb'   // شین (Blue)
+  'یەدەگ': '#2563eb',   // شین (Blue)
+  'بلاک فرایدەی': '#ff6b00', // پرتەقاڵی (Vibrant Orange - Black Friday)
+  'Black Friday': '#ff6b00'
 };
 
 export function normalizeHex(color, fallback = '#9333ea') {

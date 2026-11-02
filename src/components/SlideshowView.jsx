@@ -22,7 +22,8 @@ import {
   FolderArchive, 
   FileText,
   ArrowUpDown,
-  Tag
+  Tag,
+  MoreHorizontal
 } from 'lucide-react';
 import { downloadAllImagesAsZip, downloadModelImage } from '../services/imageExportService';
 import { getStatusBadgeStyle } from '../utils/statusColors';
@@ -57,6 +58,10 @@ export default function SlideshowView({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isControlsVisible, setIsControlsVisible] = useState(true);
   const [zenMode, setZenMode] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const touchStartTimeRef = useRef(0);
+  const thumbStripRef = useRef(null);
   const [showZenUnlock, setShowZenUnlock] = useState(false);
   const zenUnlockTimer = useRef(null);
   const hideControlsTimer = useRef(null);
@@ -310,6 +315,8 @@ export default function SlideshowView({
         x: e.touches[0].clientX,
         y: e.touches[0].clientY
       };
+      touchStartTimeRef.current = Date.now();
+      setDragX(0);
       initialPanOffsetRef.current = { ...panOffset };
 
       // Double-tap detection: reset zoom or zoom in to 2.5x
@@ -349,12 +356,18 @@ export default function SlideshowView({
         x: Math.min(maxPanX, Math.max(-maxPanX, initialPanOffsetRef.current.x + deltaX)),
         y: Math.min(maxPanY, Math.max(-maxPanY, initialPanOffsetRef.current.y + deltaY))
       });
+    } else if (e.touches.length === 1 && zoomScale <= 1.05) {
+      // Live feedback: the picture follows the finger while swiping
+      const dx = e.touches[0].clientX - singleTouchStartRef.current.x;
+      const dy = e.touches[0].clientY - singleTouchStartRef.current.y;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) setDragX(dx * 0.55);
     }
   };
 
   // Multi-Touch End: handles pinch release or swipe navigation
   const handleTouchEnd = (e) => {
     if (e.touches.length === 0) {
+      setDragX(0);
       if (isPinchingRef.current) {
         isPinchingRef.current = false;
         if (zoomScale < 1.05) {
@@ -369,7 +382,8 @@ export default function SlideshowView({
         const deltaX = singleTouchStartRef.current.x - touch.clientX;
         const deltaY = singleTouchStartRef.current.y - touch.clientY;
 
-        if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY)) {
+        const quickFlick = Date.now() - touchStartTimeRef.current < 280 && Math.abs(deltaX) > 24;
+        if ((Math.abs(deltaX) > 45 || quickFlick) && Math.abs(deltaX) > Math.abs(deltaY)) {
           if (deltaX > 0) {
             goToNext();
           } else {
@@ -425,6 +439,27 @@ export default function SlideshowView({
     : 0;
 
   const isOutOfStock = !activeModel?.stock || activeModel.stock <= 0;
+  const ghostBtn = isFullscreen
+    ? 'bg-slate-900/90 text-white border border-white/15 hover:bg-slate-800'
+    : 'bg-white/95 text-slate-800 hover:bg-white border border-slate-200';
+
+  // Price logic: a model without a real discount shows ONE normal price (never a big "0")
+  const priceOriginal = Number(activeModel?.originalPrice) || 0;
+  const priceSale = Number(activeModel?.salePrice) || 0;
+  const hasDiscountPrice = priceSale > 0 && priceOriginal > priceSale;
+  const mainPrice = hasDiscountPrice ? priceSale : (priceOriginal > 0 ? priceOriginal : priceSale);
+
+  // Thumbnail strip: only a window around the current slide is rendered (fast with hundreds of models)
+  const stripItems = useMemo(() => {
+    const start = Math.max(0, currentIndex - 20);
+    const end = Math.min(filteredModels.length, currentIndex + 21);
+    return filteredModels.slice(start, end).map((m, i) => ({ m, idx: start + i }));
+  }, [filteredModels, currentIndex]);
+
+  useEffect(() => {
+    const el = thumbStripRef.current?.querySelector('[data-active="true"]');
+    if (el && el.scrollIntoView) el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  }, [currentIndex, filteredModels.length]);
 
   return (
     <div 
@@ -451,7 +486,7 @@ export default function SlideshowView({
             {/* Drawer Header */}
             <div className="p-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shadow-xs">
                   <Filter className="w-4 h-4" />
                 </div>
                 <div>
@@ -485,7 +520,7 @@ export default function SlideshowView({
                     setSidebarCategory(e.target.value);
                     setSidebarCollection('all');
                   }}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
                 >
                   <option value="all">{t.allCategories}</option>
                   {categories.map((c) => (
@@ -503,7 +538,7 @@ export default function SlideshowView({
                 <select
                   value={sidebarCollection}
                   onChange={(e) => setSidebarCollection(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
                 >
                   <option value="all">{t.allCollections}</option>
                   {relevantCollections.map((col) => (
@@ -525,7 +560,7 @@ export default function SlideshowView({
                     setSidebarStatus(e.target.value);
                     setCurrentIndex(0);
                   }}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
                 >
                   <option value="all">هەموو دۆخەکان ({models.length})</option>
                   {customStatuses.map((st) => {
@@ -546,7 +581,7 @@ export default function SlideshowView({
                 <select
                   value={localSort}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-red-500 shadow-2xs cursor-pointer"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500 shadow-2xs cursor-pointer"
                 >
                   <option value="name-asc">{t.sortAZ || 'A ➔ Z (ئەلفوبێ)'}</option>
                   <option value="name-desc">{t.sortZA || 'Z ➔ A (پێچەوانە)'}</option>
@@ -566,7 +601,7 @@ export default function SlideshowView({
                     setSidebarStatus('all');
                     handleSortChange('name-asc');
                   }}
-                  className="w-full py-1 text-center text-[10px] font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  className="w-full py-1 text-center text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
                   <span>پاککردنەوەی فلتەرەکان (Reset)</span>
@@ -591,7 +626,7 @@ export default function SlideshowView({
                       }}
                       className={`flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-red-50 border-2 border-red-500 shadow-xs'
+                          ? 'bg-blue-50 border-2 border-blue-500 shadow-xs'
                           : 'hover:bg-slate-50 border border-transparent opacity-85 hover:opacity-100'
                       }`}
                     >
@@ -609,12 +644,17 @@ export default function SlideshowView({
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h5 className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-red-700' : 'text-slate-800'}`}>
+                        <h5 className={`text-xs font-bold truncate leading-tight ${isSelected ? 'text-blue-700' : 'text-slate-800'}`}>
                           {model.name}
                         </h5>
                         <div className="flex items-center justify-between mt-1 gap-1 flex-wrap">
-                          <span className="text-xs font-black text-red-600">
-                            {model.salePrice?.toLocaleString()} {t.currency}
+                          <span className="text-xs font-black text-slate-900">
+                            {(() => {
+                              const so = Number(model.salePrice) || 0;
+                              const oo = Number(model.originalPrice) || 0;
+                              const pr = so > 0 && oo > so ? so : (oo > 0 ? oo : so);
+                              return pr > 0 ? `${pr.toLocaleString()} ${t.currency}` : '—';
+                            })()}
                           </span>
                           {model.itemType && (
                             <span 
@@ -660,6 +700,17 @@ export default function SlideshowView({
           : 'bg-white border border-slate-200 rounded-2xl shadow-xs'
       }`}>
         
+        {/* Autoplay progress: fills over the time this slide stays on screen */}
+        {isPlaying && !zenMode && filteredModels.length > 1 && (
+          <div className="absolute top-0 inset-x-0 h-1 z-30 bg-slate-900/5 overflow-hidden pointer-events-none">
+            <div
+              key={`${currentIndex}-${dwellTime}`}
+              className="h-full bg-blue-600 origin-left rtl:origin-right"
+              style={{ animation: `slideProgress ${dwellTime}s linear forwards` }}
+            />
+          </div>
+        )}
+
         {activeModel ? (
           <div className="flex-1 flex flex-col h-full relative">
             
@@ -682,7 +733,7 @@ export default function SlideshowView({
                   className="flex items-center gap-2.5 px-4 py-2 bg-black/85 hover:bg-black text-white rounded-2xl backdrop-blur-xl border border-white/25 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer group"
                   title="کرتە بکە بۆ کردنەوەی قفڵ و گەڕانەوە بۆ دۆخی ئاسایی"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-red-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                  <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
                     <Lock className="w-4 h-4" />
                   </div>
                   <div className="text-start">
@@ -717,10 +768,10 @@ export default function SlideshowView({
                   }`}
                   title="فلتەر و لیستی مۆدێلەکان"
                 >
-                  <Filter className="w-3.5 h-3.5 text-red-600" />
+                  <Filter className="w-3.5 h-3.5 text-blue-600" />
                   <span>فلتەر و مۆدێلەکان</span>
                   {filteredModels.length > 0 && (
-                    <span className="bg-red-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                    <span className="bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
                       {currentIndex + 1} / {filteredModels.length}
                     </span>
                   )}
@@ -739,7 +790,7 @@ export default function SlideshowView({
                       className="h-5 max-w-[100px] object-contain rounded"
                     />
                   ) : (
-                    <div className="w-5 h-5 bg-linear-to-br from-red-600 to-rose-700 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0">
+                    <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0">
                       A
                     </div>
                   )}
@@ -747,104 +798,124 @@ export default function SlideshowView({
                     <span className="font-extrabold text-xs tracking-tight">
                       ASHLEY
                     </span>
-                    <span className="bg-red-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
+                    <span className="bg-blue-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
                       OUTLET
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Controls (Play/Pause, Fullscreen, Print, Zen Mode) */}
+              {/* Controls: Play / Fullscreen / Print + "More" menu */}
               <div className={`flex items-center gap-1.5 ${!zenMode && isControlsVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}>
-                
-                {/* Ambient / Zen Mode Toggle (Showroom luxury mode) */}
-                <button
-                  onClick={() => {
-                    setZenMode(true);
-                    setIsControlsVisible(false);
-                    setShowZenUnlock(false);
-                    if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-                  }}
-                  className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
-                    isFullscreen
-                      ? 'bg-slate-900/90 text-white border border-white/15 hover:bg-slate-800'
-                      : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
-                  }`}
-                  title="دۆخی قفڵ و بێدەنگ (outlet کۆتا دانە)"
-                >
-                  <Lock className="w-3.5 h-3.5 text-amber-500" />
-                </button>
 
-                {/* Auto Play / Pause */}
                 <button
                   onClick={() => {
                     setIsPlaying(!isPlaying);
                     resetControlsVisibility();
                   }}
-                  className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${
-                    isPlaying 
-                      ? 'bg-red-600 text-white shadow-red-500/20' 
-                      : 'bg-white/90 text-slate-700 hover:bg-white border border-slate-200'
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer text-xs font-bold ${
+                    isPlaying ? 'bg-blue-600 text-white' : ghostBtn
                   }`}
                   title={isPlaying ? t.pause : t.autoPlay}
                 >
-                  {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  <span className="hidden md:inline">{isPlaying ? t.pause : t.autoPlay}</span>
                 </button>
 
-                {/* Fullscreen Button */}
                 <button
                   onClick={() => {
                     toggleFullscreen();
                     resetControlsVisibility();
                   }}
-                  className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 border border-slate-200 shadow-md backdrop-blur-md transition-all cursor-pointer"
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer text-xs font-bold ${ghostBtn}`}
                   title="Full Screen / فوول سکرین"
                 >
-                  {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                  {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  <span className="hidden md:inline">{isFullscreen ? 'بچووککردنەوە' : 'شاشەی تەواو'}</span>
                 </button>
 
-                {/* Direct Print A4 button */}
                 <button
                   onClick={() => onPrintSingle(activeModel)}
-                  className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-md transition-all active:scale-95 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md transition-all active:scale-95 cursor-pointer text-xs font-bold"
                   title="چاپکردن (PRINT)"
                 >
-                  <Printer className="w-3.5 h-3.5 text-red-500" />
+                  <Printer className="w-4 h-4" />
+                  <span className="hidden md:inline">چاپ</span>
                 </button>
 
-                {/* Download Current Model Image */}
-                {activeModel?.image && (
+                {/* More: lock mode, download picture, edit, settings */}
+                <div className="relative">
                   <button
-                    onClick={() => downloadModelImage(activeModel)}
-                    className="p-2 rounded-xl bg-white/90 hover:bg-white text-slate-700 hover:text-purple-600 border border-slate-200 shadow-md backdrop-blur-md transition-all active:scale-95 cursor-pointer"
-                    title="داگرتنی ئەم وێنەیە بە ناوی مۆدێل"
+                    onClick={() => setIsMoreOpen(!isMoreOpen)}
+                    className={`p-2 rounded-xl shadow-md backdrop-blur-md transition-all cursor-pointer ${ghostBtn}`}
+                    title="زیاتر"
+                    aria-label="More"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
-                )}
 
-                {isAdmin && (
-                  <button
-                    onClick={() => onEditModel(activeModel)}
-                    className="p-1.5 bg-white hover:bg-slate-50 text-blue-600 rounded-xl border border-slate-200 shadow-sm transition-all"
-                    title={t.edit}
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                  {isMoreOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsMoreOpen(false)} />
+                      <div className="absolute end-0 top-full mt-2 w-60 z-50 bg-white text-slate-800 rounded-2xl shadow-2xl border border-slate-200 p-1.5">
+                        <button
+                          onClick={() => {
+                            setIsMoreOpen(false);
+                            setZenMode(true);
+                            setIsControlsVisible(false);
+                            setShowZenUnlock(false);
+                            if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-[13px] font-semibold text-start cursor-pointer"
+                        >
+                          <Lock className="w-4 h-4 text-amber-500" />
+                          <span>دۆخی قفڵ و بێدەنگ</span>
+                        </button>
 
-                {isAdmin && onOpenSettings && (
-                  <button
-                    onClick={onOpenSettings}
-                    className="p-1.5 sm:p-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 shadow-sm transition-all"
-                    title={t.slideshowSettings}
-                  >
-                    <Sliders className="w-3.5 h-3.5 text-red-600" />
-                  </button>
-                )}
+                        {activeModel?.image && (
+                          <button
+                            onClick={() => {
+                              setIsMoreOpen(false);
+                              downloadModelImage(activeModel);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-[13px] font-semibold text-start cursor-pointer"
+                          >
+                            <Download className="w-4 h-4 text-blue-600" />
+                            <span>داگرتنی ئەم وێنەیە</span>
+                          </button>
+                        )}
+
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              setIsMoreOpen(false);
+                              onEditModel(activeModel);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-[13px] font-semibold text-start cursor-pointer"
+                          >
+                            <Edit3 className="w-4 h-4 text-blue-600" />
+                            <span>{t.edit}</span>
+                          </button>
+                        )}
+
+                        {isAdmin && onOpenSettings && (
+                          <button
+                            onClick={() => {
+                              setIsMoreOpen(false);
+                              onOpenSettings();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-slate-100 text-[13px] font-semibold text-start cursor-pointer"
+                          >
+                            <Sliders className="w-4 h-4 text-blue-600" />
+                            <span>{t.slideshowSettings}</span>
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
 
               </div>
-
             </div>
 
             {/* Giant Furniture Image Stage in Frosted Glass with Dynamic Shimmer Sweep */}
@@ -888,7 +959,10 @@ export default function SlideshowView({
                 }`}
                 style={{
                   '--morph-duration': `${transitionTime}s`,
-                  '--shimmer-interval': `${shimmerTime}s`
+                  '--shimmer-interval': `${shimmerTime}s`,
+                  transform: dragX ? `translate3d(${dragX}px, 0, 0)` : undefined,
+                  opacity: dragX ? 1 - Math.min(0.35, Math.abs(dragX) / 600) : undefined,
+                  transition: dragX ? 'none' : 'transform 0.25s ease-out, opacity 0.25s ease-out'
                 }}
               >
                 
@@ -990,35 +1064,38 @@ export default function SlideshowView({
               >
                 <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 rtl:rotate-180" />
               </button>
-
-              {/* Touch & Tablet Interactive Pagination Indicator */}
-              {filteredModels.length > 1 && !zenMode && (
-                <div className="absolute bottom-2.5 sm:bottom-3 inset-x-0 z-20 flex items-center justify-center gap-1.5 pointer-events-none">
-                  <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full shadow-lg flex items-center gap-1.5 pointer-events-auto border border-white/10">
-                    {filteredModels.length <= 12 ? (
-                      filteredModels.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentIndex(idx)}
-                          className={`rounded-full transition-all duration-300 cursor-pointer ${
-                            idx === currentIndex
-                              ? 'w-5 h-2 bg-red-500 shadow-xs'
-                              : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-                          }`}
-                          aria-label={`Slide ${idx + 1}`}
-                        />
-                      ))
-                    ) : (
-                      <span className="text-[11px] font-mono font-bold text-white tracking-wider flex items-center gap-1">
-                        <span className="text-red-400 font-extrabold">{currentIndex + 1}</span>
-                        <span className="text-slate-400">/</span>
-                        <span>{filteredModels.length}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Thumbnail strip: jump straight to any model */}
+            {filteredModels.length > 1 && !zenMode && (
+              <div className={`shrink-0 overflow-hidden transition-all duration-500 ${isControlsVisible ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'} ${
+                isFullscreen ? 'bg-slate-900/80 border-t border-white/10' : 'bg-white/90 border-t border-slate-200'
+              }`}>
+                <div ref={thumbStripRef} className="flex items-center gap-2 overflow-x-auto px-3 py-2 scrollbar-none">
+                  {stripItems.map(({ m, idx }) => (
+                    <button
+                      key={m.id}
+                      data-active={idx === currentIndex}
+                      onClick={() => setCurrentIndex(idx)}
+                      title={m.name}
+                      className={`relative shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                        idx === currentIndex
+                          ? 'border-blue-600 ring-2 ring-blue-600/30'
+                          : 'border-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      {m.image ? (
+                        <img src={getOptimizedImageUrl(m.image, 'thumb')} alt={m.name} decoding="async" loading="lazy" className="w-full h-full object-cover bg-slate-100" />
+                      ) : (
+                        <div className="w-full h-full bg-slate-100 grid place-items-center text-slate-400">
+                          <ImageOff className="w-4 h-4" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Minimal Floating Corner Tag in Locked Zen Mode */}
             {zenMode ? (
@@ -1027,14 +1104,14 @@ export default function SlideshowView({
                   <div>
                     {/* Outlet Last Piece / Stock Badge & Large Discount Badge */}
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-red-600 text-white text-[10px] font-black uppercase tracking-wide shadow-xs">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-600 text-white text-[10px] font-black uppercase tracking-wide shadow-xs">
                         <span>ASHLEY OUTLET</span>
                         <span>•</span>
                         <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
                       </div>
 
                       {discountPercent > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-white/20">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-900 text-xs sm:text-sm font-black shadow-md border border-white/20">
                           <span>{discountPercent}%</span>
                           <span className="text-[10px] font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
                         </span>
@@ -1044,7 +1121,7 @@ export default function SlideshowView({
                     <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
                     
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300 flex-wrap">
-                      <span className="text-red-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
+                      <span className="text-blue-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
                       {activeModel.stock > 0 && (
                         <>
                           <span>•</span>
@@ -1066,22 +1143,21 @@ export default function SlideshowView({
                   </div>
 
                   <div className="text-start border-s border-white/20 ps-3.5 ms-1 shrink-0">
-                    {/* 1. Original Price: Small on top */}
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[10px] text-white/70 font-medium">پێش داشکاندن:</span>
-                      <span className="text-xs text-white font-mono font-bold">
-                        {activeModel.originalPrice && Number(activeModel.originalPrice) > 0 ? `${Number(activeModel.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
-                      </span>
-                      {discountPercent > 0 && (
-                        <span className="inline-flex items-center px-1.5 py-0.2 rounded-md bg-rose-600 text-white text-[10px] font-black shadow-xs">
-                          %{discountPercent}
+                    {hasDiscountPrice && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-xs text-white/60 font-mono font-bold line-through decoration-rose-400">
+                          {priceOriginal.toLocaleString()} {t.currency}
                         </span>
-                      )}
-                    </div>
-
-                    {/* 2. Discount Price: Larger, 0 if not set */}
-                    <div className="text-lg sm:text-2xl font-black text-red-500 leading-none">
-                      {activeModel.salePrice && Number(activeModel.salePrice) > 0 ? Number(activeModel.salePrice).toLocaleString() : '0'} <span className="text-xs font-bold text-white/80">{t.currency}</span>
+                        {discountPercent > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-400 text-slate-900 text-[10px] font-black">
+                            -%{discountPercent}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className={`text-lg sm:text-2xl font-black leading-none font-mono ${hasDiscountPrice ? 'text-emerald-400' : 'text-white'}`}>
+                      {mainPrice > 0 ? mainPrice.toLocaleString() : '—'}{' '}
+                      {mainPrice > 0 && <span className="text-xs font-bold text-white/80">{t.currency}</span>}
                     </div>
                   </div>
                 </div>
@@ -1117,7 +1193,7 @@ export default function SlideshowView({
                 {/* Left: Category, Title, Stock, Notes */}
                 <div className="flex-1 min-w-0">
                   
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-500 uppercase mb-0.5">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase mb-0.5">
                     <span>{getCategoryName(activeModel.categoryId)}</span>
                     {getCollectionName(activeModel.collectionId) && (
                       <>
@@ -1135,7 +1211,7 @@ export default function SlideshowView({
                     </h2>
 
                     {discountPercent > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gradient-to-r from-red-600 to-rose-600 text-white text-xs sm:text-sm font-black shadow-md border border-red-500/30">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-900 text-xs sm:text-sm font-black shadow-md border border-blue-500/30">
                         <span>{discountPercent}%</span>
                         <span className="text-[10px] sm:text-xs font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
                       </span>
@@ -1175,7 +1251,7 @@ export default function SlideshowView({
                         : 'bg-slate-50 border-slate-200/90 text-slate-800'
                     }`}>
                       <span className={`font-black shrink-0 text-[11px] sm:text-xs flex items-center gap-1 ${
-                        isFullscreen ? 'text-amber-400' : 'text-red-600'
+                        isFullscreen ? 'text-amber-400' : 'text-blue-600'
                       }`}>
                         <FileText className="w-3.5 h-3.5 shrink-0" />
                         <span>{t.notes || 'تێبینی'}:</span>
@@ -1194,23 +1270,23 @@ export default function SlideshowView({
                 }`}>
                   
                   <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-1">
-                    {/* 1. Original Price: Small on top */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] text-slate-500 font-medium">پێش داشکاندن:</span>
-                      <span className="text-xs sm:text-sm text-slate-900 font-bold font-mono">
-                        {activeModel.originalPrice && Number(activeModel.originalPrice) > 0 ? `${Number(activeModel.originalPrice).toLocaleString()} ${t.currency}` : `0 ${t.currency}`}
-                      </span>
-                      {discountPercent > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-md bg-rose-600 text-white text-[11px] font-black shadow-xs">
-                          %{discountPercent}
+                    {hasDiscountPrice && (
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-xs sm:text-sm font-bold font-mono line-through decoration-rose-500 ${isFullscreen ? 'text-white/60' : 'text-slate-400'}`}>
+                          {priceOriginal.toLocaleString()} {t.currency}
                         </span>
-                      )}
-                    </div>
-
-                    {/* 2. Discount Price: Larger */}
-                    <div className="text-2xl sm:text-3xl font-black text-red-600 leading-none flex items-baseline gap-1">
-                      <span>{activeModel.salePrice && Number(activeModel.salePrice) > 0 ? Number(activeModel.salePrice).toLocaleString() : '0'}</span>
-                      <span className="text-xs font-bold text-red-600/80">{t.currency}</span>
+                        {discountPercent > 0 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-amber-400 text-slate-900 text-[11px] font-black">
+                            -%{discountPercent}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div className={`text-2xl sm:text-3xl font-black leading-none flex items-baseline gap-1 font-mono ${
+                      hasDiscountPrice ? (isFullscreen ? 'text-emerald-400' : 'text-emerald-600') : (isFullscreen ? 'text-white' : 'text-slate-900')
+                    }`}>
+                      <span>{mainPrice > 0 ? mainPrice.toLocaleString() : '—'}</span>
+                      {mainPrice > 0 && <span className="text-xs font-bold opacity-70">{t.currency}</span>}
                     </div>
                   </div>
 

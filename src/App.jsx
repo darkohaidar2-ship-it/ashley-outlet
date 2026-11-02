@@ -36,6 +36,20 @@ export default function App() {
   const [data, setData] = useState({ categories: [], collections: [], models: [], settings: { logoUrl: '' } });
   const [isLoading, setIsLoading] = useState(true);
 
+  const [campaign, setCampaign] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('campaign') || localStorage.getItem('ashley_campaign') || 'black_friday';
+    }
+    return 'black_friday';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ashley_campaign', campaign);
+    }
+  }, [campaign]);
+
   const [selectedCategory, setSelectedCategory] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -386,9 +400,60 @@ export default function App() {
     };
   }, []);
 
+  // Campaign Counts
+  const bfCount = useMemo(() => {
+    return (data.models || []).filter(m => {
+      const st = (m.itemType || m.sku || '').toLowerCase();
+      return st.includes('بلاک فرایدەی') || st.includes('black friday');
+    }).length;
+  }, [data.models]);
+
+  const outletCount = useMemo(() => {
+    return (data.models || []).filter(m => {
+      const st = (m.itemType || m.sku || '').toLowerCase();
+      return !st.includes('بلاک فرایدەی') && !st.includes('black friday');
+    }).length;
+  }, [data.models]);
+
+  // Categories visible in current campaign
+  const activeCategories = useMemo(() => {
+    if (campaign === 'black_friday') {
+      const bfCatIds = new Set(
+        (data.models || [])
+          .filter(m => (m.itemType || m.sku || '').toLowerCase().includes('بلاک فرایدەی'))
+          .map(m => m.categoryId)
+      );
+      const filtered = (data.categories || []).filter(c => bfCatIds.has(c.id));
+      return filtered.length > 0 ? filtered : (data.categories || []);
+    }
+    if (campaign === 'outlet') {
+      const outletCatIds = new Set(
+        (data.models || [])
+          .filter(m => !(m.itemType || m.sku || '').toLowerCase().includes('بلاک فرایدەی'))
+          .map(m => m.categoryId)
+      );
+      const filtered = (data.categories || []).filter(c => outletCatIds.has(c.id));
+      return filtered.length > 0 ? filtered : (data.categories || []);
+    }
+    return data.categories || [];
+  }, [data.categories, data.models, campaign]);
+
   // Filter & Sort Models for Grid View
   const filteredModels = useMemo(() => {
     const list = (data.models || []).filter((model) => {
+      // 0. Campaign Filter (بلاک فرایدەی vs ئاوتلێت vs هەمووی)
+      if (campaign === 'black_friday') {
+        const itemType = (model.itemType || (model.sku && model.sku !== model.name ? model.sku : '')).toLowerCase();
+        if (!itemType.includes('بلاک فرایدەی') && !itemType.includes('black friday')) {
+          return false;
+        }
+      } else if (campaign === 'outlet') {
+        const itemType = (model.itemType || (model.sku && model.sku !== model.name ? model.sku : '')).toLowerCase();
+        if (itemType.includes('بلاک فرایدەی') || itemType.includes('black friday')) {
+          return false;
+        }
+      }
+
       // 1. Category Filter
       if (selectedCategory !== 'all' && model.categoryId !== selectedCategory) {
         return false;
@@ -577,6 +642,10 @@ export default function App() {
     logoUrl: data.settings?.logoUrl || '',
     searchQuery,
     setSearchQuery,
+    campaign,
+    setCampaign,
+    bfCount,
+    outletCount,
     openLoginModal: () => setAdminModal({ isOpen: true, type: 'login', editingModel: null }),
     openNewModelModal: () => setAdminModal({ isOpen: true, type: 'model', editingModel: null }),
     openNewCategoryModal: () => setAdminModal({ isOpen: true, type: 'category', editingModel: null }),
@@ -596,7 +665,7 @@ export default function App() {
     <FilterBar
       t={t}
       lang={lang}
-      categories={data.categories || []}
+      categories={activeCategories}
       collections={data.collections || []}
       selectedCategory={selectedCategory}
       setSelectedCategory={setSelectedCategory}
@@ -616,12 +685,16 @@ export default function App() {
   );
 
   const productGrid = filteredModels.length === 0 ? (
-    <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 max-w-md mx-auto p-8">
-      <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+    <div className={`text-center py-20 rounded-3xl border max-w-md mx-auto p-8 ${
+      campaign === 'black_friday' ? 'bg-[#121217] border-orange-500/20 text-white' : 'bg-white border-slate-200'
+    }`}>
+      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+        campaign === 'black_friday' ? 'bg-orange-500/10 text-orange-400' : 'bg-blue-50 text-blue-600'
+      }`}>
         <PackageOpen className="w-8 h-8" />
       </div>
-      <h4 className="font-bold text-slate-800 text-lg">{t.noResultsFound}</h4>
-      <p className="text-xs text-slate-500 mt-1">تکایە گەڕانەکەت بگۆڕە یان فلتەرەکان لابدە</p>
+      <h4 className="font-bold text-lg">{t.noResultsFound}</h4>
+      <p className="text-xs text-slate-400 mt-1">تکایە گەڕانەکەت بگۆڕە یان فلتەرەکان لابدە</p>
     </div>
   ) : (
     <div className={`grid gap-3 sm:gap-4 ${
@@ -638,6 +711,7 @@ export default function App() {
           collectionName={getCollectionName(model.collectionId)}
           isAdmin={isAdmin}
           statusColors={statusColors}
+          isBlackFriday={campaign === 'black_friday' || (model.itemType || model.sku || '').includes('بلاک فرایدەی')}
           onOpenDetails={(m) => setDetailModel(m)}
           onOpenSlideshow={() => openSlideshowOnModel(model)}
           onPrintSingle={handlePrintSingle}
@@ -730,8 +804,9 @@ export default function App() {
         <StoreHero
           lang={lang}
           models={data.models || []}
-          categories={data.categories || []}
+          categories={activeCategories}
           collections={data.collections || []}
+          campaign={campaign}
           onOpenModel={(m) => setDetailModel(m)}
         />
         {filterBar}
@@ -744,7 +819,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-blue-600 selection:text-white">
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 selection:bg-orange-500 selection:text-white ${
+      campaign === 'black_friday' ? 'bg-[#0b0b0e] text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
       
       {/* SCREEN INTERFACE: Hidden entirely on @media print */}
       <div id="screen-root" className="flex-1 flex flex-col no-print">

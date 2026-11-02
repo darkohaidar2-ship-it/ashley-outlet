@@ -18,7 +18,9 @@ export const CATEGORY_DEFAULTS_BY_KEYWORD = [
   { match: ['نووستن', 'نوستن', 'bed', 'sleep', 'room'], color: '#059669' }, // Emerald / Green
   { match: ['دانیشتن', 'sofa', 'جلوس', 'living', 'sit'], color: '#1d4ed8' }, // Sapphire Blue
   { match: ['کۆرنەر', 'corner', 'زاویة'], color: '#d97706' }, // Warm Amber / Bronze
-  { match: ['نانخواردن', 'dining', 'طعام', 'مێز'], color: '#b91c1c' }, // Deep Crimson
+  { match: ['نانخواردن', 'dining', 'طعام'], color: '#b91c1c' }, // Deep Crimson
+  { match: ['sehpa', 'سێپایە', 'table', 'مێز'], color: '#ff6b00' }, // Vibrant Orange
+  { match: ['tv', 'vitrine', 'فاترین', 'تیڤی'], color: '#7c3aed' }, // Royal Purple
   { match: ['ئۆفیس', 'office', 'مكتب'], color: '#4338ca' } // Indigo
 ];
 

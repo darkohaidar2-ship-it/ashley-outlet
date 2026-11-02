@@ -365,3 +365,9 @@
     object-fit: contain !important;
   }
 }
+
+/* Slideshow autoplay progress bar */
+@keyframes slideProgress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
