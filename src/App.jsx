@@ -778,25 +778,6 @@ export default function App() {
     /* ADMIN CATALOG: overview + filters + cards with edit controls (inside the admin shell) */
     pageContent = (
       <div className="px-4 sm:px-6 pb-8 space-y-4">
-        {/* Interactive Radial Wheel Dashboard */}
-        <RadialCategoryWheel
-          categories={activeCategories}
-          models={data.models || []}
-          selectedCategory={selectedCategory}
-          onSelectCategory={(catId) => {
-            setSelectedCategory(catId);
-            setSelectedCollection('all');
-          }}
-          campaign={campaign}
-          setCampaign={setCampaign}
-          logoUrl={data.settings?.logoUrl || ''}
-          totalCount={data.models?.length || 0}
-          bfCount={bfCount}
-          outletCount={outletCount}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          lang={lang}
-        />
         <div id="catalog-content-anchor" className="scroll-mt-6">
           {activeTab === 'stats' ? (
             <AdminDashboard
@@ -829,25 +810,6 @@ export default function App() {
     /* STOREFRONT (salesperson browsing) */
     pageContent = (
       <>
-        {/* Interactive Radial Wheel Dashboard */}
-        <RadialCategoryWheel
-          categories={activeCategories}
-          models={data.models || []}
-          selectedCategory={selectedCategory}
-          onSelectCategory={(catId) => {
-            setSelectedCategory(catId);
-            setSelectedCollection('all');
-          }}
-          campaign={campaign}
-          setCampaign={setCampaign}
-          logoUrl={data.settings?.logoUrl || ''}
-          totalCount={data.models?.length || 0}
-          bfCount={bfCount}
-          outletCount={outletCount}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          lang={lang}
-        />
         <div id="catalog-content-anchor" className="scroll-mt-6">
           {activeTab === 'stats' ? (
             <div className="max-w-[1600px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
@@ -883,12 +845,42 @@ export default function App() {
       {/* SCREEN INTERFACE: Hidden entirely on @media print */}
       <div id="screen-root" className="flex-1 flex flex-col no-print">
         
+        {/* 1. TOP OF THE ENTIRE PAGE: RADIAL CATEGORY WHEEL DASHBOARD */}
+        {viewMode !== 'slideshow' && (
+          <div className="w-full relative z-20">
+            <RadialCategoryWheel
+              categories={activeCategories}
+              models={data.models || []}
+              selectedCategory={selectedCategory}
+              onSelectCategory={(catId) => {
+                setSelectedCategory(catId);
+                setSelectedCollection('all');
+              }}
+              campaign={campaign}
+              setCampaign={setCampaign}
+              logoUrl={data.settings?.logoUrl || ''}
+              totalCount={data.models?.length || 0}
+              bfCount={bfCount}
+              outletCount={outletCount}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              lang={lang}
+            />
+
+            {/* Subtle Divider Line (هێڵی خەیاڵی جیاکەرەوە) */}
+            <div className="w-full relative h-[1px] bg-gradient-to-r from-transparent via-slate-700/60 to-transparent">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-orange-500/25 to-transparent blur-xs" />
+            </div>
+          </div>
+        )}
+
+        {/* 2. BELOW THE WHEEL: Admin Shell OR Top Navigation Bar + Content */}
         {useAdminShell ? (
           <AdminShell {...navProps}>{pageContent}</AdminShell>
         ) : (
           <>
-            {/* Top Navigation Bar */}
-            <Navbar {...navProps} />
+            {/* Top Navigation Bar with "بەڕێوەبەر" now sits BELOW the wheel! */}
+            {viewMode !== 'slideshow' && <Navbar {...navProps} />}
             {pageContent}
           </>
         )}

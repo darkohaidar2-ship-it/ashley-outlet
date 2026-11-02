@@ -277,137 +277,98 @@ export default function RadialCategoryWheel({
                 <feDropShadow dx="0" dy="6" stdDeviation="10" floodColor="#000000" floodOpacity="0.65" />
               </filter>
 
-              {/* Red Laser Neon Glow for Outlet Rim */}
-              <filter id="red-laser-glow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#ef4444" floodOpacity="0.9" />
-              </filter>
+              {/* Gentle Water Reflection Ripple Gradient for Outlet Strokes */}
+              <linearGradient id="water-ripple-red" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ef4444">
+                  <animate attributeName="stop-color" values="#ef4444;#fca5a5;#ef4444;#dc2626;#ef4444" dur="4s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="50%" stopColor="#ff9999">
+                  <animate attributeName="stop-color" values="#ff9999;#ffffff;#ef4444;#ff9999" dur="4s" repeatCount="indefinite" />
+                </stop>
+                <stop offset="100%" stopColor="#dc2626">
+                  <animate attributeName="stop-color" values="#dc2626;#ef4444;#fca5a5;#dc2626" dur="4s" repeatCount="indefinite" />
+                </stop>
+              </linearGradient>
             </defs>
 
-            {/* ========================================================
-                ERP INFOGRAPHIC TRACKS & DIRECTIONAL ARROWS
-                Matches the technical circular ERP reference diagram
-               ======================================================== */}
-            {/* Outer Circular Track */}
-            <circle
-              cx="0"
-              cy="0"
-              r={outerR + 10}
-              fill="none"
-              stroke="rgba(255, 255, 255, 0.22)"
-              strokeWidth="1.5"
-            />
-            {/* Outer Concentric Dash Guide */}
-            <circle
-              cx="0"
-              cy="0"
-              r={outerR + 24}
-              fill="none"
-              stroke="rgba(255, 255, 255, 0.08)"
-              strokeWidth="1"
-              strokeDasharray="4 6"
-            />
-            {/* Inner Circular Track around Central Hub */}
+            {/* Subtle Inner Hub Track Guide */}
             <circle
               cx="0"
               cy="0"
               r={innerR - 4}
               fill="none"
-              stroke="rgba(255, 255, 255, 0.22)"
-              strokeWidth="1.5"
+              stroke="rgba(255, 255, 255, 0.12)"
+              strokeWidth="1"
             />
 
             {/* ========================================================
-                OUTLET ZONE: GLOWING MOVING RED PERIMETER RIM
-                Requested: لێوارێکی درەوشاوەی و جوڵاوی سور لە دەوری هەموو بەشەکانی ئاوتلێت
-                لە دەرەوەی هەموویان یەک جار بنووسرێ ئاوت لێت
+                OUTLET ZONE: DELICATE CONNECTING HAIRLINE & TITLE BADGE
+                Requested: کە نووسراوە بەشی ئاوت لێت ئەوە وەک هێڵیکی باریک ببەستەوە بە هەموو ئەو سترۆکانی بەشەکان
                ======================================================== */}
             {outletArcData && (() => {
               const startRad = (outletArcData.startAngle * Math.PI) / 180;
               const endRad = (outletArcData.endAngle * Math.PI) / 180;
               const midRad = (outletArcData.midAngle * Math.PI) / 180;
-              const startX = rimR * Math.cos(startRad);
-              const startY = rimR * Math.sin(startRad);
-              const endX = rimR * Math.cos(endRad);
-              const endY = rimR * Math.sin(endRad);
+              const guideR = outerR + 14;
 
-              // Unified label position directly outside the rim
-              const labelRadius = rimR + 32;
-              const labelX = labelRadius * Math.cos(midRad);
-              const labelY = labelRadius * Math.sin(midRad);
+              const labelX = (guideR + 24) * Math.cos(midRad);
+              const labelY = (guideR + 24) * Math.sin(midRad);
 
               return (
-                <g key="outlet-zone-rim" className="select-none">
-                  {/* 1. Ambient Red Neon Glow */}
+                <g key="outlet-delicate-bracket" className="select-none">
+                  {/* Delicate Thin Connecting Hairline across all Outlet Strokes */}
                   <path
-                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
+                    d={describeArc(0, 0, guideR, outletArcData.startAngle, outletArcData.endAngle)}
                     fill="none"
                     stroke="#ef4444"
-                    strokeWidth="9"
-                    filter="url(#red-laser-glow)"
-                    opacity="0.85"
+                    strokeWidth="1.2"
+                    strokeDasharray="4 4"
+                    opacity="0.75"
                   />
 
-                  {/* 2. Core Solid Crimson Border */}
-                  <path
-                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
-                    fill="none"
-                    stroke="#dc2626"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                  />
-
-                  {/* 3. Hardware-Accelerated Moving Laser Pulse */}
-                  <path
-                    d={describeArc(0, 0, rimR, outletArcData.startAngle, outletArcData.endAngle)}
-                    fill="none"
-                    stroke="#ffffff"
-                    strokeWidth="3"
-                    strokeDasharray="25 65"
-                    strokeLinecap="round"
-                    opacity="0.9"
-                  >
-                    <animate attributeName="stroke-dashoffset" from="0" to="-720" dur="3s" repeatCount="indefinite" />
-                  </path>
-
-                  {/* Start Terminal Node */}
+                  {/* Start Point Dot */}
                   <circle
-                    cx={startX}
-                    cy={startY}
-                    r="5"
+                    cx={guideR * Math.cos(startRad)}
+                    cy={guideR * Math.sin(startRad)}
+                    r="2.5"
                     fill="#ef4444"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    filter="url(#red-laser-glow)"
                   />
 
-                  {/* End Terminal Node */}
+                  {/* End Point Dot */}
                   <circle
-                    cx={endX}
-                    cy={endY}
-                    r="5"
+                    cx={guideR * Math.cos(endRad)}
+                    cy={guideR * Math.sin(endRad)}
+                    r="2.5"
                     fill="#ef4444"
-                    stroke="#ffffff"
-                    strokeWidth="2"
-                    filter="url(#red-laser-glow)"
                   />
 
-                  {/* Unified Overarching Outlet Banner */}
-                  {/* Requested: لێوارەکە لە هەموویانەوە بێتە دەرەوە یەک جار بنووسرێ ئاوت لێت */}
+                  {/* Radial Connector from Badge to Arc */}
+                  <line
+                    x1={guideR * Math.cos(midRad)}
+                    y1={guideR * Math.sin(midRad)}
+                    x2={(guideR + 14) * Math.cos(midRad)}
+                    y2={(guideR + 14) * Math.sin(midRad)}
+                    stroke="#ef4444"
+                    strokeWidth="1"
+                    opacity="0.8"
+                  />
+
+                  {/* Single Unified "بەشی ئاوتلێت" Badge */}
                   <foreignObject
-                    x={labelX - 85}
-                    y={labelY - 16}
-                    width={170}
-                    height={36}
+                    x={labelX - 70}
+                    y={labelY - 14}
+                    width={140}
+                    height={28}
                     className="overflow-visible pointer-events-auto cursor-pointer"
                     onClick={() => {
                       if (setCampaign) setCampaign('outlet');
                       if (onSelectCategory) onSelectCategory('all');
                     }}
                   >
-                    <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-red-600/95 hover:bg-red-500 text-white rounded-full shadow-[0_0_20px_rgba(239,68,68,0.95)] border-2 border-red-300 backdrop-blur-md transition-all hover:scale-105 active:scale-95 group">
-                      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                      <span className="text-[11px] font-black tracking-wide">🏷️ بەشەکانی ئاوتلێت</span>
-                      <span className="text-[9.5px] font-mono opacity-90 font-black bg-black/30 px-1.5 py-0.2 rounded-full">
+                    <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-[#1a0a0d]/90 hover:bg-red-950 text-red-300 hover:text-white rounded-full border border-red-500/70 shadow-[0_0_15px_rgba(239,68,68,0.35)] backdrop-blur-md transition-all hover:scale-105 active:scale-95">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping shrink-0" />
+                      <span className="text-[11px] font-black tracking-wide">بەشی ئاوتلێت</span>
+                      <span className="text-[9px] font-mono opacity-80 font-bold bg-red-900/60 text-red-200 px-1.5 py-0.2 rounded-full">
                         {outletCount || outletArcData.count}
                       </span>
                     </div>
@@ -416,67 +377,26 @@ export default function RadialCategoryWheel({
               );
             })()}
 
-            {/* Directional Flow Arrows on Tracks (Clockwise loop like ERP) */}
+            {/* Subtle Divider Lines between Wedges */}
             {modulesWithAngles.map((mod) => {
-              const midRad = (mod.midAngle * Math.PI) / 180;
-              // Outer arrow position
-              const outerArrowX = (outerR + 10) * Math.cos(midRad);
-              const outerArrowY = (outerR + 10) * Math.sin(midRad);
-              // Inner arrow position
-              const innerArrowX = (innerR - 4) * Math.cos(midRad);
-              const innerArrowY = (innerR - 4) * Math.sin(midRad);
-              const tangentDeg = mod.midAngle + 90;
-
-              // Boundary divider angle (at start of slice)
               const boundAngle = mod.startAngle - (gap / 2);
               const boundRad = (boundAngle * Math.PI) / 180;
-              const divInnerX = (innerR - 4) * Math.cos(boundRad);
-              const divInnerY = (innerR - 4) * Math.sin(boundRad);
-              const divOuterX = (outerR + 10) * Math.cos(boundRad);
-              const divOuterY = (outerR + 10) * Math.sin(boundRad);
+              const divInnerX = (innerR - 2) * Math.cos(boundRad);
+              const divInnerY = (innerR - 2) * Math.sin(boundRad);
+              const divOuterX = (outerR + 4) * Math.cos(boundRad);
+              const divOuterY = (outerR + 4) * Math.sin(boundRad);
 
               return (
-                <g key={`track-decor-${mod.id}`} className="pointer-events-none opacity-80">
-                  {/* Radial Divider Line between Wedges */}
-                  <line
-                    x1={divInnerX}
-                    y1={divInnerY}
-                    x2={divOuterX}
-                    y2={divOuterY}
-                    stroke="rgba(255, 255, 255, 0.2)"
-                    strokeWidth="1"
-                  />
-                  {/* Pin Node at Inner Track */}
-                  <circle
-                    cx={divInnerX}
-                    cy={divInnerY}
-                    r={2.5}
-                    fill="#1e293b"
-                    stroke="#ffffff"
-                    strokeWidth="1"
-                  />
-                  {/* Pin Node at Outer Track */}
-                  <circle
-                    cx={divOuterX}
-                    cy={divOuterY}
-                    r={3}
-                    fill="#1e293b"
-                    stroke="#ffffff"
-                    strokeWidth="1.2"
-                  />
-                  {/* Outer Arrow */}
-                  <path
-                    d="M -3 -3 L 3 0 L -3 3 Z"
-                    transform={`translate(${outerArrowX}, ${outerArrowY}) rotate(${tangentDeg})`}
-                    fill="rgba(255, 255, 255, 0.55)"
-                  />
-                  {/* Inner Arrow */}
-                  <path
-                    d="M -2.5 -2.5 L 2.5 0 L -2.5 2.5 Z"
-                    transform={`translate(${innerArrowX}, ${innerArrowY}) rotate(${tangentDeg})`}
-                    fill="rgba(255, 255, 255, 0.45)"
-                  />
-                </g>
+                <line
+                  key={`divider-${mod.id}`}
+                  x1={divInnerX}
+                  y1={divInnerY}
+                  x2={divOuterX}
+                  y2={divOuterY}
+                  stroke="rgba(255, 255, 255, 0.14)"
+                  strokeWidth="1"
+                  className="pointer-events-none"
+                />
               );
             })}
 
@@ -492,14 +412,6 @@ export default function RadialCategoryWheel({
               const midR = (innerR + outerR) / 2;
               const contentX = midR * Math.cos(midRad);
               const contentY = midR * Math.sin(midRad);
-
-              // Outer label line anchor
-              const lineStartR = outerR + 10;
-              const lineStartX = lineStartR * Math.cos(midRad);
-              const lineStartY = lineStartR * Math.sin(midRad);
-
-              const lineEndX = labelR * Math.cos(midRad);
-              const lineEndY = labelR * Math.sin(midRad);
 
               const IconComponent = mod.icon;
               const wedgePath = createWedgePath(mod.startAngle, mod.endAngle, innerR, outerR);
@@ -539,8 +451,16 @@ export default function RadialCategoryWheel({
                           : 'none',
                         opacity: isSelected ? 1 : isHovered ? 0.98 : 0.88
                       }}
-                      stroke={mod.isBF ? '#ffd700' : isSelected ? '#ffffff' : 'rgba(255,255,255,0.22)'}
-                      strokeWidth={mod.isBF ? 3.5 : isSelected ? 3 : 1.2}
+                      stroke={
+                        mod.isBF 
+                          ? '#ffd700' 
+                          : isSelected 
+                          ? '#ffffff' 
+                          : mod.isOutlet 
+                          ? 'url(#water-ripple-red)' 
+                          : 'rgba(255,255,255,0.22)'
+                      }
+                      strokeWidth={mod.isBF ? 3.5 : isSelected ? 3 : mod.isOutlet ? 2 : 1.2}
                     />
 
                     {/* Content INSIDE the Wedge: Icon + Section Name directly inside! */}
@@ -594,71 +514,6 @@ export default function RadialCategoryWheel({
                       </div>
                     </foreignObject>
                   </g>
-
-                  {/* Outer Connecting Line & Dot */}
-                  <line
-                    x1={lineStartX}
-                    y1={lineStartY}
-                    x2={lineEndX}
-                    y2={lineEndY}
-                    stroke={mod.isBF ? '#ffd700' : mod.color}
-                    strokeWidth={isSelected || mod.isBF ? 2.5 : 1.5}
-                    strokeDasharray={isSelected ? 'none' : '2 2'}
-                    opacity={isSelected || mod.isBF ? 1 : isHovered ? 0.9 : 0.6}
-                  />
-                  <circle
-                    cx={lineEndX}
-                    cy={lineEndY}
-                    r={isSelected || mod.isBF ? 4.5 : 3}
-                    fill={mod.isBF ? '#ffd700' : mod.color}
-                  />
-
-                  {/* Outer Indicators: Showing Outlet Badge & Model Counts */}
-                  <foreignObject
-                    x={lineEndX - 70}
-                    y={lineEndY - 16}
-                    width={140}
-                    height={34}
-                    className="overflow-visible pointer-events-none"
-                  >
-                    <div 
-                      className={`px-2.5 py-0.5 rounded-full backdrop-blur-md flex items-center justify-center gap-1.5 transition-all text-center shadow-lg ${
-                        mod.isBF
-                          ? 'animate-gold-shimmer text-black ring-2 ring-amber-300 scale-105 font-black'
-                          : isSelected 
-                          ? 'bg-white text-slate-900 ring-2 ring-white scale-105 font-black' 
-                          : isHovered
-                          ? 'bg-neutral-900/95 text-white ring-1 ring-white/50 scale-105 font-bold'
-                          : 'bg-[#181922]/90 text-neutral-200 border border-white/10 font-bold'
-                      }`}
-                      style={{
-                        borderColor: mod.isBF ? undefined : isSelected ? undefined : mod.color
-                      }}
-                    >
-                      {/* Outlet indication tag if this is an outlet category */}
-                      {mod.isOutlet && (
-                        <span className="text-[9px] bg-blue-600/90 text-white font-extrabold px-1.5 py-0.1 rounded-md">
-                          ئاوتلێت
-                        </span>
-                      )}
-
-                      <span className="text-[10px] sm:text-[11px] truncate leading-tight font-bold">
-                        {mod.name}
-                      </span>
-
-                      {mod.count !== undefined && (
-                        <span 
-                          className={`text-[9px] font-mono px-1.5 py-0.2 rounded-full font-extrabold ${
-                            mod.isBF
-                              ? 'bg-black text-amber-300'
-                              : isSelected ? 'bg-slate-900 text-white' : 'bg-white/20 text-white'
-                          }`}
-                        >
-                          {mod.count}
-                        </span>
-                      )}
-                    </div>
-                  </foreignObject>
                 </g>
               );
             })}
