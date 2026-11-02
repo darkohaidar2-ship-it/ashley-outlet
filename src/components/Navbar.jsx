@@ -77,37 +77,29 @@ export default function Navbar({
               <span className="font-black text-base sm:text-lg tracking-tight text-slate-900">
                 ASHLEY
               </span>
-              {campaign === 'black_friday' ? (
-                <span className="bg-gradient-to-r from-orange-600 to-amber-500 text-black text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-0.5 shadow-xs">
-                  <Flame className="w-2.5 h-2.5 fill-black" />
-                  <span>BLACK FRIDAY</span>
-                </span>
-              ) : (
-                <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
-                  OUTLET
-                </span>
-              )}
+              <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">
+                OUTLET
+              </span>
             </div>
           </div>
 
-          {/* Campaign Switcher (بلاک فرایدەی / ئاوتلێت / هەمووی) */}
+          {/* Section / Campaign Switcher (هەمووی / ئاوتلێت / بلاک فرایدەی) */}
           <div className="flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200/80 shadow-2xs shrink-0">
             <button
               type="button"
-              onClick={() => setCampaign && setCampaign('black_friday')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
-                campaign === 'black_friday'
-                  ? 'bg-neutral-950 text-orange-400 shadow-sm ring-1 ring-orange-500/40'
-                  : 'text-slate-600 hover:text-slate-900'
+              onClick={() => setCampaign && setCampaign('all')}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                campaign === 'all'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
-              title="کەمپەینی بلاک فرایدەی"
+              title="هەموو کاڵاکان"
             >
-              <Flame className={`w-3.5 h-3.5 ${campaign === 'black_friday' ? 'text-orange-500 fill-orange-500' : 'text-slate-400'}`} />
-              <span className="hidden sm:inline">بلاک فرایدەی</span>
+              <span>هەمووی</span>
               <span className={`text-[10px] px-1.5 py-0.1 rounded-full font-bold ${
-                campaign === 'black_friday' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
+                campaign === 'all' ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'
               }`}>
-                {bfCount || 0}
+                {(bfCount || 0) + (outletCount || 0)}
               </span>
             </button>
 
@@ -116,14 +108,14 @@ export default function Navbar({
               onClick={() => setCampaign && setCampaign('outlet')}
               className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                 campaign === 'outlet'
-                  ? 'bg-white text-blue-700 shadow-sm'
+                  ? 'bg-blue-600 text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
               title="بەشی ئاوتلێت"
             >
-              <span className="hidden sm:inline">ئاوتلێت</span>
+              <span>ئاوتلێت</span>
               <span className={`text-[10px] px-1.5 py-0.1 rounded-full font-bold ${
-                campaign === 'outlet' ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-600'
+                campaign === 'outlet' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
               }`}>
                 {outletCount || 0}
               </span>
@@ -131,15 +123,21 @@ export default function Navbar({
 
             <button
               type="button"
-              onClick={() => setCampaign && setCampaign('all')}
-              className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                campaign === 'all'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800'
+              onClick={() => setCampaign && setCampaign('black_friday')}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 cursor-pointer ${
+                campaign === 'black_friday'
+                  ? 'bg-gradient-to-r from-neutral-950 to-black text-orange-400 shadow-sm ring-1 ring-orange-500/50'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
-              title="هەموو کاڵاکان"
+              title="کەمپەینی بلاک فرایدەی"
             >
-              <span>هەمووی</span>
+              <Flame className={`w-3.5 h-3.5 ${campaign === 'black_friday' ? 'text-orange-500 fill-orange-500 animate-pulse' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">بلاک فرایدەی</span>
+              <span className={`text-[10px] px-1.5 py-0.1 rounded-full font-bold ${
+                campaign === 'black_friday' ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-600'
+              }`}>
+                {bfCount || 0}
+              </span>
             </button>
           </div>
 

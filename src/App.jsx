@@ -39,9 +39,9 @@ export default function App() {
   const [campaign, setCampaign] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      return params.get('campaign') || localStorage.getItem('ashley_campaign') || 'black_friday';
+      return params.get('campaign') || 'all';
     }
-    return 'black_friday';
+    return 'all';
   });
 
   useEffect(() => {
@@ -415,28 +415,8 @@ export default function App() {
     }).length;
   }, [data.models]);
 
-  // Categories visible in current campaign
-  const activeCategories = useMemo(() => {
-    if (campaign === 'black_friday') {
-      const bfCatIds = new Set(
-        (data.models || [])
-          .filter(m => (m.itemType || m.sku || '').toLowerCase().includes('بلاک فرایدەی'))
-          .map(m => m.categoryId)
-      );
-      const filtered = (data.categories || []).filter(c => bfCatIds.has(c.id));
-      return filtered.length > 0 ? filtered : (data.categories || []);
-    }
-    if (campaign === 'outlet') {
-      const outletCatIds = new Set(
-        (data.models || [])
-          .filter(m => !(m.itemType || m.sku || '').toLowerCase().includes('بلاک فرایدەی'))
-          .map(m => m.categoryId)
-      );
-      const filtered = (data.categories || []).filter(c => outletCatIds.has(c.id));
-      return filtered.length > 0 ? filtered : (data.categories || []);
-    }
-    return data.categories || [];
-  }, [data.categories, data.models, campaign]);
+  // All categories are always accessible and visible
+  const activeCategories = data.categories || [];
 
   // Filter & Sort Models for Grid View
   const filteredModels = useMemo(() => {
