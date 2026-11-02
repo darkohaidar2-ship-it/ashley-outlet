@@ -199,6 +199,10 @@ export default function SlideshowView({
   }, [filteredModels.length, currentIndex]);
 
   const activeModel = filteredModels[currentIndex] || filteredModels[0];
+  const isBF = Boolean(
+    (activeModel?.itemType || activeModel?.sku || '').toLowerCase().includes('بلاک فرایدەی') ||
+    (activeModel?.itemType || activeModel?.sku || '').toLowerCase().includes('black friday')
+  );
 
   // Dynamic timing controls (under Admin settings control)
   const stage1Time = Math.max(0.5, parseFloat(settings?.stage1Time) || 3.0);
@@ -696,8 +700,8 @@ export default function SlideshowView({
       {/* 2. FULLSCREEN HERO MODEL & BOTTOM INFO BAR (مۆدێلە گەورەکە بە ستایلی مۆرف) */}
       <main className={`flex-1 overflow-hidden flex flex-col relative transition-all ${
         isFullscreen || zenMode
-          ? 'bg-black border-0 rounded-none' 
-          : 'bg-white border border-slate-200 rounded-2xl shadow-xs'
+          ? (isBF ? 'bg-[#09090c] border-0 rounded-none' : 'bg-black border-0 rounded-none')
+          : (isBF ? 'bg-gradient-to-b from-[#16161d] to-[#0c0c10] border-2 border-orange-500/40 rounded-2xl shadow-2xl ring-1 ring-amber-400/20' : 'bg-white border border-slate-200 rounded-2xl shadow-xs')
       }`}>
         
         {/* Autoplay progress: fills over the time this slide stays on screen */}
@@ -705,7 +709,7 @@ export default function SlideshowView({
           <div className="absolute top-0 inset-x-0 h-1 z-30 bg-slate-900/5 overflow-hidden pointer-events-none">
             <div
               key={`${currentIndex}-${dwellTime}`}
-              className="h-full bg-blue-600 origin-left rtl:origin-right"
+              className={`h-full ${isBF ? 'bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-400' : 'bg-blue-600'} origin-left rtl:origin-right`}
               style={{ animation: `slideProgress ${dwellTime}s linear forwards` }}
             />
           </div>
@@ -733,7 +737,7 @@ export default function SlideshowView({
                   className="flex items-center gap-2.5 px-4 py-2 bg-black/85 hover:bg-black text-white rounded-2xl backdrop-blur-xl border border-white/25 shadow-2xl transition-all hover:scale-105 active:scale-95 cursor-pointer group"
                   title="کرتە بکە بۆ کردنەوەی قفڵ و گەڕانەوە بۆ دۆخی ئاسایی"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+                  <div className={`w-8 h-8 rounded-xl ${isBF ? 'bg-orange-500 text-black' : 'bg-blue-600 text-white'} flex items-center justify-center shadow-md group-hover:scale-105 transition-transform`}>
                     <Lock className="w-4 h-4" />
                   </div>
                   <div className="text-start">
@@ -741,8 +745,8 @@ export default function SlideshowView({
                       <span>کردنەوەی قفڵ</span>
                       <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/20 px-1.5 py-0.2 rounded">دۆخی ئاسایی</span>
                     </div>
-                    <div className="text-[11px] text-amber-300 font-bold leading-tight mt-0.5">
-                      outlet کۆتا دانە
+                    <div className={`text-[11px] font-bold leading-tight mt-0.5 ${isBF ? 'text-orange-400' : 'text-amber-300'}`}>
+                      {isBF ? '🔥 VIP BLACK FRIDAY' : 'outlet کۆتا دانە'}
                     </div>
                   </div>
                 </button>
@@ -762,47 +766,63 @@ export default function SlideshowView({
                     resetControlsVisibility();
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl shadow-md text-xs font-bold transition-all backdrop-blur-md active:scale-95 cursor-pointer ${
-                    isFullscreen
+                    isBF
+                      ? 'bg-neutral-950/90 hover:bg-neutral-900 text-white border border-orange-500/40 ring-1 ring-amber-400/30'
+                      : isFullscreen
                       ? 'bg-slate-900/90 hover:bg-slate-800 text-white border border-white/20'
                       : 'bg-white/95 hover:bg-white text-slate-800 border border-slate-200/90'
                   }`}
                   title="فلتەر و لیستی مۆدێلەکان"
                 >
-                  <Filter className="w-3.5 h-3.5 text-blue-600" />
+                  <Filter className={`w-3.5 h-3.5 ${isBF ? 'text-orange-400' : 'text-blue-600'}`} />
                   <span>فلتەر و مۆدێلەکان</span>
                   {filteredModels.length > 0 && (
-                    <span className="bg-blue-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full">
+                    <span className={`${isBF ? 'bg-orange-500 text-black' : 'bg-blue-600 text-white'} text-[10px] font-black px-1.5 py-0.2 rounded-full`}>
                       {currentIndex + 1} / {filteredModels.length}
                     </span>
                   )}
                 </button>
 
                 {/* Corner Ashley Logo Badge */}
-                <div className={`hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl shadow-xs backdrop-blur-md ${
-                  isFullscreen
-                    ? 'bg-slate-900/80 border border-white/10 text-white'
-                    : 'bg-white/90 border border-slate-200/80 text-slate-900'
-                }`}>
-                  {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      alt="Ashley Outlet"
-                      className="h-5 max-w-[100px] object-contain rounded"
-                    />
-                  ) : (
-                    <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0">
-                      A
+                {isBF ? (
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-lg backdrop-blur-xl bg-neutral-950/90 border border-orange-500/50 ring-1 ring-amber-400/40 text-white">
+                    <span className="text-xs">👑</span>
+                    <div className="flex items-center gap-1.5 leading-none">
+                      <span className="font-extrabold text-xs tracking-tight text-white">
+                        ASHLEY
+                      </span>
+                      <span className="animate-gold-shimmer text-black text-[9px] font-black px-1.5 py-0.2 rounded-xs uppercase tracking-wider">
+                        VIP BLACK FRIDAY
+                      </span>
                     </div>
-                  )}
-                  <div className="flex items-center gap-1 leading-none">
-                    <span className="font-extrabold text-xs tracking-tight">
-                      ASHLEY
-                    </span>
-                    <span className="bg-blue-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
-                      OUTLET
-                    </span>
                   </div>
-                </div>
+                ) : (
+                  <div className={`hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-xl shadow-xs backdrop-blur-md ${
+                    isFullscreen
+                      ? 'bg-slate-900/80 border border-white/10 text-white'
+                      : 'bg-white/90 border border-slate-200/80 text-slate-900'
+                  }`}>
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt="Ashley Outlet"
+                        className="h-5 max-w-[100px] object-contain rounded"
+                      />
+                    ) : (
+                      <div className="w-5 h-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0">
+                        A
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 leading-none">
+                      <span className="font-extrabold text-xs tracking-tight">
+                        ASHLEY
+                      </span>
+                      <span className="bg-blue-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
+                        OUTLET
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Controls: Play / Fullscreen / Print + "More" menu */}
@@ -955,7 +975,7 @@ export default function SlideshowView({
               {/* Frosted Glass Frame with Dynamic CSS Variables */}
               <div 
                 className={`w-full h-full flex items-center justify-center relative overflow-hidden ${
-                  zenMode ? 'p-0 bg-transparent border-0' : 'glass-image-frame p-1.5 sm:p-3'
+                  zenMode ? 'p-0 bg-transparent border-0' : (isBF ? 'vip-bf-frame p-1.5 sm:p-3' : 'glass-image-frame p-1.5 sm:p-3')
                 }`}
                 style={{
                   '--morph-duration': `${transitionTime}s`,
@@ -971,6 +991,11 @@ export default function SlideshowView({
                   className="glass-shimmer-sweep" 
                   style={{ animationDuration: `${shimmerTime}s` }}
                 />
+
+                {/* Black Friday Warm Backlight Ambient Glow */}
+                {isBF && (
+                  <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/20 via-amber-500/10 to-transparent blur-3xl pointer-events-none -z-0" />
+                )}
 
                 {/* Luxury Ambient Glow in Zen Mode & Fullscreen (GPU-optimized for butter smooth 60fps) */}
                 {(zenMode || isFullscreen) && activeModel?.image && (
@@ -1099,16 +1124,29 @@ export default function SlideshowView({
 
             {/* Minimal Floating Corner Tag in Locked Zen Mode */}
             {zenMode ? (
-              <div className="absolute bottom-4 start-4 z-30 bg-black/85 backdrop-blur-xl border border-white/20 px-4 py-3 rounded-2xl shadow-2xl text-white select-none pointer-events-none animate-fadeIn max-w-sm sm:max-w-xl">
+              <div className={`absolute bottom-4 start-4 z-30 backdrop-blur-xl px-4 py-3 rounded-2xl shadow-2xl text-white select-none pointer-events-none animate-fadeIn max-w-sm sm:max-w-xl ${
+                isBF 
+                  ? 'bg-gradient-to-br from-[#121217] via-[#0d0d10] to-black border-2 border-orange-500/50 ring-1 ring-amber-400/40' 
+                  : 'bg-black/85 border border-white/20'
+              }`}>
                 <div className="flex items-start justify-between gap-3.5">
                   <div>
-                    {/* Outlet Last Piece / Stock Badge & Large Discount Badge */}
+                    {/* Outlet Last Piece / Black Friday VIP Badge */}
                     <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-600 text-white text-[10px] font-black uppercase tracking-wide shadow-xs">
-                        <span>ASHLEY OUTLET</span>
-                        <span>•</span>
-                        <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
-                      </div>
+                      {isBF ? (
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg animate-gold-shimmer text-black text-[10px] font-black uppercase tracking-wide shadow-md border border-amber-300/50">
+                          <span>👑</span>
+                          <span>VIP BLACK FRIDAY</span>
+                          <span>•</span>
+                          <span>ASHLEY</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-blue-600 text-white text-[10px] font-black uppercase tracking-wide shadow-xs">
+                          <span>ASHLEY OUTLET</span>
+                          <span>•</span>
+                          <span className="text-amber-200 font-black">outlet کۆتا دانە</span>
+                        </div>
+                      )}
 
                       {discountPercent > 0 && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-900 text-xs sm:text-sm font-black shadow-md border border-white/20">
@@ -1121,14 +1159,14 @@ export default function SlideshowView({
                     <h3 className="font-extrabold text-sm sm:text-base text-white leading-tight">{activeModel.name}</h3>
                     
                     <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-300 flex-wrap">
-                      <span className="text-blue-400 font-bold">{getCategoryName(activeModel.categoryId)}</span>
+                      <span className={`font-bold ${isBF ? 'text-orange-400' : 'text-blue-400'}`}>{getCategoryName(activeModel.categoryId)}</span>
                       {activeModel.stock > 0 && (
                         <>
                           <span>•</span>
                           <span className="text-amber-300 font-bold">عدد: {activeModel.stock}</span>
                         </>
                       )}
-                      {activeModel.itemType && (
+                      {activeModel.itemType && !isBF && (
                         <>
                           <span>•</span>
                           <span 
@@ -1155,9 +1193,11 @@ export default function SlideshowView({
                         )}
                       </div>
                     )}
-                    <div className={`text-lg sm:text-2xl font-black leading-none font-mono ${hasDiscountPrice ? 'text-emerald-400' : 'text-white'}`}>
+                    <div className={`text-lg sm:text-2xl font-black leading-none font-mono ${
+                      isBF ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400' : (hasDiscountPrice ? 'text-emerald-400' : 'text-white')
+                    }`}>
                       {mainPrice > 0 ? mainPrice.toLocaleString() : '—'}{' '}
-                      {mainPrice > 0 && <span className="text-xs font-bold text-white/80">{t.currency}</span>}
+                      {mainPrice > 0 && <span className={`text-xs font-bold ${isBF ? 'text-amber-400' : 'text-white/80'}`}>{t.currency}</span>}
                     </div>
                   </div>
                 </div>
@@ -1166,8 +1206,8 @@ export default function SlideshowView({
                 {activeModel.notes && (
                   <div className="mt-2.5 pt-2 border-t border-white/15">
                     <div className="flex items-start gap-1.5 text-[11px] sm:text-xs leading-relaxed text-slate-200">
-                      <span className="text-amber-400 font-black shrink-0 flex items-center gap-1">
-                        <FileText className="w-3 h-3 text-amber-400" />
+                      <span className={`${isBF ? 'text-orange-400' : 'text-amber-400'} font-black shrink-0 flex items-center gap-1`}>
+                        <FileText className="w-3 h-3" />
                         <span>{t.notes || 'تێبینی'}:</span>
                       </span>
                       <p className="font-medium whitespace-pre-line text-slate-100/95 leading-relaxed">
@@ -1183,7 +1223,9 @@ export default function SlideshowView({
                 key={activeModel.id}
                 style={{ animationDuration: `${transitionTime}s` }}
                 className={`animate-morph-content p-3 sm:p-3.5 border-t backdrop-blur-xl shadow-lg shrink-0 transition-all duration-500 ${
-                  isFullscreen 
+                  isBF
+                    ? 'bg-gradient-to-r from-neutral-950 via-[#141318] to-black border-orange-500/50 text-white ring-1 ring-amber-400/20'
+                    : isFullscreen 
                     ? 'bg-slate-900/90 border-white/10 text-white' 
                     : 'bg-white/95 border-slate-200 text-slate-900'
                 }`}
@@ -1193,24 +1235,33 @@ export default function SlideshowView({
                 {/* Left: Category, Title, Stock, Notes */}
                 <div className="flex-1 min-w-0">
                   
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-blue-500 uppercase mb-0.5">
+                  <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase mb-0.5 ${
+                    isBF ? 'text-orange-400' : 'text-blue-500'
+                  }`}>
                     <span>{getCategoryName(activeModel.categoryId)}</span>
                     {getCollectionName(activeModel.collectionId) && (
                       <>
                         <span className="text-slate-400">•</span>
-                        <span className={isFullscreen ? 'text-slate-300' : 'text-slate-700'}>{getCollectionName(activeModel.collectionId)}</span>
+                        <span className={isFullscreen || isBF ? 'text-slate-300' : 'text-slate-700'}>{getCollectionName(activeModel.collectionId)}</span>
                       </>
                     )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className={`text-base sm:text-lg font-black leading-tight ${
-                      isFullscreen ? 'text-white' : 'text-slate-900'
+                      isFullscreen || isBF ? 'text-white' : 'text-slate-900'
                     }`}>
                       {activeModel.name}
                     </h2>
 
-                    {discountPercent > 0 && (
+                    {isBF && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full animate-gold-shimmer text-black text-[10px] font-black shadow-md border border-amber-300/60 uppercase tracking-wider">
+                        <span>👑</span>
+                        <span>VIP BLACK FRIDAY</span>
+                      </span>
+                    )}
+
+                    {!isBF && discountPercent > 0 && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-400 text-slate-900 text-xs sm:text-sm font-black shadow-md border border-blue-500/30">
                         <span>{discountPercent}%</span>
                         <span className="text-[10px] sm:text-xs font-bold uppercase">{t.saveDiscount || 'داشکاندن'}</span>
@@ -1218,7 +1269,7 @@ export default function SlideshowView({
                     )}
 
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 ${
-                      isOutOfStock ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-800'
+                      isOutOfStock ? 'bg-rose-100 text-rose-700' : (isBF ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-emerald-100 text-emerald-800')
                     }`}>
                       {isOutOfStock ? (
                         <>
@@ -1233,7 +1284,7 @@ export default function SlideshowView({
                       )}
                     </span>
 
-                    {activeModel.itemType && (
+                    {activeModel.itemType && !isBF && (
                       <span 
                         className="text-[10.5px] font-black px-2.5 py-0.5 rounded-md flex items-center gap-1 shadow-xs"
                         style={getStatusBadgeStyle(activeModel.itemType, statusColors)}
@@ -1246,12 +1297,14 @@ export default function SlideshowView({
                   {/* Notes & Dimensions (Detailed and clear without truncation) */}
                   {activeModel.notes && (
                     <div className={`mt-2 flex items-start gap-2 p-2 rounded-xl text-xs max-w-4xl border transition-colors ${
-                      isFullscreen 
+                      isBF
+                        ? 'bg-neutral-900/90 border-orange-500/30 text-neutral-200 shadow-sm'
+                        : isFullscreen 
                         ? 'bg-white/10 border-white/15 text-slate-100 shadow-sm' 
                         : 'bg-slate-50 border-slate-200/90 text-slate-800'
                     }`}>
                       <span className={`font-black shrink-0 text-[11px] sm:text-xs flex items-center gap-1 ${
-                        isFullscreen ? 'text-amber-400' : 'text-blue-600'
+                        isBF ? 'text-orange-400' : (isFullscreen ? 'text-amber-400' : 'text-blue-600')
                       }`}>
                         <FileText className="w-3.5 h-3.5 shrink-0" />
                         <span>{t.notes || 'تێبینی'}:</span>
@@ -1266,13 +1319,13 @@ export default function SlideshowView({
 
                 {/* Right: Pricing Box in Iraqi Dinar (د.ع) */}
                 <div className={`flex items-baseline sm:items-end justify-between sm:justify-center border-t sm:border-t-0 sm:border-s pt-2 sm:pt-0 sm:ps-5 shrink-0 ${
-                  isFullscreen ? 'border-white/10' : 'border-slate-200'
+                  isBF ? 'border-orange-500/30' : (isFullscreen ? 'border-white/10' : 'border-slate-200')
                 }`}>
                   
                   <div className="flex sm:flex-col items-baseline sm:items-end gap-2 sm:gap-1">
                     {hasDiscountPrice && (
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-xs sm:text-sm font-bold font-mono line-through decoration-rose-500 ${isFullscreen ? 'text-white/60' : 'text-slate-400'}`}>
+                        <span className={`text-xs sm:text-sm font-bold font-mono line-through decoration-rose-500 ${isFullscreen || isBF ? 'text-white/60' : 'text-slate-400'}`}>
                           {priceOriginal.toLocaleString()} {t.currency}
                         </span>
                         {discountPercent > 0 && (
@@ -1283,10 +1336,12 @@ export default function SlideshowView({
                       </div>
                     )}
                     <div className={`text-2xl sm:text-3xl font-black leading-none flex items-baseline gap-1 font-mono ${
-                      hasDiscountPrice ? (isFullscreen ? 'text-emerald-400' : 'text-emerald-600') : (isFullscreen ? 'text-white' : 'text-slate-900')
+                      isBF
+                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400'
+                        : hasDiscountPrice ? (isFullscreen ? 'text-emerald-400' : 'text-emerald-600') : (isFullscreen ? 'text-white' : 'text-slate-900')
                     }`}>
                       <span>{mainPrice > 0 ? mainPrice.toLocaleString() : '—'}</span>
-                      {mainPrice > 0 && <span className="text-xs font-bold opacity-70">{t.currency}</span>}
+                      {mainPrice > 0 && <span className={`text-xs font-bold ${isBF ? 'text-amber-400' : 'opacity-70'}`}>{t.currency}</span>}
                     </div>
                   </div>
 

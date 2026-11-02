@@ -50,7 +50,7 @@ export default function ProductCard({
       onTouchStart={handlePreloadHero}
       className={`group relative flex flex-col rounded-3xl p-2 transition-all duration-300 ${
         isBF
-          ? 'bg-[#141419] border-2 border-orange-500/30 hover:border-orange-500/80 shadow-[0_4px_20px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_45px_-12px_rgba(255,107,0,0.35)] text-white'
+          ? 'bg-gradient-to-b from-[#191922] via-[#14141b] to-[#0c0c10] border-2 border-orange-500/40 hover:border-amber-400 shadow-[0_8px_30px_rgba(0,0,0,0.6)] hover:shadow-[0_20px_50px_-10px_rgba(255,107,0,0.45)] text-white ring-1 ring-amber-400/20'
           : 'bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-blue-200 hover:shadow-[0_20px_40px_-20px_rgba(37,99,235,0.35)] text-slate-900'
       }`}
     >
@@ -59,7 +59,7 @@ export default function ProductCard({
       <div
         onClick={() => onOpenDetails(model)}
         className={`relative aspect-square w-full rounded-[20px] overflow-hidden cursor-pointer flex items-center justify-center ${
-          isBF ? 'bg-black/60 border border-orange-500/20' : 'bg-slate-100'
+          isBF ? 'bg-black/80 border border-orange-500/20' : 'bg-slate-100'
         }`}
       >
         {model.image ? (
@@ -85,12 +85,18 @@ export default function ProductCard({
           </div>
         )}
 
-        {/* Black Friday badge */}
+        {/* Black Friday VIP Animated Gold Shimmer Badge */}
         {isBF && (
-          <div className="absolute top-2.5 start-2.5 bg-gradient-to-r from-orange-600 to-amber-500 text-black font-black text-[10px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1 uppercase tracking-wider">
-            <span>🔥</span>
-            <span>BLACK FRIDAY</span>
-          </div>
+          <>
+            <div className="absolute top-2.5 start-2.5 flex items-center gap-1.5 px-3 py-1 rounded-full shadow-lg border border-amber-300/60 animate-gold-shimmer text-black font-black text-[10px] tracking-wider uppercase">
+              <span className="text-xs">👑</span>
+              <span className="font-black tracking-wider text-[9px] drop-shadow-2xs">VIP BLACK FRIDAY</span>
+            </div>
+            <div className="absolute top-2.5 end-2.5 bg-neutral-950/85 backdrop-blur-md border border-orange-500/50 text-orange-400 px-2 py-0.5 rounded-full text-[9px] font-black flex items-center gap-1 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-ping" />
+              <span>VIP 2026</span>
+            </div>
+          </>
         )}
 
         {/* Discount badge */}
@@ -171,20 +177,25 @@ export default function ProductCard({
                     {Number(model.originalPrice).toLocaleString()} {t.currency}
                   </span>
                 </div>
-                <div className={`text-lg font-black leading-none flex items-baseline gap-1 tracking-tight font-mono ${
-                  isBF ? 'text-orange-400' : 'text-emerald-600'
+                <div className={`text-lg sm:text-xl font-black leading-none flex items-baseline gap-1 tracking-tight font-mono ${
+                  isBF ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400' : 'text-emerald-600'
                 }`}>
                   <span>{Number(model.salePrice).toLocaleString()}</span>
-                  <span className="text-[10px] font-bold opacity-80">{t.currency}</span>
+                  <span className={`text-[10px] font-bold ${isBF ? 'text-amber-400' : 'opacity-80'}`}>{t.currency}</span>
                 </div>
               </>
             ) : (
               <div>
-                <div className={`text-[10px] font-medium mb-0.5 ${isBF ? 'text-orange-400/80 font-bold' : 'text-slate-400'}`}>
-                  {isBF ? 'نرخی بلاک فرایدەی' : (t.price || 'نرخ')}
+                <div className={`text-[10px] font-medium mb-0.5 ${isBF ? 'text-orange-400 font-bold flex items-center gap-1' : 'text-slate-400'}`}>
+                  {isBF ? (
+                    <>
+                      <span>👑</span>
+                      <span>نرخی VIP</span>
+                    </>
+                  ) : (t.price || 'نرخ')}
                 </div>
-                <div className={`text-lg font-black leading-none flex items-baseline gap-1 tracking-tight font-mono ${
-                  isBF ? 'text-orange-400' : 'text-slate-900'
+                <div className={`text-lg sm:text-xl font-black leading-none flex items-baseline gap-1 tracking-tight font-mono ${
+                  isBF ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400' : 'text-slate-900'
                 }`}>
                   <span>
                     {model.originalPrice && Number(model.originalPrice) > 0
@@ -192,7 +203,7 @@ export default function ProductCard({
                       : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '—')}
                   </span>
                   {(Number(model.originalPrice) > 0 || Number(model.salePrice) > 0) && (
-                    <span className={`text-[10px] font-bold ${isBF ? 'text-orange-400/80' : 'text-slate-500'}`}>{t.currency}</span>
+                    <span className={`text-[10px] font-bold ${isBF ? 'text-amber-400' : 'text-slate-500'}`}>{t.currency}</span>
                   )}
                 </div>
               </div>

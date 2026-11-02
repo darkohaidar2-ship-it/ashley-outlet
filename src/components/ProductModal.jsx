@@ -69,6 +69,11 @@ export default function ProductModal({
 
   if (!model) return null;
 
+  const isBF = Boolean(
+    (model?.itemType || model?.sku || '').toLowerCase().includes('بلاک فرایدەی') ||
+    (model?.itemType || model?.sku || '').toLowerCase().includes('black friday')
+  );
+
   const handleCopyLink = async () => {
     const url = `${window.location.origin}/?model=${model.id}`;
     try {
@@ -102,18 +107,29 @@ export default function ProductModal({
   const isOutOfStock = !model.stock || model.stock <= 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-5 bg-black/70 backdrop-blur-sm animate-fadeIn no-print">
-      <div className="bg-white w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex flex-col md:flex-row max-h-[94vh] sm:max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-5 bg-black/75 backdrop-blur-sm animate-fadeIn no-print">
+      <div className={`w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row max-h-[94vh] sm:max-h-[92vh] ${
+        isBF 
+          ? 'bg-[#121217] border-2 border-orange-500/50 ring-1 ring-amber-400/30 text-white shadow-orange-950/40' 
+          : 'bg-white border border-slate-200'
+      }`}>
         
         {/* Left Side: Large Uncropped Image with Ambient Glow & Full View Capability */}
-        <div className="relative md:w-7/12 lg:w-3/5 bg-slate-900/5 min-h-[300px] sm:min-h-[420px] md:min-h-[580px] flex items-center justify-center overflow-hidden p-3 sm:p-5 group">
+        <div className={`relative md:w-7/12 lg:w-3/5 min-h-[300px] sm:min-h-[420px] md:min-h-[580px] flex items-center justify-center overflow-hidden p-3 sm:p-5 group ${
+          isBF ? 'bg-black/90' : 'bg-slate-900/5'
+        }`}>
           {model.image ? (
             <>
               {/* Soft luxury ambient background glow */}
               <div 
-                className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-20 scale-125 pointer-events-none -z-0"
+                className={`absolute inset-0 bg-cover bg-center filter blur-3xl scale-125 pointer-events-none -z-0 ${
+                  isBF ? 'opacity-30' : 'opacity-20'
+                }`}
                 style={{ backgroundImage: `url(${cachedThumbSrc || thumbUrl})` }}
               />
+              {isBF && (
+                <div className="absolute inset-0 bg-gradient-to-tr from-orange-600/20 via-amber-500/10 to-transparent blur-2xl pointer-events-none -z-0" />
+              )}
 
               <div 
                 className="max-h-[50vh] sm:max-h-[60vh] md:max-h-[78vh] w-full h-full flex items-center justify-center z-10 cursor-zoom-in drop-shadow-md select-none"
@@ -200,46 +216,64 @@ export default function ProductModal({
         </div>
 
         {/* Right Side: Details */}
-        <div className="md:w-5/12 lg:w-2/5 p-6 sm:p-7 flex flex-col justify-between overflow-y-auto bg-white">
+        <div className={`md:w-5/12 lg:w-2/5 p-6 sm:p-7 flex flex-col justify-between overflow-y-auto ${
+          isBF ? 'bg-[#121217] text-white' : 'bg-white text-slate-900'
+        }`}>
           <div>
             <div className="flex items-center justify-between mb-3">
               {/* Ashley Brand Header */}
               <div className="flex items-center gap-2">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo" className="h-6 max-w-[100px] object-contain rounded" />
-                ) : (
-                  <div className="w-6 h-6 bg-red-600 rounded-md flex items-center justify-center text-white font-black text-xs">
-                    A
+                {isBF ? (
+                  <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-black border border-orange-500/50">
+                    <span className="text-xs">👑</span>
+                    <span className="font-extrabold text-xs tracking-tight text-white">ASHLEY</span>
+                    <span className="animate-gold-shimmer text-black text-[9px] font-black px-1.5 py-0.2 rounded uppercase tracking-wider">
+                      VIP BLACK FRIDAY
+                    </span>
                   </div>
+                ) : (
+                  <>
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="h-6 max-w-[100px] object-contain rounded" />
+                    ) : (
+                      <div className="w-6 h-6 bg-red-600 rounded-md flex items-center justify-center text-white font-black text-xs">
+                        A
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <span className="font-extrabold text-xs tracking-tight text-slate-900">
+                        ASHLEY
+                      </span>
+                      <span className="bg-red-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
+                        OUTLET
+                      </span>
+                    </div>
+                  </>
                 )}
-                <div className="flex items-center gap-1">
-                  <span className="font-extrabold text-xs tracking-tight text-slate-900">
-                    ASHLEY
-                  </span>
-                  <span className="bg-red-600 text-white text-[8px] font-bold px-1 py-0.2 rounded-xs uppercase">
-                    OUTLET
-                  </span>
-                </div>
               </div>
 
               <button
                 onClick={onClose}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors"
+                className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                  isBF ? 'text-neutral-400 hover:text-white hover:bg-neutral-800' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                }`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 mb-2 flex-wrap">
-              <span>{categoryName}</span>
+            <div className={`flex items-center gap-1.5 text-xs font-semibold mb-2 flex-wrap ${
+              isBF ? 'text-neutral-400' : 'text-slate-400'
+            }`}>
+              <span className={isBF ? 'text-orange-400 font-bold' : ''}>{categoryName}</span>
               {collectionName && (
                 <>
-                  <span>•</span>
-                  <span className="text-red-600 font-bold">{collectionName}</span>
+                  <span className={isBF ? 'text-neutral-600' : 'text-slate-300'}>•</span>
+                  <span className={isBF ? 'text-amber-400 font-bold' : 'text-red-600 font-bold'}>{collectionName}</span>
                 </>
               )}
-              {model.itemType && (
+              {model.itemType && !isBF && (
                 <>
                   <span>•</span>
                   <span 
@@ -253,18 +287,26 @@ export default function ProductModal({
             </div>
 
             {/* Model Name */}
-            <h2 className="text-xl font-bold text-slate-900 leading-snug">
+            <h2 className={`text-xl font-bold leading-snug ${
+              isBF ? 'text-white' : 'text-slate-900'
+            }`}>
               {model.name}
             </h2>
 
             {/* Price Box */}
-            <div className="mt-5 p-4 rounded-2xl bg-slate-50 border border-slate-200/90 shadow-2xs">
+            <div className={`mt-5 p-4 rounded-2xl shadow-2xs ${
+              isBF 
+                ? 'bg-gradient-to-r from-[#171722] via-[#121218] to-[#0c0c10] border-2 border-orange-500/60 text-white shadow-lg' 
+                : 'bg-slate-50 border border-slate-200/90'
+            }`}>
               {hasDiscount ? (
                 <>
-                  {/* 1. Old Price: Small in Red with Strikethrough */}
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-900 mb-1">
-                    <span className="text-[11px] text-slate-400 font-medium">کۆن:</span>
-                    <span className="font-mono font-bold text-rose-600 line-through decoration-rose-500">
+                  {/* 1. Old Price */}
+                  <div className={`flex items-center gap-2 text-xs font-bold mb-1 ${
+                    isBF ? 'text-neutral-300' : 'text-slate-900'
+                  }`}>
+                    <span className={`text-[11px] font-medium ${isBF ? 'text-neutral-400' : 'text-slate-400'}`}>کۆن:</span>
+                    <span className="font-mono font-bold text-rose-500 line-through decoration-rose-500">
                       {Number(model.originalPrice).toLocaleString()} {t.currency}
                     </span>
                     {discountPercent > 0 && (
@@ -274,30 +316,40 @@ export default function ProductModal({
                     )}
                   </div>
 
-                  {/* 2. New Sale Price: Large Modern Emerald Green */}
-                  <div className="flex items-baseline gap-2 text-emerald-600">
-                    <span className="text-xs text-emerald-700 font-bold uppercase tracking-wider">
-                      {t.outletPrice || 'نرخی نوێ'}:
+                  {/* 2. New Sale Price */}
+                  <div className="flex items-baseline gap-2">
+                    <span className={`text-xs font-bold uppercase tracking-wider ${
+                      isBF ? 'text-orange-400' : 'text-emerald-700'
+                    }`}>
+                      {isBF ? 'نرخی VIP:' : (t.outletPrice || 'نرخی نوێ:')}
                     </span>
-                    <span className="text-2xl sm:text-3xl font-black text-emerald-600 font-mono tracking-tight">
+                    <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                      isBF 
+                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400' 
+                        : 'text-emerald-600'
+                    }`}>
                       {Number(model.salePrice).toLocaleString()}
                     </span>
-                    <span className="text-sm font-bold text-emerald-700">{t.currency}</span>
+                    <span className={`text-sm font-bold ${isBF ? 'text-amber-400' : 'text-emerald-700'}`}>{t.currency}</span>
                   </div>
                 </>
               ) : (
-                /* Single Active Price: Large & Clean, Never "0 $" */
+                /* Single Active Price */
                 <div>
-                  <div className="text-[11px] text-slate-400 font-medium mb-1">
-                    {t.price || 'نرخ'}:
+                  <div className={`text-[11px] font-medium mb-1 ${isBF ? 'text-orange-400 font-bold' : 'text-slate-400'}`}>
+                    {isBF ? '👑 نرخی تایبەتی VIP:' : (t.price || 'نرخ:')}
                   </div>
-                  <div className="flex items-baseline gap-1.5 text-slate-900">
-                    <span className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                      isBF 
+                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400' 
+                        : 'text-slate-900'
+                    }`}>
                       {model.originalPrice && Number(model.originalPrice) > 0 
                         ? Number(model.originalPrice).toLocaleString() 
                         : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0')}
                     </span>
-                    <span className="text-sm font-bold text-slate-500">{t.currency}</span>
+                    <span className={`text-sm font-bold ${isBF ? 'text-amber-400' : 'text-slate-500'}`}>{t.currency}</span>
                   </div>
                 </div>
               )}
@@ -306,11 +358,11 @@ export default function ProductModal({
             {/* Stock Count & Item Status */}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 font-medium">{t.stock}:</span>
+                <span className={`text-xs font-medium ${isBF ? 'text-neutral-400' : 'text-slate-500'}`}>{t.stock}:</span>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${
                   isOutOfStock
-                    ? 'bg-rose-100 text-rose-700'
-                    : 'bg-emerald-100 text-emerald-800'
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    : (isBF ? 'bg-orange-500/20 text-orange-400 border border-orange-500/40' : 'bg-emerald-100 text-emerald-800')
                 }`}>
                   {isOutOfStock ? (
                     <>
@@ -326,7 +378,7 @@ export default function ProductModal({
                 </span>
               </div>
 
-              {model.itemType && (
+              {model.itemType && !isBF && (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-slate-500 font-medium">{t.itemStatus || 'دۆخی کاڵا'}:</span>
                   <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
@@ -347,11 +399,15 @@ export default function ProductModal({
             {/* Notes & Dimensions */}
             {model.notes && (
               <div className="mt-4">
-                <div className="text-xs font-semibold text-slate-500 mb-1 flex items-center gap-1">
+                <div className={`text-xs font-semibold mb-1 flex items-center gap-1 ${
+                  isBF ? 'text-orange-400' : 'text-slate-500'
+                }`}>
                   <FileText className="w-3.5 h-3.5" />
                   {t.notes}
                 </div>
-                <div className="p-3 bg-slate-50 rounded-xl text-xs sm:text-sm text-slate-700 leading-relaxed border border-slate-100 whitespace-pre-line">
+                <div className={`p-3 rounded-xl text-xs sm:text-sm leading-relaxed border whitespace-pre-line ${
+                  isBF ? 'bg-neutral-900/90 border-orange-500/30 text-neutral-200' : 'bg-slate-50 border-slate-100 text-slate-700'
+                }`}>
                   {model.notes}
                 </div>
               </div>
@@ -359,19 +415,27 @@ export default function ProductModal({
           </div>
 
           {/* Action Buttons: Print, Download Image & Share Link */}
-          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-2">
+          <div className={`mt-6 pt-4 border-t flex items-center gap-2 ${
+            isBF ? 'border-neutral-800' : 'border-slate-100'
+          }`}>
             <button
               onClick={() => onPrint(model)}
-              className="flex-1 py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-2xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer"
+              className={`flex-1 py-3 px-4 font-bold rounded-2xl flex items-center justify-center gap-2 shadow-md transition-all active:scale-98 cursor-pointer ${
+                isBF 
+                  ? 'bg-gradient-to-r from-orange-600 via-amber-500 to-yellow-500 text-black font-black hover:brightness-110 shadow-orange-950/40' 
+                  : 'bg-slate-900 hover:bg-slate-800 text-white'
+              }`}
               title="چاپکردن (PRINT)"
             >
-              <Printer className="w-5 h-5 text-red-500" />
+              <Printer className="w-5 h-5 text-black" />
               <span className="text-sm font-black tracking-wide">PRINT</span>
             </button>
             {model.image && (
               <button
                 onClick={() => downloadModelImage(model)}
-                className="p-3 bg-slate-100 hover:bg-slate-200 text-purple-600 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer"
+                className={`p-3 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer ${
+                  isBF ? 'bg-neutral-900 hover:bg-neutral-800 text-amber-400 border border-neutral-800' : 'bg-slate-100 hover:bg-slate-200 text-purple-600'
+                }`}
                 title="داگرتنی وێنەکە بە ناوی مۆدێل"
               >
                 <Download className="w-5 h-5" />
@@ -379,11 +443,13 @@ export default function ProductModal({
             )}
             <button
               onClick={handleCopyLink}
-              className="p-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer"
+              className={`p-3 rounded-2xl flex items-center justify-center transition-all active:scale-98 shadow-2xs cursor-pointer ${
+                isBF ? 'bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              }`}
               title="کۆپیکردنی بەستەری مۆدێل"
             >
               {copied ? (
-                <Check className="w-5 h-5 text-emerald-600" />
+                <Check className="w-5 h-5 text-emerald-500" />
               ) : (
                 <Share2 className="w-5 h-5" />
               )}
