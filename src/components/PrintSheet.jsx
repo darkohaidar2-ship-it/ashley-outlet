@@ -88,7 +88,7 @@ export default function PrintSheet({
       {shouldShowCover && (
         <div 
           className={`print-cover-page relative overflow-hidden flex flex-col justify-between ${
-            isBlackFridayAlbum ? 'bf-vip-cover bg-[#0c0c10] text-white' : 'bg-white'
+            isBlackFridayAlbum ? 'bf-vip-cover bg-white text-slate-900' : 'bg-white'
           }`} 
           style={{ 
             borderColor: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor, 
@@ -105,7 +105,7 @@ export default function PrintSheet({
           {/* Inner Decorative Book Framing with Theme Color */}
           <div 
             className={`flex-1 flex flex-col justify-between border-2 rounded-2xl p-6 sm:p-8 relative mt-2 ${
-              isBlackFridayAlbum ? 'bg-[#0e0e14] border-orange-500/50 text-white' : 'bg-white'
+              isBlackFridayAlbum ? 'bg-white border-orange-500 text-slate-900' : 'bg-white'
             }`} 
             style={{ borderColor: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor }}
           >
@@ -126,7 +126,7 @@ export default function PrintSheet({
               ) : (
                 <div 
                   className={`w-20 h-20 rounded-2xl flex items-center justify-center font-black text-4xl shadow-md mb-2 ${
-                    isBlackFridayAlbum ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-black' : 'text-white'
+                    isBlackFridayAlbum ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white' : 'text-white'
                   }`}
                   style={{ backgroundColor: isBlackFridayAlbum ? undefined : coverThemeColor }}
                 >
@@ -135,7 +135,7 @@ export default function PrintSheet({
               )}
               <div className="flex items-center gap-3 mt-1">
                 <span className="h-px w-10" style={{ backgroundColor: isBlackFridayAlbum ? '#d4af37' : coverThemeColor, opacity: 0.6 }} />
-                <span className="text-xs font-black tracking-widest uppercase" style={{ color: isBlackFridayAlbum ? '#d4af37' : coverThemeColor }}>
+                <span className="text-xs font-black tracking-widest uppercase" style={{ color: isBlackFridayAlbum ? '#ea580c' : coverThemeColor }}>
                   {isBlackFridayAlbum ? '★ VIP BLACK FRIDAY EXCLUSIVE EDITION ★' : 'ESTABLISHED 1945 • HOMESTORE & OUTLET'}
                 </span>
                 <span className="h-px w-10" style={{ backgroundColor: isBlackFridayAlbum ? '#d4af37' : coverThemeColor, opacity: 0.6 }} />
@@ -147,7 +147,7 @@ export default function PrintSheet({
               
               <div 
                 className={`inline-block px-5 py-1.5 rounded-full text-xs font-black tracking-widest uppercase mb-4 border ${
-                  isBlackFridayAlbum ? 'bg-[#181822] text-[#ff6b00] border-[#d4af37]' : ''
+                  isBlackFridayAlbum ? 'bg-orange-50 text-orange-600 border-orange-400' : ''
                 }`} 
                 style={!isBlackFridayAlbum ? { 
                   color: coverThemeColor, 
@@ -160,7 +160,7 @@ export default function PrintSheet({
 
               {/* Huge Bold Title: ASHLEY / ئـاشـڵـی */}
               <h1 className={`text-7xl sm:text-8xl md:text-9xl font-black tracking-widest leading-none my-1 font-sans ${
-                isBlackFridayAlbum ? 'text-white drop-shadow-md' : 'text-slate-900'
+                isBlackFridayAlbum ? 'text-slate-950' : 'text-slate-900'
               }`}>
                 ASHLEY
               </h1>
@@ -170,7 +170,7 @@ export default function PrintSheet({
 
               {/* Status Badge: ستۆک / ئاوتلێت / بلاک فرایدەی VIP */}
               {isBlackFridayAlbum ? (
-                <div className="inline-flex items-center gap-4 px-10 py-3.5 rounded-2xl shadow-xl bg-gradient-to-r from-orange-600 via-amber-500 to-yellow-500 text-black font-black text-3xl sm:text-4xl tracking-widest uppercase mt-2 border-2 border-[#d4af37]">
+                <div className="inline-flex items-center gap-4 px-10 py-3.5 rounded-2xl shadow-md bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 text-white font-black text-3xl sm:text-4xl tracking-widest uppercase mt-2 border-2 border-orange-600">
                   <span>👑</span>
                   <span>VIP BLACK FRIDAY</span>
                   <span>🔥</span>
@@ -190,7 +190,7 @@ export default function PrintSheet({
               {primaryCategoryName && (
                 <div 
                   className={`mt-4 px-8 py-3 rounded-2xl border-2 font-black text-2xl sm:text-3xl tracking-wide flex items-center justify-center gap-3 shadow-xs ${
-                    isBlackFridayAlbum ? 'bg-[#151520] border-orange-500/60 text-white' : ''
+                    isBlackFridayAlbum ? 'bg-orange-50/80 border-orange-400 text-slate-900' : ''
                   }`}
                   style={!isBlackFridayAlbum ? {
                     color: primaryCategoryColor,
@@ -199,10 +199,10 @@ export default function PrintSheet({
                   } : undefined}
                 >
                   <span className="w-3 h-3 rounded-full" style={{ backgroundColor: isBlackFridayAlbum ? '#ff6b00' : primaryCategoryColor }} />
-                  <span style={{ color: isBlackFridayAlbum ? '#ff6b00' : undefined }}>{primaryCategoryName}</span>
+                  <span style={{ color: isBlackFridayAlbum ? '#ea580c' : undefined }}>{primaryCategoryName}</span>
                   {primaryCategoryEnglish && (
                     <span className={`text-base sm:text-lg font-bold font-sans tracking-widest uppercase ${
-                      isBlackFridayAlbum ? 'text-amber-400 opacity-90' : 'opacity-80'
+                      isBlackFridayAlbum ? 'text-orange-600 opacity-90' : 'opacity-80'
                     }`}>
                       ({primaryCategoryEnglish})
                     </span>
@@ -229,64 +229,64 @@ export default function PrintSheet({
                 {/* 1. Total Models Count (کۆی گشتی مۆدێلەکان) */}
                 <div 
                   className={`p-4 rounded-xl border-2 text-center shadow-2xs relative overflow-hidden ${
-                    isBlackFridayAlbum ? 'bg-[#14141d] border-orange-500/50 text-white' : 'bg-white'
+                    isBlackFridayAlbum ? 'bg-white border-orange-400 text-slate-900' : 'bg-white'
                   }`}
                   style={!isBlackFridayAlbum ? { borderColor: coverThemeColor } : undefined}
                 >
                   <div className="absolute top-0 inset-x-0 h-1.5" style={{ backgroundColor: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor }} />
-                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-neutral-300' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-slate-600' : 'text-slate-600'}`}>
                     کۆی گشتی مۆدێلەکان
                   </span>
                   <div className={`text-3xl sm:text-4xl font-black font-mono leading-tight my-1 ${
-                    isBlackFridayAlbum ? 'text-amber-400' : 'text-slate-900'
+                    isBlackFridayAlbum ? 'text-slate-950' : 'text-slate-900'
                   }`}>
                     {totalModelsCount}
                   </div>
-                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-neutral-400' : 'text-slate-500'}`}>مۆدێلی تۆمارکراو</span>
+                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-slate-500' : 'text-slate-500'}`}>مۆدێلی تۆمارکراو</span>
                 </div>
 
                 {/* 2. Total Stock Count (کۆی گشتی عدد) */}
                 <div 
                   className={`p-4 rounded-xl border-2 text-center shadow-2xs relative overflow-hidden ${
-                    isBlackFridayAlbum ? 'bg-[#14141d] border-orange-500/50 text-white' : 'bg-white'
+                    isBlackFridayAlbum ? 'bg-white border-orange-400 text-slate-900' : 'bg-white'
                   }`}
                   style={!isBlackFridayAlbum ? { borderColor: coverThemeColor } : undefined}
                 >
                   <div className="absolute top-0 inset-x-0 h-1.5" style={{ backgroundColor: isBlackFridayAlbum ? '#d4af37' : coverThemeColor }} />
-                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-neutral-300' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-slate-600' : 'text-slate-600'}`}>
                     کۆی گشتی عدد
                   </span>
-                  <div className={`text-3xl sm:text-4xl font-black font-mono leading-tight my-1`} style={{ color: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor }}>
+                  <div className={`text-3xl sm:text-4xl font-black font-mono leading-tight my-1`} style={{ color: isBlackFridayAlbum ? '#ea580c' : coverThemeColor }}>
                     {totalStockCount}
                   </div>
-                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-neutral-400' : 'text-slate-500'}`}>دانە لە کۆگادا</span>
+                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-slate-500' : 'text-slate-500'}`}>دانە لە کۆگادا</span>
                 </div>
 
                 {/* 3. Issue Date (بەروار) */}
                 <div 
                   className={`p-4 rounded-xl border-2 text-center shadow-2xs relative overflow-hidden ${
-                    isBlackFridayAlbum ? 'bg-[#14141d] border-orange-500/50 text-white' : 'bg-white'
+                    isBlackFridayAlbum ? 'bg-white border-orange-400 text-slate-900' : 'bg-white'
                   }`}
                   style={!isBlackFridayAlbum ? { borderColor: coverThemeColor } : undefined}
                 >
                   <div className="absolute top-0 inset-x-0 h-1.5" style={{ backgroundColor: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor }} />
-                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-neutral-300' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-bold uppercase block mb-1 ${isBlackFridayAlbum ? 'text-slate-600' : 'text-slate-600'}`}>
                     بەرواری چاپ / DATE
                   </span>
                   <div className={`text-lg sm:text-xl font-black font-mono leading-tight my-2 ${
-                    isBlackFridayAlbum ? 'text-amber-400' : 'text-slate-900'
+                    isBlackFridayAlbum ? 'text-slate-950' : 'text-slate-900'
                   }`}>
                     {currentDate}
                   </div>
-                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-neutral-400' : 'text-slate-500'}`}>چاپکراوی فەرمی</span>
+                  <span className={`text-[11px] font-semibold ${isBlackFridayAlbum ? 'text-slate-500' : 'text-slate-500'}`}>چاپکراوی فەرمی</span>
                 </div>
 
               </div>
 
               {/* Bottom Verification Seal & Footer */}
               <div className="pt-2 flex items-center justify-between text-xs font-bold">
-                <div className={`flex items-center gap-2 ${isBlackFridayAlbum ? 'text-neutral-300' : 'text-slate-700'}`}>
-                  <span style={{ color: isBlackFridayAlbum ? '#ff6b00' : coverThemeColor }}>
+                <div className={`flex items-center gap-2 ${isBlackFridayAlbum ? 'text-slate-700' : 'text-slate-700'}`}>
+                  <span style={{ color: isBlackFridayAlbum ? '#ea580c' : coverThemeColor }}>
                     {isBlackFridayAlbum ? 'ASHLEY HOMESTORE • BLACK FRIDAY VIP' : 'ASHLEY HOMESTORE OUTLET'}
                   </span>
                   <span className="text-slate-400">•</span>
@@ -339,7 +339,7 @@ export default function PrintSheet({
           <div 
             key={model.id} 
             className={`print-page relative overflow-hidden ${
-              isModelBF ? 'bf-vip-page bg-[#0c0c10] text-white' : 'bg-white'
+              isModelBF ? 'bf-vip-page bg-white text-slate-900' : 'bg-white'
             }`}
             style={{
               '--print-page-border': isModelBF ? '#ff6b00' : modelCatColor,
@@ -359,7 +359,7 @@ export default function PrintSheet({
 
             {/* 1. Header with Ashley Logo & 1 Single Clear Status Stamp */}
             <div className={`flex items-center justify-between border-b-2 pb-3 pt-1 ${
-              isModelBF ? 'border-orange-500/40' : 'border-slate-900'
+              isModelBF ? 'border-orange-400' : 'border-slate-900'
             }`}>
               <div className="flex items-center gap-3">
                 {logoUrl ? (
@@ -371,7 +371,7 @@ export default function PrintSheet({
                 ) : (
                   <div 
                     className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-2xl shadow-sm ${
-                      isModelBF ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-black' : 'text-white'
+                      isModelBF ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white' : 'text-white'
                     }`}
                     style={{ backgroundColor: isModelBF ? undefined : modelCatColor }}
                   >
@@ -382,7 +382,7 @@ export default function PrintSheet({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className={`font-extrabold text-2xl tracking-tight ${
-                      isModelBF ? 'text-white' : 'text-slate-900'
+                      isModelBF ? 'text-slate-950' : 'text-slate-900'
                     }`}>
                       ASHLEY
                     </span>
@@ -390,13 +390,13 @@ export default function PrintSheet({
                   <div className="flex items-center gap-1.5 text-xs font-medium tracking-wide">
                     {logoSubtitle && (
                       <span className={`font-mono font-black uppercase tracking-widest text-[10.5px] px-1.5 py-0.5 rounded border ${
-                        isModelBF ? 'bg-neutral-900 text-amber-400 border-orange-500/40' : 'text-slate-700 bg-slate-100 border-slate-200'
+                        isModelBF ? 'bg-orange-50 text-orange-700 border-orange-300' : 'text-slate-700 bg-slate-100 border-slate-200'
                       }`}>
                         {logoSubtitle}
                       </span>
                     )}
                     <span className={isModelBF ? 'text-orange-500' : 'text-slate-300'}>•</span>
-                    <span className={isModelBF ? 'text-amber-400 font-bold' : 'text-slate-500'}>
+                    <span className={isModelBF ? 'text-orange-700 font-bold' : 'text-slate-500'}>
                       {isModelBF ? 'HOMESTORE & OUTLET • VIP BLACK FRIDAY' : 'HOMESTORE & OUTLET'}
                     </span>
                   </div>
@@ -406,7 +406,7 @@ export default function PrintSheet({
               {/* Status Watermark Stamp & Date (تەنها لەم بەشە دۆخی کاڵا بە دیاری نیشان دەدرێت) */}
               <div className="flex items-center gap-3">
                 {isModelBF ? (
-                  <div className="px-4 py-1.5 rounded-xl border-2 border-[#d4af37] bg-black text-[#ff6b00] font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md">
+                  <div className="px-4 py-1.5 rounded-xl border-2 border-orange-500 bg-orange-50 text-orange-600 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs">
                     <span>👑</span>
                     <span>VIP BLACK FRIDAY</span>
                   </div>
@@ -424,11 +424,11 @@ export default function PrintSheet({
                   </div>
                 )}
 
-                <div className={`text-end ps-3 border-s ${isModelBF ? 'border-orange-500/30' : 'border-slate-200'}`}>
-                  <div className={`text-[10px] font-bold uppercase ${isModelBF ? 'text-neutral-400' : 'text-slate-400'}`}>
+                <div className={`text-end ps-3 border-s ${isModelBF ? 'border-orange-300' : 'border-slate-200'}`}>
+                  <div className={`text-[10px] font-bold uppercase ${isModelBF ? 'text-slate-400' : 'text-slate-400'}`}>
                     DATE / بەروار
                   </div>
-                  <div className={`text-xs font-bold font-mono ${isModelBF ? 'text-amber-400' : 'text-slate-800'}`}>
+                  <div className={`text-xs font-bold font-mono ${isModelBF ? 'text-slate-900' : 'text-slate-800'}`}>
                     {currentDate}
                   </div>
                 </div>
@@ -438,7 +438,7 @@ export default function PrintSheet({
             {/* 2. Furniture High-Quality Photo with Category Themed Border */}
             <div 
               className={`print-image-container my-3 rounded-2xl overflow-hidden flex items-center justify-center relative min-h-[280px] ${
-                isModelBF ? 'bg-black border-2 border-orange-500/50' : 'bg-slate-50'
+                isModelBF ? 'bg-white border-2 border-orange-400/80' : 'bg-slate-50'
               }`}
               style={!isModelBF ? {
                 border: `2px solid ${hexToRgba(modelCatColor, 0.25)}`
@@ -454,12 +454,12 @@ export default function PrintSheet({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400">
-                  <span className={`text-xl font-bold ${isModelBF ? 'text-neutral-300' : 'text-slate-700'}`}>ئەم مۆدێلە وێنەی نییە</span>
+                  <span className={`text-xl font-bold ${isModelBF ? 'text-slate-700' : 'text-slate-700'}`}>ئەم مۆدێلە وێنەی نییە</span>
                   <span className="text-xs text-slate-400 mt-1">ئەم مۆدێلە لە سیستەمدا بەبێ وێنە تۆمارکراوە</span>
                 </div>
               )}
               {isModelBF ? (
-                <div className="absolute top-3 start-3 bg-gradient-to-r from-orange-600 to-amber-500 text-black font-black text-xs px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 border border-[#d4af37]">
+                <div className="absolute top-3 start-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white font-black text-xs px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1.5 border border-orange-600">
                   <span>👑</span>
                   <span>VIP 2026 EDITION</span>
                 </div>
@@ -481,7 +481,7 @@ export default function PrintSheet({
                 {catName && (
                   <span 
                     className={`px-3.5 py-1 rounded-lg font-black text-xs shadow-2xs ${
-                      isModelBF ? 'bg-gradient-to-r from-orange-600 via-amber-500 to-yellow-500 text-black' : 'text-white'
+                      isModelBF ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white' : 'text-white'
                     }`}
                     style={!isModelBF ? { backgroundColor: modelCatColor } : undefined}
                   >
@@ -491,14 +491,14 @@ export default function PrintSheet({
                 {colName && (
                   <>
                     <span className={isModelBF ? 'text-orange-500' : 'text-slate-300'}>•</span>
-                    <span className={isModelBF ? 'text-amber-400 font-bold' : 'text-slate-700 font-bold'}>{colName}</span>
+                    <span className={isModelBF ? 'text-slate-800 font-bold' : 'text-slate-700 font-bold'}>{colName}</span>
                   </>
                 )}
               </div>
 
               {/* Title */}
               <h1 className={`text-2xl font-black leading-tight ${
-                isModelBF ? 'text-white' : 'text-slate-900'
+                isModelBF ? 'text-slate-950' : 'text-slate-900'
               }`}>
                 {model.name}
               </h1>
@@ -506,9 +506,9 @@ export default function PrintSheet({
               {/* Notes & Description */}
               {model.notes && (
                 <div className={`p-2.5 rounded-xl text-xs leading-relaxed border ${
-                  isModelBF ? 'bg-[#151520] border-orange-500/30 text-neutral-200' : 'bg-slate-50 border-slate-200 text-slate-700'
+                  isModelBF ? 'bg-orange-50/50 border-orange-200 text-slate-800' : 'bg-slate-50 border-slate-200 text-slate-700'
                 }`}>
-                  <div className={`font-bold mb-0.5 ${isModelBF ? 'text-orange-400' : 'text-slate-900'}`}>
+                  <div className={`font-bold mb-0.5 ${isModelBF ? 'text-orange-600' : 'text-slate-900'}`}>
                     {t.notes}:
                   </div>
                   <div className="whitespace-pre-line">
@@ -522,7 +522,7 @@ export default function PrintSheet({
             <div 
               className={`my-3 p-3.5 sm:p-4 rounded-2xl flex items-center justify-between transition-colors shadow-2xs ${
                 isModelBF
-                  ? 'bg-gradient-to-r from-[#171722] via-[#121218] to-[#0c0c10] border-2 border-orange-500/70 text-white shadow-lg'
+                  ? 'bg-orange-50/60 border-2 border-orange-400 text-slate-900'
                   : 'bg-slate-50/80 border border-slate-200/90'
               }`}
             >
@@ -530,18 +530,18 @@ export default function PrintSheet({
               {/* Stock info - Clean Modern Badge */}
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${
-                  isModelBF ? 'bg-neutral-900 border border-orange-500/40 text-amber-400' : 'bg-white border border-slate-200/80 shadow-2xs'
+                  isModelBF ? 'bg-white border border-orange-300 text-orange-500 shadow-2xs' : 'bg-white border border-slate-200/80 shadow-2xs'
                 }`}>
                   📦
                 </div>
                 <div>
                   <div className={`text-[10px] font-bold uppercase tracking-wider ${
-                    isModelBF ? 'text-orange-400/90' : 'text-slate-400'
+                    isModelBF ? 'text-orange-600' : 'text-slate-400'
                   }`}>
                     {t.stock || 'بڕی بەردەست'}
                   </div>
                   <div className={`text-sm sm:text-base font-black font-mono ${
-                    isModelBF ? 'text-white' : 'text-slate-900'
+                    isModelBF ? 'text-slate-950' : 'text-slate-900'
                   }`}>
                     {model.stock && model.stock > 0 ? (
                       <span>{model.stock} {t.piece || 'دانە'}</span>
@@ -559,7 +559,7 @@ export default function PrintSheet({
                   <>
                     {/* Old Price in Small Red with Strikethrough (نرخی کۆن بە سووری بچووک) */}
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className={`text-[10.5px] font-bold ${isModelBF ? 'text-neutral-400' : 'text-slate-400'}`}>کۆن:</span>
+                      <span className={`text-[10.5px] font-bold ${isModelBF ? 'text-slate-400' : 'text-slate-400'}`}>کۆن:</span>
                       <span className="line-through text-rose-500 font-bold text-xs sm:text-sm font-mono decoration-rose-500 decoration-1.5">
                         {Number(model.originalPrice).toLocaleString()} {t.currency}
                       </span>
@@ -573,19 +573,19 @@ export default function PrintSheet({
                     {/* New Discounted Price */}
                     <div className="flex items-baseline justify-end gap-1.5">
                       <span className={`text-xs sm:text-sm font-black uppercase tracking-wider me-1 ${
-                        isModelBF ? 'text-orange-400' : 'text-emerald-700 opacity-90'
+                        isModelBF ? 'text-orange-600' : 'text-emerald-700 opacity-90'
                       }`}>
                         {isModelBF ? 'نرخی VIP:' : (t.outletPrice || 'نرخی نوێ:')}
                       </span>
                       <span className={`text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight ${
                         isModelBF
-                          ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400'
+                          ? 'text-orange-600'
                           : 'text-emerald-600'
                       }`}>
                         {Number(model.salePrice).toLocaleString()}
                       </span>
                       <span className={`text-sm sm:text-base font-bold ${
-                        isModelBF ? 'text-amber-400' : 'text-emerald-700'
+                        isModelBF ? 'text-orange-600' : 'text-emerald-700'
                       }`}>{t.currency}</span>
                     </div>
                   </>
@@ -593,13 +593,13 @@ export default function PrintSheet({
                   /* Single Active Price */
                   <div className="flex items-baseline justify-end gap-1.5">
                     <span className={`text-xs sm:text-sm font-bold uppercase tracking-wider me-1 ${
-                      isModelBF ? 'text-orange-400 font-bold' : 'text-slate-500'
+                      isModelBF ? 'text-orange-600 font-bold' : 'text-slate-500'
                     }`}>
                       {isModelBF ? '👑 نرخی VIP:' : (t.price || 'نرخ:')}
                     </span>
                     <span className={`text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight ${
                       isModelBF
-                        ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-400 via-amber-300 to-yellow-400'
+                        ? 'text-orange-600'
                         : 'text-slate-900'
                     }`}>
                       {model.originalPrice && Number(model.originalPrice) > 0 
@@ -607,7 +607,7 @@ export default function PrintSheet({
                         : (model.salePrice && Number(model.salePrice) > 0 ? Number(model.salePrice).toLocaleString() : '0')}
                     </span>
                     <span className={`text-sm sm:text-base font-bold ${
-                      isModelBF ? 'text-amber-400' : 'text-slate-600'
+                      isModelBF ? 'text-orange-600' : 'text-slate-600'
                     }`}>{t.currency}</span>
                   </div>
                 )}
@@ -618,10 +618,10 @@ export default function PrintSheet({
 
             {/* 5. A4 Footer (Clean, Modern, No Redundancy) */}
             <div className={`pt-2 border-t flex items-center justify-between text-[10px] font-medium ${
-              isModelBF ? 'border-orange-500/30 text-neutral-400' : 'border-slate-200 text-slate-500'
+              isModelBF ? 'border-orange-300 text-slate-500' : 'border-slate-200 text-slate-500'
             }`}>
               <div className="flex items-center gap-1.5 font-bold">
-                <span style={{ color: isModelBF ? '#ff6b00' : modelCatColor }}>ASHLEY FURNITURE</span>
+                <span style={{ color: isModelBF ? '#ea580c' : modelCatColor }}>ASHLEY FURNITURE</span>
                 <span>•</span>
                 <span>{isModelBF ? 'OFFICIAL VIP BLACK FRIDAY SPECIFICATION' : 'OFFICIAL SALES SPECIFICATION'}</span>
                 {catName && (

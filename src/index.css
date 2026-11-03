@@ -451,25 +451,25 @@
     margin-bottom: 20px !important;
   }
 
-  /* Black Friday VIP Edition Cover */
+  /* Black Friday VIP Edition Cover - Clean Luxury White Edition */
   .print-cover-page.bf-vip-cover {
-    background: #0c0c10 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
     border: 3.5px solid #ff6b00 !important;
     border-top: 10px solid #d4af37 !important;
   }
 
-  /* Black Friday VIP Edition Specification Page */
+  /* Black Friday VIP Edition Specification Page - Clean Luxury White Edition */
   .print-page.bf-vip-page {
-    background: #0e0e13 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
     border: 2.5px solid #ff6b00 !important;
     border-top: 8px solid #d4af37 !important;
   }
 
   .print-page.bf-vip-page .print-image-container {
-    background: #050507 !important;
-    border: 1.5px solid rgba(255, 107, 0, 0.45) !important;
+    background: #ffffff !important;
+    border: 2px solid rgba(255, 107, 0, 0.45) !important;
   }
 
   .print-page:last-child {
