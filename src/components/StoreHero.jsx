@@ -37,7 +37,7 @@ export default function StoreHero({
   models = [], 
   categories = [], 
   collections = [], 
-  campaign = 'black_friday',
+  campaign = 'outlet',
   onOpenModel 
 }) {
   const isBF = campaign === 'black_friday';

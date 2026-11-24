@@ -422,6 +422,13 @@ export default function App() {
     }).length;
   }, [data.models]);
 
+  // If Black Friday has no items, automatically fall back to outlet so the catalog is never empty
+  useEffect(() => {
+    if (bfCount === 0 && campaign === 'black_friday' && !isLoading) {
+      setCampaign('outlet');
+    }
+  }, [bfCount, campaign, isLoading]);
+
   // All categories are always accessible and visible
   const activeCategories = data.categories || [];
 

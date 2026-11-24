@@ -25,3 +25,7 @@ Thumbs.db
 
 .vercel
 .env*
+
+scratch*
+old_backup_data.json
+update-env-vercel*

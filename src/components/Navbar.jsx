@@ -29,7 +29,7 @@ export default function Navbar({
   logoUrl,
   searchQuery,
   setSearchQuery,
-  campaign = 'black_friday',
+  campaign = 'outlet',
   setCampaign,
   bfCount = 0,
   outletCount = 0,
